@@ -3,11 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hepta Labs | Future Infrastructure</title>
-    <meta
-      name="description"
-      content="Hepta Labs company profile with multilingual support, day/night themes, and dynamic business portfolio pages."
-    />
+    <title>Hepta Labs | Detail</title>
+    <meta name="description" content="Hepta Labs business and company detail pages." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,7 +13,7 @@
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body data-page="home">
+  <body data-page="detail">
     <div class="page-bg" aria-hidden="true"></div>
     <div class="orb orb-top" data-depth="18" aria-hidden="true"></div>
     <div class="orb orb-bottom" data-depth="24" aria-hidden="true"></div>
@@ -40,31 +37,32 @@
       </div>
     </header>
 
-    <main class="home-main">
-      <section class="hero reveal">
-        <p class="hero-kicker" data-home-kicker></p>
-        <h1 data-home-title></h1>
-        <p class="hero-line" data-home-line1></p>
-        <p class="hero-line" data-home-line2></p>
-        <p class="hero-line" data-home-line3></p>
-        <div class="hero-actions">
-          <a class="cta primary" data-home-cta-primary href="#footer-panel"></a>
-          <a class="cta ghost" data-home-cta-secondary href="./detail.html?menu=about&item=hepta-labs"></a>
-        </div>
-      </section>
+    <main class="detail-main">
+      <aside class="detail-side reveal">
+        <p class="side-caption" data-detail-menu-label></p>
+        <ul class="detail-list" data-detail-item-list></ul>
+      </aside>
 
-      <section class="spotlight-grid reveal" data-home-cards></section>
+      <article class="detail-content reveal">
+        <p class="detail-path" data-detail-path></p>
+        <h1 data-detail-title></h1>
+        <p class="detail-subtitle" data-detail-subtitle></p>
 
-      <section class="footer-panel reveal" id="footer-panel">
-        <div class="footer-brand-block">
-          <div class="brand-mark-lg">H</div>
-          <p class="footer-brand-name">HEPTA LABS</p>
-          <p data-footer-copyright></p>
-          <p data-footer-community></p>
-        </div>
-        <div class="footer-columns" data-footer-columns></div>
-      </section>
+        <div class="section-stack" data-detail-sections></div>
+
+        <a class="cta primary detail-cta" data-detail-cta href="./detail.html?menu=help&item=contact"></a>
+      </article>
     </main>
+
+    <section class="footer-panel reveal">
+      <div class="footer-brand-block">
+        <div class="brand-mark-lg">H</div>
+        <p class="footer-brand-name">HEPTA LABS</p>
+        <p data-footer-copyright></p>
+        <p data-footer-community></p>
+      </div>
+      <div class="footer-columns" data-footer-columns></div>
+    </section>
 
     <script src="./content.js"></script>
     <script src="./app.js"></script>
