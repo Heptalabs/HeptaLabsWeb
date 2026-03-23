@@ -4,11 +4,17 @@
   const STORAGE_KEYS = {
     theme: "heptalabs_theme",
     lang: "heptalabs_lang",
-    content: "heptalabs_content_v1"
+    content: "heptalabs_content_v1",
+    adminSession: "heptalabs_admin_session_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
   const SUPPORTED_THEMES = ["day", "night"];
+  const ADMIN_AUTH = {
+    usernames: ["heptalabs", "heptalabs@gmail.com"],
+    passwordHash: "cdc018604758228f4c6fdcb5b908ad5144b03f86d71cd1efababad46f74400b4",
+    passwordFallback: "HeptaLabs@2026"
+  };
 
   const UI_TEXT = {
     nav: {
@@ -67,7 +73,16 @@
         statusImportOk: "JSON을 성공적으로 불러왔습니다.",
         statusImportFail: "유효하지 않은 JSON 형식입니다.",
         statusExport: "JSON 파일을 내보냈습니다.",
-        confirmResetAll: "전체 콘텐츠를 기본값으로 되돌릴까요?"
+        confirmResetAll: "전체 콘텐츠를 기본값으로 되돌릴까요?",
+        logout: "로그아웃",
+        authTitle: "관리자 로그인",
+        authSubtitle: "어드민 페이지는 ID와 비밀번호 인증 후 접근할 수 있습니다.",
+        authIdLabel: "아이디",
+        authPasswordLabel: "비밀번호",
+        authSubmit: "로그인",
+        authNote: "권한이 없는 경우 관리자에게 계정을 문의하세요.",
+        authInvalid: "아이디 또는 비밀번호가 올바르지 않습니다.",
+        authLoggedOut: "로그아웃되었습니다."
       },
       en: {
         title: "Hepta Labs Content Admin",
@@ -97,7 +112,16 @@
         statusImportOk: "JSON was imported successfully.",
         statusImportFail: "Invalid JSON format.",
         statusExport: "JSON file exported.",
-        confirmResetAll: "Reset all content to defaults?"
+        confirmResetAll: "Reset all content to defaults?",
+        logout: "Logout",
+        authTitle: "Admin Sign In",
+        authSubtitle: "Access to the admin page requires a valid ID and password.",
+        authIdLabel: "ID",
+        authPasswordLabel: "Password",
+        authSubmit: "Sign In",
+        authNote: "If you need access, contact an administrator.",
+        authInvalid: "Invalid ID or password.",
+        authLoggedOut: "You have been logged out."
       },
       zh: {
         title: "Hepta Labs 内容管理",
@@ -126,7 +150,16 @@
         statusImportOk: "JSON 导入成功。",
         statusImportFail: "JSON 格式无效。",
         statusExport: "JSON 文件已导出。",
-        confirmResetAll: "确定将全部内容重置为默认值吗？"
+        confirmResetAll: "确定将全部内容重置为默认值吗？",
+        logout: "退出登录",
+        authTitle: "管理员登录",
+        authSubtitle: "访问管理页面前需要通过账号和密码验证。",
+        authIdLabel: "账号",
+        authPasswordLabel: "密码",
+        authSubmit: "登录",
+        authNote: "如需权限，请联系管理员。",
+        authInvalid: "账号或密码不正确。",
+        authLoggedOut: "已退出登录。"
       }
     }
   };
@@ -153,6 +186,61 @@
   };
 
   const deepClone = (value) => JSON.parse(JSON.stringify(value));
+  const toHex = (buffer) =>
+    Array.from(new Uint8Array(buffer))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  const normalizeAdminId = (value) => String(value || "").trim().toLowerCase();
+  const normalizeAdminPassword = (value) => String(value || "").trim();
+
+  const sha256Hex = async (value) => {
+    if (!window.crypto || !window.crypto.subtle) {
+      return null;
+    }
+
+    const encoded = new TextEncoder().encode(value);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", encoded);
+    return toHex(hashBuffer);
+  };
+
+  const isAdminAuthenticated = () => {
+    try {
+      return sessionStorage.getItem(STORAGE_KEYS.adminSession) === "1";
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const setAdminAuthenticated = (active) => {
+    try {
+      if (active) {
+        sessionStorage.setItem(STORAGE_KEYS.adminSession, "1");
+      } else {
+        sessionStorage.removeItem(STORAGE_KEYS.adminSession);
+      }
+    } catch (error) {
+      return;
+    }
+  };
+
+  const verifyAdminCredentials = async (id, password) => {
+    const normalizedId = normalizeAdminId(id);
+    const normalizedPassword = normalizeAdminPassword(password);
+    if (!ADMIN_AUTH.usernames.includes(normalizedId)) {
+      return false;
+    }
+
+    try {
+      const hash = await sha256Hex(normalizedPassword);
+      if (hash) {
+        return hash === ADMIN_AUTH.passwordHash;
+      }
+    } catch (error) {
+      return normalizedPassword === ADMIN_AUTH.passwordFallback;
+    }
+
+    return normalizedPassword === ADMIN_AUTH.passwordFallback;
+  };
 
   const isValidContent = (value) => {
     if (!value || typeof value !== "object" || !Array.isArray(value.menus)) {
@@ -247,7 +335,10 @@
   };
 
   const firstMenu = state.content.menus[0];
-  const buildDetailUrl = (menuId, itemId) => `./detail.html?menu=${encodeURIComponent(menuId)}&item=${encodeURIComponent(itemId)}`;
+  const isAdminRoutePath = /\/admin\/?$/.test(window.location.pathname);
+  const routePrefix = isAdminRoutePath ? "../" : "./";
+  const buildDetailUrl = (menuId, itemId) =>
+    `${routePrefix}detail.html?menu=${encodeURIComponent(menuId)}&item=${encodeURIComponent(itemId)}`;
 
   const encodeHtml = (value) =>
     String(value)
@@ -533,8 +624,36 @@
     const statusElement = document.getElementById("admin-status");
     const jsonElement = document.getElementById("admin-json");
     const previewLink = document.getElementById("admin-preview");
+    const authWrap = document.getElementById("admin-auth-wrap");
+    const adminMain = document.getElementById("admin-main");
+    const authStatusElement = document.getElementById("admin-auth-status");
+    const loginForm = document.getElementById("admin-login-form");
+    const loginIdInput = document.getElementById("admin-login-id");
+    const loginPasswordInput = document.getElementById("admin-login-password");
+    const logoutButton = document.getElementById("admin-logout");
 
     const adminText = () => getLangText(UI_TEXT.admin);
+    let authGranted = isAdminAuthenticated();
+
+    const showAuthStatus = (message) => {
+      if (authStatusElement) {
+        authStatusElement.textContent = message || "";
+      }
+    };
+
+    const setAdminAccess = (granted) => {
+      authGranted = granted;
+      if (adminMain) {
+        adminMain.hidden = !granted;
+      }
+      if (authWrap) {
+        authWrap.hidden = granted;
+      }
+      if (logoutButton) {
+        logoutButton.hidden = !granted;
+      }
+      document.body.dataset.adminAuth = granted ? "granted" : "locked";
+    };
 
     const showStatus = (message) => {
       if (statusElement) {
@@ -582,7 +701,14 @@
         "[data-admin-reset-all]": text.resetAll,
         "[data-admin-export]": text.export,
         "[data-admin-import]": text.import,
-        "[data-admin-json-heading]": text.jsonHeading
+        "[data-admin-json-heading]": text.jsonHeading,
+        "[data-admin-logout]": text.logout,
+        "[data-admin-auth-title]": text.authTitle,
+        "[data-admin-auth-subtitle]": text.authSubtitle,
+        "[data-admin-auth-id-label]": text.authIdLabel,
+        "[data-admin-auth-password-label]": text.authPasswordLabel,
+        "[data-admin-login-submit]": text.authSubmit,
+        "[data-admin-auth-note]": text.authNote
       };
 
       Object.entries(map).forEach(([selector, value]) => {
@@ -808,6 +934,45 @@
       event.target.value = "";
     });
 
+    if (loginForm) {
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const userId = loginIdInput ? loginIdInput.value : "";
+        const userPassword = loginPasswordInput ? loginPasswordInput.value : "";
+        const isValid = await verifyAdminCredentials(userId, userPassword);
+
+        if (!isValid) {
+          showAuthStatus(adminText().authInvalid);
+          if (loginPasswordInput) {
+            loginPasswordInput.value = "";
+            loginPasswordInput.focus();
+          }
+          return;
+        }
+
+        setAdminAuthenticated(true);
+        setAdminAccess(true);
+        showAuthStatus("");
+        if (loginPasswordInput) {
+          loginPasswordInput.value = "";
+        }
+      });
+    }
+
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        setAdminAuthenticated(false);
+        setAdminAccess(false);
+        showAuthStatus(adminText().authLoggedOut);
+        if (loginPasswordInput) {
+          loginPasswordInput.value = "";
+        }
+        if (loginIdInput) {
+          loginIdInput.focus();
+        }
+      });
+    }
+
     document.addEventListener("hepta:langchange", () => {
       adminState.editLang = state.lang;
       renderAdminLabels();
@@ -820,6 +985,10 @@
     renderMenuSelect();
     renderItemSelect();
     renderEditor();
+    setAdminAccess(authGranted);
+    if (!authGranted && loginIdInput) {
+      loginIdInput.focus();
+    }
   };
 
   const rerenderPage = () => {

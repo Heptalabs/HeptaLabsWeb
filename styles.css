@@ -36,6 +36,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -319,6 +323,7 @@ body {
 .home-main,
 .detail-main,
 .footer-panel,
+.admin-auth-wrap,
 .admin-main {
   width: min(1380px, calc(100% - 50px));
   margin: 0 auto;
@@ -398,6 +403,10 @@ body {
   min-height: 36px;
   padding: 0 14px;
   font-size: 0.82rem;
+}
+
+.cta.full {
+  width: 100%;
 }
 
 .cta:hover {
@@ -621,6 +630,61 @@ body {
   padding: 34px 0 80px;
 }
 
+.admin-auth-wrap {
+  padding: 58px 0 80px;
+}
+
+.admin-auth-card {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--bg-elev);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--glow);
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.admin-auth-card h1 {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(1.58rem, 2.6vw, 2.3rem);
+}
+
+.admin-auth-subtitle {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.admin-auth-form {
+  margin-top: 16px;
+}
+
+.admin-auth-form .field-group {
+  max-width: 320px;
+  width: 100%;
+  margin: 0 auto 12px;
+}
+
+.admin-auth-form input {
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 9px 10px;
+}
+
+.admin-auth-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.admin-auth-status {
+  min-height: 22px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .admin-panel {
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -824,6 +888,7 @@ textarea {
   .home-main,
   .detail-main,
   .footer-panel,
+  .admin-auth-wrap,
   .admin-main {
     width: min(100% - 20px, 1380px);
   }

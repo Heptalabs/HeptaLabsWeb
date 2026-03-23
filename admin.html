@@ -2,108 +2,14 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=./admin/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hepta Labs | Admin</title>
-    <meta name="description" content="Hepta Labs local CMS admin page." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./styles.css" />
+    <title>Hepta Labs | Admin Redirect</title>
+    <script>
+      window.location.replace("./admin/");
+    </script>
   </head>
-  <body data-page="admin">
-    <div class="page-bg" aria-hidden="true"></div>
-
-    <header class="site-header reveal admin-header">
-      <a class="brand" href="./index.html" aria-label="Hepta Labs home">
-        <span class="brand-mark">H</span>
-        <span class="brand-word">HEPTA LABS</span>
-      </a>
-
-      <nav class="primary-nav admin-nav">
-        <a href="./index.html" data-admin-home-link></a>
-        <a href="./detail.html?menu=about&item=hepta-labs" data-admin-detail-link></a>
-      </nav>
-
-      <div class="header-controls">
-        <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle theme"></button>
-        <div class="lang-switch" role="group" aria-label="Language switcher">
-          <button type="button" data-lang="ko">KO</button>
-          <button type="button" data-lang="en">EN</button>
-          <button type="button" data-lang="zh">ZH</button>
-        </div>
-      </div>
-    </header>
-
-    <main class="admin-main reveal">
-      <section class="admin-panel">
-        <h1 data-admin-title></h1>
-        <p class="admin-subtitle" data-admin-subtitle></p>
-
-        <div class="admin-grid">
-          <div class="admin-card">
-            <h2 data-admin-select-heading></h2>
-            <div class="field-group">
-              <label for="admin-menu" data-admin-label-menu></label>
-              <select id="admin-menu"></select>
-            </div>
-            <div class="field-group">
-              <label for="admin-item" data-admin-label-item></label>
-              <select id="admin-item"></select>
-            </div>
-            <div class="field-group">
-              <p class="field-label" data-admin-label-language></p>
-              <div class="lang-switch" id="admin-lang-tabs">
-                <button type="button" data-admin-lang="ko">KO</button>
-                <button type="button" data-admin-lang="en">EN</button>
-                <button type="button" data-admin-lang="zh">ZH</button>
-              </div>
-            </div>
-            <a class="cta ghost small" id="admin-preview" target="_blank" rel="noreferrer" data-admin-preview></a>
-          </div>
-
-          <div class="admin-card admin-editor" id="admin-editor">
-            <h2 data-admin-edit-heading></h2>
-            <div class="field-group">
-              <label for="admin-title-input" data-admin-label-title></label>
-              <input id="admin-title-input" type="text" />
-            </div>
-            <div class="field-group">
-              <label for="admin-subtitle-input" data-admin-label-subtitle></label>
-              <textarea id="admin-subtitle-input" rows="4"></textarea>
-            </div>
-
-            <div class="sections-wrap">
-              <div class="section-header-row">
-                <p data-admin-sections-heading></p>
-                <button class="cta ghost small" id="admin-add-section" type="button" data-admin-add-section></button>
-              </div>
-              <div id="admin-sections"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-actions">
-          <button class="cta primary" id="admin-save" type="button" data-admin-save></button>
-          <button class="cta ghost" id="admin-reset-item" type="button" data-admin-reset-item></button>
-          <button class="cta ghost" id="admin-reset-all" type="button" data-admin-reset-all></button>
-          <button class="cta ghost" id="admin-export" type="button" data-admin-export></button>
-          <label class="cta ghost file-btn" for="admin-import" data-admin-import></label>
-          <input id="admin-import" type="file" accept="application/json" />
-        </div>
-
-        <p class="admin-status" id="admin-status" aria-live="polite"></p>
-
-        <div class="admin-card json-card">
-          <h2 data-admin-json-heading></h2>
-          <pre id="admin-json"></pre>
-        </div>
-      </section>
-    </main>
-
-    <script src="./content.js"></script>
-    <script src="./app.js"></script>
+  <body>
+    <p>Redirecting to <a href="./admin/">/admin/</a> ...</p>
   </body>
 </html>
