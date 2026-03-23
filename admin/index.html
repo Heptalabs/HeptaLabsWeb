@@ -13,7 +13,7 @@
     />
     <link rel="icon" type="image/svg+xml" href="../assets/brand/favicon.svg" />
     <link rel="shortcut icon" href="../assets/brand/favicon.svg" />
-    <link rel="stylesheet" href="../styles.css?v=20260323brand" />
+    <link rel="stylesheet" href="../styles.css?v=20260323cms" />
   </head>
   <body data-page="admin">
     <div class="page-bg" aria-hidden="true"></div>
@@ -108,6 +108,18 @@
               <label for="admin-subtitle-input" data-admin-label-subtitle></label>
               <textarea id="admin-subtitle-input" rows="4"></textarea>
             </div>
+            <div class="field-group">
+              <label for="admin-feature-image-input" data-admin-label-feature-image></label>
+              <input id="admin-feature-image-input" type="url" placeholder="https://..." />
+            </div>
+            <div class="field-group">
+              <label for="admin-feature-image-alt-input" data-admin-label-feature-alt></label>
+              <input id="admin-feature-image-alt-input" type="text" />
+            </div>
+            <div class="field-group">
+              <label for="admin-feature-image-file" data-admin-label-feature-upload></label>
+              <input id="admin-feature-image-file" type="file" accept="image/*" />
+            </div>
 
             <div class="sections-wrap">
               <div class="section-header-row">
@@ -134,10 +146,22 @@
           <h2 data-admin-json-heading></h2>
           <pre id="admin-json"></pre>
         </div>
+
+        <div class="admin-card admin-advanced-card">
+          <h2 data-admin-advanced-heading></h2>
+          <p class="admin-advanced-subtitle" data-admin-advanced-subtitle></p>
+          <div class="admin-module-tabs" id="admin-module-tabs">
+            <button type="button" data-admin-module="news"></button>
+            <button type="button" data-admin-module="notice"></button>
+            <button type="button" data-admin-module="qna"></button>
+            <button type="button" data-admin-module="site"></button>
+          </div>
+          <div id="admin-module-content"></div>
+        </div>
       </section>
     </main>
 
-    <script src="../content.js?v=20260323brand"></script>
-    <script src="../app.js?v=20260323brand"></script>
+    <script src="../content.js?v=20260323cms"></script>
+    <script src="../app.js?v=20260323cms"></script>
   </body>
 </html>
