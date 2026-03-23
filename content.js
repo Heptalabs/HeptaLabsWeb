@@ -6,9 +6,9 @@ window.HeptaContentDefaults = {
         kicker: "Future Infrastructure, Built with Trust",
         title: "HEPTA LABS",
         lines: [
-          "Hepta Labs는 검증된 인프라와 소프트웨어 역량을 결합해,",
-          "Web2.0과 Web3.0 사이를 연결하는 실전형 디지털 비즈니스를 설계합니다.",
-          "복잡한 기술을 명확한 성과로 전환하는 것이 우리의 기준입니다."
+          "Hepta Labs는 검증된 인프라와 소프트웨어 실행력을 결합해,",
+          "Web2.0과 Web3.0을 연결하는 실전형 디지털 비즈니스를 설계합니다.",
+          "복잡한 기술을 명확한 운영 성과로 전환하는 것이 우리의 기준입니다."
         ],
         ctaPrimary: "비즈니스 포트폴리오",
         ctaSecondary: "회사 소개 보기"
@@ -17,9 +17,9 @@ window.HeptaContentDefaults = {
         kicker: "Future Infrastructure, Built with Trust",
         title: "HEPTA LABS",
         lines: [
-          "Hepta Labs combines proven infrastructure and software expertise",
-          "to build practical digital businesses across Web2.0 and Web3.0.",
-          "We turn complex technology into clear, measurable outcomes."
+          "Hepta Labs combines proven infrastructure with software execution capability",
+          "to design practical digital businesses across Web2.0 and Web3.0.",
+          "Our standard is turning complex technology into clear operating outcomes."
         ],
         ctaPrimary: "Business Portfolio",
         ctaSecondary: "About Hepta Labs"
@@ -28,9 +28,9 @@ window.HeptaContentDefaults = {
         kicker: "Future Infrastructure, Built with Trust",
         title: "HEPTA LABS",
         lines: [
-          "Hepta Labs 以成熟的基础设施与软件能力为底座，",
-          "打造连接 Web2.0 与 Web3.0 的实战型数字业务。",
-          "我们将复杂技术转化为清晰、可衡量的成果。"
+          "Hepta Labs 以成熟的基础设施与软件执行能力为基础，",
+          "设计连接 Web2.0 与 Web3.0 的实战型数字业务。",
+          "我们的标准是将复杂技术转化为清晰的运营成果。"
         ],
         ctaPrimary: "业务版图",
         ctaSecondary: "了解 Hepta Labs"
@@ -71,12 +71,12 @@ window.HeptaContentDefaults = {
             ko: {
               title: "Hepta Labs",
               subtitle:
-                "Hepta Labs는 인프라 운영 경험과 다년간의 Web2.0/Web3.0 실행력을 바탕으로, 안정성과 확장성을 동시에 설계하는 기술 파트너입니다.",
+                "Hepta Labs는 인프라 운영 경험과 Web2.0/Web3.0 실행력을 기반으로, 안정성과 확장성을 함께 설계하는 기술 파트너입니다.",
               sections: [
                 {
                   heading: "회사 개요",
                   body:
-                    "2016년 암호화폐 채굴 사업 참여를 시작으로 인프라 운영 경험을 축적했고, 2018년 중국 인선으로 확장하며 글로벌 현장 운영 체계를 구축했습니다.\n현재는 채굴, 화이트라벨 거래소, 자체 거래소, AI 트레이딩, 맞춤형 개발까지 비즈니스 포트폴리오를 확장해 종합 디지털 솔루션을 제공합니다."
+                    "2016년 암호화폐 채굴 사업을 시작으로 대규모 인프라 운영 경험을 축적했고, 2018년 중국 거점 확장을 통해 글로벌 현장 운영 체계를 구축했습니다.\n현재는 채굴, 화이트라벨 거래소, 자체 거래소, AI 트레이딩, 맞춤형 개발까지 포트폴리오를 확장해 종합 디지털 솔루션을 제공합니다."
                 },
                 {
                   heading: "비즈니스 모델",
@@ -93,12 +93,12 @@ window.HeptaContentDefaults = {
             en: {
               title: "Hepta Labs",
               subtitle:
-                "Hepta Labs is a technology partner that combines infrastructure operations and multi-year Web2.0/Web3.0 execution experience to deliver both stability and scalability.",
+                "Hepta Labs is a technology partner that combines infrastructure operations and Web2.0/Web3.0 execution capability to deliver both stability and scalability.",
               sections: [
                 {
                   heading: "Company Overview",
                   body:
-                    "Starting from crypto-mining operations in 2016, we accumulated large-scale infrastructure expertise and expanded to Incheon, China in 2018 for global field operations.\nToday, our portfolio spans mining, white-label exchanges, proprietary exchange operations, AI trading, and custom development services."
+                    "Starting from crypto-mining operations in 2016, we accumulated large-scale infrastructure expertise and expanded our China base in 2018 to build a global field operations model.\nToday, our portfolio spans mining, white-label exchanges, proprietary exchange operations, AI trading, and custom development."
                 },
                 {
                   heading: "Business Models",
@@ -115,12 +115,12 @@ window.HeptaContentDefaults = {
             zh: {
               title: "Hepta Labs",
               subtitle:
-                "Hepta Labs 以基础设施运维经验与多年 Web2.0/Web3.0 落地能力为核心，同时构建稳定性与扩展性。",
+                "Hepta Labs 以基础设施运维经验与 Web2.0/Web3.0 落地能力为核心，同时构建稳定性与扩展性。",
               sections: [
                 {
                   heading: "公司概览",
                   body:
-                    "我们自 2016 年进入加密矿业，持续积累大规模基础设施运维能力，并于 2018 年扩展至中国仁川，形成全球化现场运营体系。\n目前已形成涵盖矿业、白标交易所、自营交易所、AI 交易与定制开发的综合业务矩阵。"
+                    "我们自 2016 年进入加密矿业，持续积累大规模基础设施运维能力，并于 2018 年完成中国据点扩展，形成全球化现场运营体系。\n目前已形成涵盖矿业、白标交易所、自营交易所、AI 交易与定制开发的综合业务矩阵。"
                 },
                 {
                   heading: "业务模型",
@@ -152,7 +152,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "핵심 철학",
                   body:
-                    "우리는 기술 자체보다 고객의 지속 가능한 성공을 우선합니다.\n서비스 품질, 응답 속도, 운영 신뢰성을 동시에 높이는 것이 Hepta Labs의 비전입니다."
+                    "우리는 기술 과시보다 고객의 지속 가능한 성공을 우선합니다.\n서비스 품질, 응답 속도, 운영 신뢰성을 동시에 높이는 것이 Hepta Labs의 비전입니다."
                 },
                 {
                   heading: "1. 고객과 상생하는 구조",
@@ -179,7 +179,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Core Philosophy",
                   body:
-                    "We prioritize sustainable customer success over technology hype.\nService quality, response speed, and operational trust are pursued together."
+                    "We prioritize sustainable customer success over technology hype.\nService quality, response speed, and operational trust are pursued together as one system."
                 },
                 {
                   heading: "1. Co-growth with Customers",
@@ -206,7 +206,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "核心理念",
                   body:
-                    "我们优先关注客户可持续成功，而非技术噱头。\n服务质量、响应速度与运营可信度同步提升。"
+                    "我们优先关注客户可持续成功，而非技术噱头。\n服务质量、响应速度与运营可信度作为同一套标准同步提升。"
                 },
                 {
                   heading: "1. 与客户共成长",
@@ -243,12 +243,12 @@ window.HeptaContentDefaults = {
                 {
                   heading: "비전 선언",
                   body:
-                    "우리는 변화하는 시장에서 고객의 미래 경쟁력을 함께 설계합니다.\n기술의 화려함보다 실제 비즈니스 성과를 더 중요하게 판단합니다."
+                    "우리는 변화하는 시장에서 고객의 미래 경쟁력을 함께 설계합니다.\n기술의 화려함보다 실제 비즈니스 성과를 우선합니다."
                 },
                 {
                   heading: "혁신과 신뢰",
                   body:
-                    "고객의 요구를 빠르게 해석하고 실행 가능한 솔루션으로 연결하며, 모든 과정에서 투명한 커뮤니케이션과 책임 있는 운영을 유지합니다."
+                    "고객의 요구를 빠르게 해석해 실행 가능한 솔루션으로 연결하고, 전 과정에서 투명한 커뮤니케이션과 책임 있는 운영을 유지합니다."
                 },
                 {
                   heading: "지속 가능성",
@@ -270,12 +270,12 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Vision Statement",
                   body:
-                    "We co-design future competitiveness with our clients in changing markets.\nBeyond technology itself, we focus on practical business outcomes."
+                    "We co-design future competitiveness with our clients in changing markets.\nBeyond technology itself, we prioritize practical business outcomes."
                 },
                 {
                   heading: "Innovation and Trust",
                   body:
-                    "We quickly interpret customer needs and connect them to executable solutions, while maintaining transparent communication and accountable operations."
+                    "We quickly interpret customer needs and translate them into executable solutions, while maintaining transparent communication and accountable operations."
                 },
                 {
                   heading: "Sustainability",
@@ -349,7 +349,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Bitcoin Mining",
                   body:
-                    "Antminer, Whatsminer, Avalon 등 검증된 ASIC 장비를 운용하며 안정적인 채굴 운영 체계를 구축했습니다.\n중국과 러시아 거점 채굴장에서 고가용성 운영을 지속하고 있습니다."
+                    "Antminer, Whatsminer, Avalon 등 검증된 ASIC 장비를 운용하며 안정적인 채굴 체계를 구축했습니다.\n중국과 러시아 거점 채굴장에서 고가용성 운영을 지속하고 있습니다."
                 },
                 {
                   heading: "솔루션",
@@ -376,12 +376,12 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Web3.0 Cloud Storage",
                   body:
-                    "Hepta Labs has built deep experience in Web3.0 IPFS-based distributed storage.\nThrough projects with global partners in regions including the US and China, we continue to scale a practical storage ecosystem."
+                    "Hepta Labs has built deep experience in Web3.0 IPFS-based distributed storage.\nThrough projects with global partners in regions including the US and China, we continue to scale a production-grade storage ecosystem."
                 },
                 {
                   heading: "Bitcoin Mining",
                   body:
-                    "We operate proven ASIC equipment including Antminer, Whatsminer, and Avalon under stable mining governance.\nOur teams maintain high-availability operations across sites in China and Russia."
+                    "We operate proven ASIC equipment including Antminer, Whatsminer, and Avalon under a stable mining governance model.\nOur teams maintain high-availability operations across sites in China and Russia."
                 },
                 {
                   heading: "Solutions",
@@ -450,7 +450,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "서비스 개요",
                   body:
-                    "기존 Web2.0 서버 호스팅 경험과 Web3.0 인프라 역량을 결합해, 거래소/지갑/생태계 서비스까지 확장 가능한 구조를 설계했습니다.\n빠른 오픈과 안정적인 운영을 동시에 원하는 고객에게 최적화된 모델입니다."
+                    "Web2.0 서버 호스팅 경험과 Web3.0 인프라 역량을 결합해, 거래소/지갑/생태계 서비스까지 확장 가능한 구조를 설계했습니다.\n빠른 오픈과 안정적 운영을 동시에 원하는 고객에게 최적화된 모델입니다."
                 },
                 {
                   heading: "솔루션",
@@ -472,7 +472,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Service Overview",
                   body:
-                    "By combining Web2.0 hosting know-how with Web3.0 infrastructure expertise, we designed a model that scales from exchange operations to wallet and ecosystem services.\nThis structure is optimized for clients who need both speed-to-market and operational reliability."
+                    "By combining Web2.0 hosting know-how with Web3.0 infrastructure expertise, we designed a model that scales from exchange operations to wallet and ecosystem services.\nThis structure is optimized for clients that need both speed-to-market and operational reliability."
                 },
                 {
                   heading: "Solutions",
@@ -521,7 +521,7 @@ window.HeptaContentDefaults = {
             ko: {
               title: "Crypto Exchange",
               subtitle:
-                "Hepta Labs는 자체 개발한 가상자산 거래소 SaaS 솔루션을 기반으로 IMBIT 플랫폼을 운영하고 있습니다.",
+                "Hepta Labs는 자체 개발한 가상자산 거래소 SaaS 솔루션을 기반으로 IMBIT 플랫폼을 운영합니다.",
               sections: [
                 {
                   heading: "운영 전략",
@@ -572,7 +572,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "AI 인프라 대응",
                   body:
-                    "AI 산업 확장에 따라 고성능 GPU 수요와 공급 불균형이 발생하는 환경에서도, 기존 인프라 운영 체계를 활용해 필요한 리소스를 빠르게 확보합니다."
+                    "AI 산업 확장으로 고성능 GPU 수요·공급 불균형이 발생하는 환경에서도, 기존 인프라 운영 체계를 활용해 필요한 리소스를 빠르게 확보합니다."
                 },
                 {
                   heading: "솔루션",
@@ -626,7 +626,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "AI 基础设施能力",
                   body:
-                    "即使在高性能 GPU 供需紧张的市场环境下，我们仍能依托既有运维体系快速 확보所需资源。"
+                    "即使在高性能 GPU 供需紧张的市场环境下，我们仍能依托既有运维体系快速获取所需资源。"
                 },
                 {
                   heading: "解决方案",
@@ -658,7 +658,7 @@ window.HeptaContentDefaults = {
             ko: {
               title: "Development",
               subtitle:
-                "대기업 프로젝트 경험을 보유한 개발팀이 Web2.0부터 Web3.0까지 고객 맞춤형 플랫폼을 설계·구현합니다.",
+                "대규모 프로젝트 경험을 보유한 개발팀이 Web2.0부터 Web3.0까지 고객 맞춤형 플랫폼을 설계·구현합니다.",
               sections: [
                 {
                   heading: "개발 역량",
@@ -673,7 +673,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "결합형 솔루션",
                   body:
-                    "개발과 서버 호스팅을 하나의 체계로 묶어, 구축부터 운영 환경 제공까지 원스톱으로 제공합니다.\n개발 비용과 운영 비용을 동시에 최적화할 수 있습니다."
+                    "개발과 서버 호스팅을 하나의 체계로 묶어, 구축부터 운영 환경 제공까지 원스톱으로 제공합니다.\n개발 비용과 운영 비용을 동시에 최적화합니다."
                 },
                 {
                   heading: "제공 솔루션",
@@ -705,7 +705,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Integrated Solution",
                   body:
-                    "We integrate development and hosting into one flow, from implementation to production-ready infrastructure.\nThis reduces both development and operating costs."
+                    "We integrate development and hosting into one flow, from implementation to production-ready infrastructure.\nThis approach optimizes both development and operating costs."
                 },
                 {
                   heading: "What We Provide",
@@ -774,7 +774,7 @@ window.HeptaContentDefaults = {
             ko: {
               title: "News",
               subtitle:
-                "Hepta Labs의 주요 업데이트와 프로젝트 진행 소식을 전합니다.",
+                "Hepta Labs의 주요 업데이트와 프로젝트 진행 상황을 전합니다.",
               sections: [
                 {
                   heading: "플랫폼 운영 고도화",
@@ -789,14 +789,14 @@ window.HeptaContentDefaults = {
                 {
                   heading: "개발 파트너십",
                   body:
-                    "맞춤형 Web/App 구축 프로젝트를 신규 수주하며, 블록체인 기반 서비스 연동 범위를 확장하고 있습니다."
+                    "맞춤형 Web/App 구축 프로젝트를 신규 수주하며, 블록체인 기반 서비스 연동 범위를 지속적으로 확장하고 있습니다."
                 }
               ]
             },
             en: {
               title: "News",
               subtitle:
-                "Major updates and project highlights from Hepta Labs.",
+                "Major updates and project progress from Hepta Labs.",
               sections: [
                 {
                   heading: "Platform Operations Upgrade",
@@ -811,7 +811,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "Development Partnerships",
                   body:
-                    "With new custom Web/App contracts, we are expanding integration coverage across blockchain-enabled services."
+                    "With new custom Web/App contracts, we continue to expand integration coverage across blockchain-enabled services."
                 }
               ]
             },
@@ -832,7 +832,7 @@ window.HeptaContentDefaults = {
                 {
                   heading: "开发合作进展",
                   body:
-                    "随着新增定制 Web/App 项目，我们正在扩展区块链相关服务的集成范围。"
+                    "随着新增定制 Web/App 项目，我们正持续扩展区块链相关服务的集成范围。"
                 }
               ]
             }
@@ -848,7 +848,7 @@ window.HeptaContentDefaults = {
           translations: {
             ko: {
               title: "Notice",
-              subtitle: "서비스 이용 및 협업 관련 공지 사항을 안내합니다.",
+              subtitle: "서비스 이용과 협업 진행에 필요한 공지 사항을 안내합니다.",
               sections: [
                 {
                   heading: "운영 정책",
@@ -869,7 +869,7 @@ window.HeptaContentDefaults = {
             },
             en: {
               title: "Notice",
-              subtitle: "Operational and collaboration notices for our services.",
+              subtitle: "Notices related to service use and collaboration workflows.",
               sections: [
                 {
                   heading: "Operations Policy",
@@ -890,7 +890,7 @@ window.HeptaContentDefaults = {
             },
             zh: {
               title: "Notice",
-              subtitle: "服务运营与协作相关公告说明。",
+              subtitle: "服务使用与协作流程相关公告说明。",
               sections: [
                 {
                   heading: "运营政策",
