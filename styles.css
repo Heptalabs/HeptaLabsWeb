@@ -165,39 +165,27 @@ body {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
   text-decoration: none;
-  color: inherit;
   white-space: nowrap;
 }
 
-.brand-mark,
-.brand-mark-lg {
-  display: grid;
-  place-items: center;
-  font-family: "Sora", sans-serif;
-  font-weight: 800;
-  border: 2px solid currentColor;
-  line-height: 1;
+.brand-logo {
+  display: block;
+  height: clamp(24px, 2.3vw, 36px);
+  width: auto;
+  max-width: min(56vw, 292px);
 }
 
-.brand-mark {
-  width: 34px;
-  height: 42px;
-  font-size: 1.24rem;
+.brand-logo-night {
+  display: none;
 }
 
-.brand-mark-lg {
-  width: 56px;
-  height: 66px;
-  font-size: 2rem;
+:root[data-theme="night"] .brand-logo-day {
+  display: none;
 }
 
-.brand-word {
-  font-family: "Sora", sans-serif;
-  font-size: clamp(1.1rem, 1.6vw, 2rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+:root[data-theme="night"] .brand-logo-night {
+  display: block;
 }
 
 .primary-nav {
@@ -477,11 +465,26 @@ body {
   gap: 12px;
 }
 
-.footer-brand-name {
-  margin: 0;
-  font-family: "Sora", sans-serif;
-  font-size: 1.2rem;
-  letter-spacing: 0.07em;
+.footer-brand-lockup {
+  width: min(204px, 52vw);
+}
+
+.footer-brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.footer-brand-logo-night {
+  display: none;
+}
+
+:root[data-theme="night"] .footer-brand-logo-day {
+  display: none;
+}
+
+:root[data-theme="night"] .footer-brand-logo-night {
+  display: block;
 }
 
 .footer-brand-block p {
@@ -915,6 +918,15 @@ textarea {
   .hero h1,
   .detail-content h1 {
     font-size: clamp(2.3rem, 13vw, 4rem);
+  }
+
+  .brand-logo {
+    height: 28px;
+    max-width: 68vw;
+  }
+
+  .footer-brand-lockup {
+    width: min(184px, 72vw);
   }
 
   .spotlight-grid,
