@@ -2421,16 +2421,37 @@
     let currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
 
     const selectedIndex = selectedPostId ? notices.findIndex((notice) => notice.id === selectedPostId) : -1;
-    if (selectedIndex >= 0) {
+    const selected = selectedIndex >= 0 ? notices[selectedIndex] : null;
+
+    if (selected) {
       currentPage = Math.floor(selectedIndex / noticesPerPage) + 1;
+      const selectedTranslation = getPostTranslation(selected);
+      const postDetail = document.createElement("article");
+      postDetail.className = "post-expanded notice-post-detail";
+      postDetail.innerHTML = `
+        ${
+          selected.image
+            ? `<img class="news-post-cover" src="${encodeHtml(selected.image)}" alt="${encodeHtml(
+                getLocalizedLabel(selected.imageAlt) || selectedTranslation.title
+              )}" loading="lazy" />`
+            : ""
+        }
+        <p class="post-card-meta">${encodeHtml(formatDisplayDate(selected.createdAt))}</p>
+        <h2 class="post-card-title">${encodeHtml(selectedTranslation.title)}</h2>
+        <p class="post-card-excerpt">${richText(selectedTranslation.body)}</p>
+      `;
+      target.append(postDetail);
+
+      const backLink = document.createElement("a");
+      backLink.className = "cta ghost small news-back-link";
+      backLink.href = buildDetailUrl("infos", "notice", { page: currentPage });
+      backLink.textContent = detailText.newsBackToList;
+      target.append(backLink);
+      return;
     }
 
     const start = (currentPage - 1) * noticesPerPage;
     const pageNotices = notices.slice(start, start + noticesPerPage);
-    const selected =
-      selectedIndex >= 0
-        ? notices[selectedIndex]
-        : pageNotices[0] || notices[start] || notices[0];
 
     const grid = document.createElement("div");
     grid.className = "post-grid";
@@ -2440,9 +2461,6 @@
       const excerpt = postTranslation.excerpt || truncateText(postTranslation.body);
       const article = document.createElement("article");
       article.className = "post-card notice-card";
-      if (selected.id === notice.id) {
-        article.classList.add("is-active");
-      }
 
       const thumbHtml = notice.image
         ? `<img class="notice-card-thumb" src="${encodeHtml(notice.image)}" alt="${encodeHtml(
@@ -2507,17 +2525,6 @@
 
       target.append(pagination);
     }
-
-    const selectedTranslation = getPostTranslation(selected);
-    const expanded = document.createElement("article");
-    expanded.className = "post-expanded";
-    expanded.innerHTML = `
-      <p class="post-card-meta">${encodeHtml(formatDisplayDate(selected.createdAt))}</p>
-      <h2 class="post-card-title">${encodeHtml(selectedTranslation.title)}</h2>
-      <p class="post-card-excerpt">${richText(selectedTranslation.body)}</p>
-    `;
-
-    target.append(expanded);
   };
 
   const renderQnaPublicList = (target) => {
