@@ -64,45 +64,49 @@ body {
   inset: 0;
   z-index: -4;
   background:
-    radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.28), transparent 42%),
-    radial-gradient(circle at 84% 74%, rgba(180, 212, 255, 0.18), transparent 40%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.24), transparent 32%),
-    var(--bg);
+    radial-gradient(1100px 520px at -8% -10%, rgba(255, 255, 255, 0.72), transparent 62%),
+    radial-gradient(980px 460px at 108% 20%, rgba(92, 191, 255, 0.3), transparent 64%),
+    radial-gradient(820px 420px at 52% 120%, rgba(168, 184, 210, 0.3), transparent 70%),
+    linear-gradient(162deg, #f3f5f8 0%, #e5e9ef 54%, #d9dfe8 100%);
 }
 
 :root[data-theme="night"] .page-bg {
   background:
-    radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.08), transparent 42%),
-    radial-gradient(circle at 84% 74%, rgba(90, 210, 255, 0.12), transparent 40%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.04), transparent 32%),
-    var(--bg);
+    radial-gradient(1040px 500px at -8% -10%, rgba(255, 255, 255, 0.1), transparent 64%),
+    radial-gradient(940px 450px at 108% 20%, rgba(86, 200, 255, 0.2), transparent 66%),
+    radial-gradient(760px 400px at 48% 120%, rgba(72, 92, 128, 0.22), transparent 72%),
+    linear-gradient(160deg, #05070b 0%, #0a0f16 56%, #111923 100%);
 }
 
 .page-bg::before {
   content: "";
   position: absolute;
-  inset: -24% -12%;
+  inset: -30% -16%;
   pointer-events: none;
-  background: linear-gradient(
-    112deg,
-    transparent 30%,
-    rgba(115, 210, 255, 0.16) 46%,
-    rgba(255, 255, 255, 0.12) 52%,
-    transparent 66%
-  );
-  filter: blur(40px);
-  opacity: 0.45;
-  animation: ambientSweep 16s var(--easing) infinite;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 22%,
+      rgba(115, 210, 255, 0.22) 42%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(115, 210, 255, 0.14) 56%,
+      transparent 74%
+    ),
+    linear-gradient(292deg, transparent 58%, rgba(255, 255, 255, 0.14) 72%, transparent 84%);
+  filter: blur(34px);
+  opacity: 0.62;
+  animation: ambientSweep 13s var(--easing) infinite;
 }
 
 :root[data-theme="night"] .page-bg::before {
-  opacity: 0.26;
+  opacity: 0.42;
   background: linear-gradient(
     112deg,
-    transparent 26%,
-    rgba(90, 212, 255, 0.2) 44%,
-    rgba(255, 255, 255, 0.16) 52%,
-    transparent 70%
+    transparent 18%,
+    rgba(90, 212, 255, 0.3) 38%,
+    rgba(255, 255, 255, 0.2) 48%,
+    rgba(120, 170, 255, 0.22) 58%,
+    transparent 76%
   );
 }
 
@@ -112,16 +116,16 @@ body {
   inset: 0;
   pointer-events: none;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.08) 0.6px, transparent 0.8px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.05) 0.6px, transparent 0.8px);
-  background-size: 3px 3px, 4px 4px;
-  background-position: 0 0, 1px 1px;
-  opacity: 0.18;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 86%);
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 72px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 72%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
+  opacity: 0.34;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.84), transparent 90%);
 }
 
 :root[data-theme="night"] .page-bg::after {
-  opacity: 0.1;
+  opacity: 0.2;
 }
 
 .orb {
