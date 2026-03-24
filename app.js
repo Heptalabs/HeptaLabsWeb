@@ -16,6 +16,23 @@
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
   const SUPPORTED_THEMES = ["day", "night"];
   const PRIMARY_MENU_IDS = ["about", "business", "infos", "help"];
+  const ROUTE_PATHS = Object.freeze({
+    home: "/main",
+    about: "/about",
+    business: "/business",
+    infos: "/infos",
+    help: "/help",
+    admin: "/admin"
+  });
+  const MENU_ROUTE_PATHS = Object.freeze({
+    about: ROUTE_PATHS.about,
+    business: ROUTE_PATHS.business,
+    infos: ROUTE_PATHS.infos,
+    help: ROUTE_PATHS.help
+  });
+  const ROUTE_MENU_IDS = Object.freeze(
+    Object.fromEntries(Object.entries(MENU_ROUTE_PATHS).map(([menuId, path]) => [path, menuId]))
+  );
   const QNA_MIN_SUBMIT_INTERVAL_MS = 30000;
   const LOCALE_BY_LANG = {
     ko: "ko-KR",
@@ -1898,14 +1915,29 @@
     return menu.items.find((item) => item.id === itemId) || null;
   };
 
-  const isAdminRoutePath = /\/admin\/?$/.test(window.location.pathname);
-  const routePrefix = isAdminRoutePath ? "../" : "./";
+  const normalizeRoutePath = (pathname) => {
+    const raw = asString(pathname).split("?")[0].split("#")[0];
+    let normalized = raw || "/";
+    if (!normalized.startsWith("/")) {
+      normalized = `/${normalized}`;
+    }
+    normalized = normalized.replace(/\/index\.html$/i, "");
+    normalized = normalized.replace(/\/+$/, "") || "/";
+    return normalized;
+  };
+
+  const resolveMenuFromPath = (pathname) => {
+    const normalizedPath = normalizeRoutePath(pathname);
+    return ROUTE_MENU_IDS[normalizedPath] || null;
+  };
 
   const buildDetailUrl = (menuId, itemId, extraParams = null) => {
-    const params = new URLSearchParams({
-      menu: menuId,
-      item: itemId
-    });
+    const params = new URLSearchParams();
+    const routePath = MENU_ROUTE_PATHS[menuId] || MENU_ROUTE_PATHS.about;
+
+    if (itemId) {
+      params.set("item", itemId);
+    }
 
     if (extraParams && typeof extraParams === "object") {
       Object.entries(extraParams).forEach(([key, value]) => {
@@ -1915,7 +1947,8 @@
       });
     }
 
-    return `${routePrefix}detail.html?${params.toString()}`;
+    const query = params.toString();
+    return query ? `${routePath}?${query}` : routePath;
   };
 
   const toDatetimeLocalValue = (iso) => {
@@ -2222,8 +2255,7 @@
 
   const renderPrimaryNav = () => {
     const navText = getLangText(UI_TEXT.nav);
-    const params = new URLSearchParams(window.location.search);
-    const activeMenu = params.get("menu");
+    const activeMenu = document.body.dataset.page === "detail" ? resolveDetailParams().menuId : null;
     const publicMenus = getPublicMenus();
 
     document.querySelectorAll("[data-primary-nav]").forEach((nav) => {
@@ -2427,7 +2459,8 @@
 
   const resolveDetailParams = () => {
     const params = new URLSearchParams(window.location.search);
-    let menuId = params.get("menu");
+    const menuIdFromPath = resolveMenuFromPath(window.location.pathname);
+    let menuId = menuIdFromPath || params.get("menu");
     let itemId = params.get("item");
     const postId = params.get("post");
     const pageRaw = Number.parseInt(params.get("page") || "1", 10);

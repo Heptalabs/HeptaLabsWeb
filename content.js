@@ -41,51 +41,51 @@ window.HeptaContentDefaults = {
         {
           title: "핵심 비즈니스",
           description: "Mining · White Label · Crypto Exchange",
-          link: "./detail.html?menu=business&item=mining"
+          link: "/business?item=mining"
         },
         {
           title: "솔루션 스택",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "./detail.html?menu=business&item=development"
+          link: "/business?item=development"
         },
         {
           title: "운영 철학",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "./detail.html?menu=about&item=vision"
+          link: "/about?item=vision"
         }
       ],
       en: [
         {
           title: "Core Business",
           description: "Mining · White Label · Crypto Exchange",
-          link: "./detail.html?menu=business&item=mining"
+          link: "/business?item=mining"
         },
         {
           title: "Solution Stack",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "./detail.html?menu=business&item=development"
+          link: "/business?item=development"
         },
         {
           title: "Operating Principles",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "./detail.html?menu=about&item=vision"
+          link: "/about?item=vision"
         }
       ],
       zh: [
         {
           title: "核心业务",
           description: "Mining · White Label · Crypto Exchange",
-          link: "./detail.html?menu=business&item=mining"
+          link: "/business?item=mining"
         },
         {
           title: "方案栈",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "./detail.html?menu=business&item=development"
+          link: "/business?item=development"
         },
         {
           title: "运营理念",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "./detail.html?menu=about&item=vision"
+          link: "/about?item=vision"
         }
       ]
     },
