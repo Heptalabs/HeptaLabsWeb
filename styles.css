@@ -103,7 +103,7 @@ body {
   z-index: -2;
   opacity: 0.74;
   transform: translate3d(var(--parallax-x), var(--parallax-y), 0) rotate(0deg);
-  animation: floatRing 11.4s ease-in-out infinite, spinRing 27s linear infinite;
+  animation: floatRing 11.4s ease-in-out infinite;
   filter: blur(0.55px);
 }
 
@@ -162,17 +162,17 @@ body {
 }
 
 .orb-top {
-  width: clamp(420px, 41vw, 720px);
+  width: clamp(210px, 20.5vw, 360px);
   aspect-ratio: 1;
   top: 6vh;
-  right: clamp(-110px, -10vw, -38px);
+  right: clamp(-64px, -6.2vw, -20px);
 }
 
 .orb-bottom {
-  width: clamp(320px, 31vw, 540px);
+  width: clamp(160px, 15.5vw, 270px);
   aspect-ratio: 1;
   bottom: -13vh;
-  left: clamp(-140px, -9vw, -26px);
+  left: clamp(-74px, -5.2vw, -14px);
   animation-delay: -3.4s;
 }
 
@@ -180,9 +180,9 @@ body {
   position: sticky;
   top: 0;
   z-index: 30;
-  margin: 0 auto;
-  width: min(1380px, calc(100% - 50px));
-  padding: 18px 8px;
+  margin: 0;
+  width: 100%;
+  padding: 18px clamp(22px, 3vw, 48px);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -267,7 +267,8 @@ body {
 .header-controls {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-self: end;
+  gap: 12px;
 }
 
 .icon-btn {
@@ -1389,16 +1390,19 @@ textarea {
 
 @media (max-width: 1120px) {
   .site-header {
-    width: min(100% - 20px, 1380px);
+    width: 100%;
     grid-template-columns: 1fr;
     justify-items: start;
-    padding: 14px 8px;
+    padding: 14px clamp(16px, 3.4vw, 28px);
     gap: 10px;
   }
 
-  .primary-nav,
-  .header-controls {
+  .primary-nav {
     justify-self: start;
+  }
+
+  .header-controls {
+    justify-self: end;
   }
 
   .home-main,
@@ -1406,7 +1410,7 @@ textarea {
   .footer-panel,
   .admin-auth-wrap,
   .admin-main {
-    width: min(100% - 20px, 1380px);
+    width: min(calc(100% - 20px), 1380px);
   }
 
   .spotlight-grid,
@@ -1498,13 +1502,13 @@ textarea {
   }
 
   .orb-top {
-    width: min(66vw, 380px);
-    right: -25vw;
+    width: min(34vw, 190px);
+    right: -12vw;
   }
 
   .orb-bottom {
-    width: min(62vw, 320px);
-    left: -22vw;
+    width: min(32vw, 160px);
+    left: -11vw;
   }
 
   .lang-switch button {
