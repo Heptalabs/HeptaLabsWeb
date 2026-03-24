@@ -2074,8 +2074,9 @@
     target.append(pagination);
   };
 
-  const renderNoticeDetail = (translation, target, selectedPostId) => {
+  const renderNoticeDetail = (translation, target, selectedPostId, pageNumber = 1) => {
     const detailText = getLangText(UI_TEXT.detail);
+    const noticesPerPage = 5;
 
     appendFeatureImage(translation, target);
 
@@ -2088,31 +2089,44 @@
       return;
     }
 
-    const selected = notices.find((notice) => notice.id === selectedPostId) || notices[0];
+    const totalPages = Math.max(1, Math.ceil(notices.length / noticesPerPage));
+    let currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+
+    const selectedIndex = selectedPostId ? notices.findIndex((notice) => notice.id === selectedPostId) : -1;
+    if (selectedIndex >= 0) {
+      currentPage = Math.floor(selectedIndex / noticesPerPage) + 1;
+    }
+
+    const start = (currentPage - 1) * noticesPerPage;
+    const pageNotices = notices.slice(start, start + noticesPerPage);
+    const selected =
+      selectedIndex >= 0
+        ? notices[selectedIndex]
+        : pageNotices[0] || notices[start] || notices[0];
 
     const grid = document.createElement("div");
     grid.className = "post-grid";
 
-    notices.forEach((notice) => {
+    pageNotices.forEach((notice) => {
       const postTranslation = getPostTranslation(notice);
       const excerpt = postTranslation.excerpt || truncateText(postTranslation.body);
       const article = document.createElement("article");
-      article.className = "post-card";
+      article.className = "post-card notice-card";
       if (selected.id === notice.id) {
         article.classList.add("is-active");
       }
 
+      const thumbHtml = notice.image
+        ? `<img class="notice-card-thumb" src="${encodeHtml(notice.image)}" alt="${encodeHtml(
+            getLocalizedLabel(notice.imageAlt) || postTranslation.title
+          )}" loading="lazy" />`
+        : `<div class="notice-card-thumb notice-card-thumb-placeholder" aria-hidden="true"></div>`;
+
       article.innerHTML = `
         <a class="post-card-link" href="${encodeHtml(
-          buildDetailUrl("infos", "notice", { post: notice.id })
+          buildDetailUrl("infos", "notice", { post: notice.id, page: currentPage })
         )}">
-          ${
-            notice.image
-              ? `<img class="post-card-cover" src="${encodeHtml(notice.image)}" alt="${encodeHtml(
-                  getLocalizedLabel(notice.imageAlt) || postTranslation.title
-                )}" loading="lazy" />`
-              : ""
-          }
+          ${thumbHtml}
           <div class="post-card-body">
             <p class="post-card-meta">${encodeHtml(formatDisplayDate(notice.createdAt))}</p>
             <h3 class="post-card-title">${encodeHtml(postTranslation.title)}</h3>
@@ -2130,6 +2144,41 @@
     });
 
     target.append(grid);
+
+    if (totalPages > 1) {
+      const pagination = document.createElement("nav");
+      pagination.className = "news-pagination";
+      pagination.setAttribute("aria-label", "Notice pagination");
+
+      if (currentPage > 1) {
+        const prevLink = document.createElement("a");
+        prevLink.className = "news-page-btn";
+        prevLink.href = buildDetailUrl("infos", "notice", { page: currentPage - 1 });
+        prevLink.textContent = detailText.pagePrev;
+        pagination.append(prevLink);
+      }
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        const pageLink = document.createElement("a");
+        pageLink.className = "news-page-btn";
+        if (page === currentPage) {
+          pageLink.classList.add("is-active");
+        }
+        pageLink.href = buildDetailUrl("infos", "notice", { page });
+        pageLink.textContent = String(page);
+        pagination.append(pageLink);
+      }
+
+      if (currentPage < totalPages) {
+        const nextLink = document.createElement("a");
+        nextLink.className = "news-page-btn";
+        nextLink.href = buildDetailUrl("infos", "notice", { page: currentPage + 1 });
+        nextLink.textContent = detailText.pageNext;
+        pagination.append(nextLink);
+      }
+
+      target.append(pagination);
+    }
 
     const selectedTranslation = getPostTranslation(selected);
     const expanded = document.createElement("article");
@@ -2364,7 +2413,7 @@
       if (menuId === "infos" && itemId === "news") {
         renderNewsDetail(translation, sectionsElement, postId, page);
       } else if (menuId === "infos" && itemId === "notice") {
-        renderNoticeDetail(translation, sectionsElement, postId);
+        renderNoticeDetail(translation, sectionsElement, postId, page);
       } else if (menuId === "help" && itemId === "qna") {
         renderQnaDetail(translation, sectionsElement);
       } else {
