@@ -1084,6 +1084,13 @@ textarea {
   line-height: 1.6;
 }
 
+.qna-item-contact {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
 .qna-item-answer {
   margin: 10px 0 0;
   padding-top: 10px;

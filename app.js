@@ -1094,6 +1094,39 @@
     return "";
   };
 
+  const maskEmail = (email) => {
+    const source = asString(email).trim();
+    if (!source.includes("@")) {
+      return source ? "***" : "";
+    }
+
+    const [local, domain] = source.split("@");
+    if (!local || !domain) {
+      return "***";
+    }
+
+    const localMasked =
+      local.length <= 2
+        ? `${local.slice(0, 1)}*`
+        : `${local.slice(0, 1)}${"*".repeat(Math.max(local.length - 2, 2))}${local.slice(-1)}`;
+
+    return `${localMasked}@${domain}`;
+  };
+
+  const maskPhone = (phone) => {
+    const source = asString(phone).trim();
+    if (!source) {
+      return "";
+    }
+
+    const digits = source.replace(/\D/g, "");
+    if (digits.length < 8) {
+      return "***-***";
+    }
+
+    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}**-**${digits.slice(-2)}`;
+  };
+
   const getNoticeSeenIds = () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.noticeSeen);
@@ -1490,11 +1523,15 @@
       article.className = "qna-item";
 
       const answerText = getLocalizedAnswer(entry);
+      const maskedPhone = maskPhone(entry.phone);
+      const maskedEmail = maskEmail(entry.email);
+      const contactText = [maskedEmail, maskedPhone].filter(Boolean).join(" · ");
       article.innerHTML = `
         <div class="qna-item-head">
           <span class="qna-item-name">${encodeHtml(entry.name || "Anonymous")}</span>
           <span class="qna-item-date">${encodeHtml(formatDisplayDate(entry.createdAt))}</span>
         </div>
+        ${contactText ? `<p class="qna-item-contact">${encodeHtml(contactText)}</p>` : ""}
         <p class="qna-item-question">${richText(entry.question)}</p>
         <p class="qna-item-answer"><strong>A.</strong> ${
           answerText ? richText(answerText) : encodeHtml(detailText.qnaPending)
