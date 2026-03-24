@@ -142,14 +142,18 @@
         editHeading: "콘텐츠 편집",
         labelTitle: "제목",
         labelSubtitle: "부제",
-        labelFeatureImage: "대표 이미지 URL",
-        labelFeatureAlt: "대표 이미지 ALT",
-        labelFeatureUpload: "대표 이미지 업로드",
+        labelFeatureMediaType: "대표 미디어 타입",
+        labelFeatureImage: "대표 미디어 URL",
+        labelFeatureAlt: "대표 미디어 ALT",
+        labelFeatureUpload: "대표 미디어 업로드",
         sectionsHeading: "섹션",
         sectionHeadingLabel: "섹션 제목",
         sectionBodyLabel: "섹션 본문",
-        sectionImageLabel: "섹션 이미지 URL",
-        sectionImageUploadLabel: "섹션 이미지 업로드",
+        sectionMediaTypeLabel: "섹션 미디어 타입",
+        sectionImageLabel: "섹션 미디어 URL",
+        sectionImageUploadLabel: "섹션 미디어 업로드",
+        mediaTypeImage: "이미지 / GIF",
+        mediaTypeVideo: "동영상",
         addSection: "섹션 추가",
         save: "저장",
         resetItem: "현재 항목 초기화",
@@ -246,14 +250,18 @@
         editHeading: "Content Editor",
         labelTitle: "Title",
         labelSubtitle: "Subtitle",
-        labelFeatureImage: "Feature Image URL",
-        labelFeatureAlt: "Feature Image ALT",
-        labelFeatureUpload: "Upload Feature Image",
+        labelFeatureMediaType: "Feature Media Type",
+        labelFeatureImage: "Feature Media URL",
+        labelFeatureAlt: "Feature Media ALT",
+        labelFeatureUpload: "Upload Feature Media",
         sectionsHeading: "Sections",
         sectionHeadingLabel: "Section Heading",
         sectionBodyLabel: "Section Body",
-        sectionImageLabel: "Section Image URL",
-        sectionImageUploadLabel: "Upload Section Image",
+        sectionMediaTypeLabel: "Section Media Type",
+        sectionImageLabel: "Section Media URL",
+        sectionImageUploadLabel: "Upload Section Media",
+        mediaTypeImage: "Image / GIF",
+        mediaTypeVideo: "Video",
         addSection: "Add Section",
         save: "Save",
         resetItem: "Reset Current Item",
@@ -350,14 +358,18 @@
         editHeading: "内容编辑",
         labelTitle: "标题",
         labelSubtitle: "副标题",
-        labelFeatureImage: "主图 URL",
-        labelFeatureAlt: "主图 ALT",
-        labelFeatureUpload: "上传主图",
+        labelFeatureMediaType: "主媒体类型",
+        labelFeatureImage: "主媒体 URL",
+        labelFeatureAlt: "主媒体 ALT",
+        labelFeatureUpload: "上传主媒体",
         sectionsHeading: "段落",
         sectionHeadingLabel: "段落标题",
         sectionBodyLabel: "段落内容",
-        sectionImageLabel: "段落图片 URL",
-        sectionImageUploadLabel: "上传段落图片",
+        sectionMediaTypeLabel: "段落媒体类型",
+        sectionImageLabel: "段落媒体 URL",
+        sectionImageUploadLabel: "上传段落媒体",
+        mediaTypeImage: "图片 / GIF",
+        mediaTypeVideo: "视频",
         addSection: "新增段落",
         save: "保存",
         resetItem: "重置当前条目",
@@ -464,6 +476,53 @@
   const createEntryId = (prefix) =>
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+  const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
+
+  const normalizeMediaType = (value, fallback = "image") => {
+    const source = asString(value).trim().toLowerCase();
+    if (source === "video") {
+      return "video";
+    }
+    if (source === "image") {
+      return "image";
+    }
+    return fallback === "video" ? "video" : "image";
+  };
+
+  const inferMediaTypeFromUrl = (value, fallback = "image") => {
+    const source = asString(value).trim().toLowerCase();
+    if (!source) {
+      return normalizeMediaType(fallback);
+    }
+
+    if (source.startsWith("data:video/")) {
+      return "video";
+    }
+
+    if (source.startsWith("data:image/")) {
+      return "image";
+    }
+
+    const cleaned = source.split("?")[0].split("#")[0];
+    const extension = cleaned.includes(".") ? cleaned.split(".").pop() : "";
+    if (extension && VIDEO_EXTENSIONS.has(extension)) {
+      return "video";
+    }
+
+    return normalizeMediaType(fallback);
+  };
+
+  const inferMediaTypeFromFile = (file, fallback = "image") => {
+    const mime = asString(file && file.type ? file.type : "").toLowerCase();
+    if (mime.startsWith("video/")) {
+      return "video";
+    }
+    if (mime.startsWith("image/")) {
+      return "image";
+    }
+    return inferMediaTypeFromUrl(asString(file && file.name ? file.name : ""), fallback);
+  };
+
   const ensureLangMap = (value, fallback = {}) => {
     const source = value && typeof value === "object" ? value : {};
     const fallbackMap = fallback && typeof fallback === "object" ? fallback : {};
@@ -496,11 +555,17 @@
   const ensureSection = (value, fallback = {}) => {
     const source = value && typeof value === "object" ? value : {};
     const fallbackSection = fallback && typeof fallback === "object" ? fallback : {};
+    const mediaUrl = asString(source.image || fallbackSection.image || "");
+    const mediaType = normalizeMediaType(
+      source.mediaType || fallbackSection.mediaType,
+      inferMediaTypeFromUrl(mediaUrl, "image")
+    );
 
     return {
       heading: asString(source.heading || fallbackSection.heading),
       body: asString(source.body || fallbackSection.body),
-      image: asString(source.image || fallbackSection.image || "")
+      image: mediaUrl,
+      mediaType
     };
   };
 
@@ -513,11 +578,17 @@
       ? fallbackTranslation.sections
       : [];
     const sectionsToUse = sourceSections || fallbackSections;
+    const featureMediaUrl = asString(source.featureImage || fallbackTranslation.featureImage || "");
+    const featureMediaType = normalizeMediaType(
+      source.featureMediaType || fallbackTranslation.featureMediaType,
+      inferMediaTypeFromUrl(featureMediaUrl, "image")
+    );
 
     return {
       title: asString(source.title || fallbackTranslation.title),
       subtitle: asString(source.subtitle || fallbackTranslation.subtitle),
-      featureImage: asString(source.featureImage || fallbackTranslation.featureImage || ""),
+      featureImage: featureMediaUrl,
+      featureMediaType,
       featureImageAlt: ensureLangMap(source.featureImageAlt, fallbackTranslation.featureImageAlt),
       sections: sectionsToUse.map((section, index) =>
         ensureSection(section, fallbackSections[index] || {})
@@ -1443,18 +1514,56 @@
     return { menuId, itemId, postId };
   };
 
-  const appendFeatureImage = (translation, target) => {
-    const imageUrl = asString(translation.featureImage).trim();
-    if (!imageUrl) {
-      return;
+  const createDetailMediaNode = ({
+    url,
+    mediaType,
+    alt,
+    imageClassName,
+    videoClassName,
+    fallbackType = "image"
+  }) => {
+    const sourceUrl = asString(url).trim();
+    if (!sourceUrl) {
+      return null;
     }
 
-    const featureImage = document.createElement("img");
-    featureImage.className = "detail-feature-image";
-    featureImage.src = imageUrl;
-    featureImage.alt = getLocalizedLabel(translation.featureImageAlt) || asString(translation.title);
-    featureImage.loading = "lazy";
-    target.append(featureImage);
+    const resolvedType = normalizeMediaType(mediaType, inferMediaTypeFromUrl(sourceUrl, fallbackType));
+    if (resolvedType === "video") {
+      const video = document.createElement("video");
+      video.className = videoClassName;
+      video.src = sourceUrl;
+      video.controls = true;
+      video.preload = "metadata";
+      video.playsInline = true;
+      const label = asString(alt).trim();
+      if (label) {
+        video.setAttribute("title", label);
+        video.setAttribute("aria-label", label);
+      }
+      return video;
+    }
+
+    const image = document.createElement("img");
+    image.className = imageClassName;
+    image.src = sourceUrl;
+    image.alt = asString(alt);
+    image.loading = "lazy";
+    return image;
+  };
+
+  const appendFeatureImage = (translation, target) => {
+    const featureAlt = getLocalizedLabel(translation.featureImageAlt) || asString(translation.title);
+    const mediaNode = createDetailMediaNode({
+      url: translation.featureImage,
+      mediaType: translation.featureMediaType,
+      alt: featureAlt,
+      imageClassName: "detail-feature-image",
+      videoClassName: "detail-feature-video",
+      fallbackType: "image"
+    });
+    if (mediaNode) {
+      target.append(mediaNode);
+    }
   };
 
   const appendTranslationSections = (translation, target) => {
@@ -1462,14 +1571,26 @@
       const block = document.createElement("section");
       block.className = "detail-section";
 
-      const imageUrl = asString(section.image).trim();
-      block.innerHTML = `${
-        imageUrl
-          ? `<img class="detail-section-image" src="${encodeHtml(imageUrl)}" alt="${encodeHtml(
-              section.heading || translation.title
-            )}" loading="lazy" />`
-          : ""
-      }<h2>${encodeHtml(section.heading)}</h2><p>${richText(section.body)}</p>`;
+      const mediaNode = createDetailMediaNode({
+        url: section.image,
+        mediaType: section.mediaType,
+        alt: section.heading || translation.title,
+        imageClassName: "detail-section-image",
+        videoClassName: "detail-section-video",
+        fallbackType: "image"
+      });
+      if (mediaNode) {
+        block.append(mediaNode);
+      }
+
+      const heading = document.createElement("h2");
+      heading.textContent = asString(section.heading);
+      block.append(heading);
+
+      const body = document.createElement("p");
+      body.innerHTML = richText(section.body);
+      block.append(body);
+
       target.append(block);
     });
   };
@@ -1974,6 +2095,7 @@
     const itemSelect = document.getElementById("admin-item");
     const titleInput = document.getElementById("admin-title-input");
     const subtitleInput = document.getElementById("admin-subtitle-input");
+    const featureMediaTypeSelect = document.getElementById("admin-feature-media-type");
     const featureImageInput = document.getElementById("admin-feature-image-input");
     const featureImageAltInput = document.getElementById("admin-feature-image-alt-input");
     const featureImageFileInput = document.getElementById("admin-feature-image-file");
@@ -2136,9 +2258,12 @@
         "[data-admin-edit-heading]": text.editHeading,
         "[data-admin-label-title]": text.labelTitle,
         "[data-admin-label-subtitle]": text.labelSubtitle,
+        "[data-admin-label-feature-media-type]": text.labelFeatureMediaType,
         "[data-admin-label-feature-image]": text.labelFeatureImage,
         "[data-admin-label-feature-alt]": text.labelFeatureAlt,
         "[data-admin-label-feature-upload]": text.labelFeatureUpload,
+        "[data-admin-media-type-image]": text.mediaTypeImage,
+        "[data-admin-media-type-video]": text.mediaTypeVideo,
         "[data-admin-sections-heading]": text.sectionsHeading,
         "[data-admin-add-section]": text.addSection,
         "[data-admin-save]": text.save,
@@ -2250,11 +2375,30 @@
         });
       });
 
+      sectionsWrap.querySelectorAll("select[data-section-media-type]").forEach((input) => {
+        input.addEventListener("change", () => {
+          const translation = ensureTranslation();
+          const index = Number(input.dataset.sectionMediaType);
+          translation.sections[index].mediaType = normalizeMediaType(input.value, "image");
+          syncJsonPreview();
+        });
+      });
+
       sectionsWrap.querySelectorAll("input[data-section-image]").forEach((input) => {
         input.addEventListener("input", () => {
           const translation = ensureTranslation();
           const index = Number(input.dataset.sectionImage);
           translation.sections[index].image = input.value;
+          translation.sections[index].mediaType = inferMediaTypeFromUrl(
+            input.value,
+            translation.sections[index].mediaType
+          );
+          const typeSelect = sectionsWrap.querySelector(
+            `select[data-section-media-type="${index}"]`
+          );
+          if (typeSelect) {
+            typeSelect.value = translation.sections[index].mediaType;
+          }
           syncJsonPreview();
         });
       });
@@ -2271,6 +2415,10 @@
             const translation = ensureTranslation();
             const index = Number(input.dataset.sectionImageFile);
             translation.sections[index].image = dataUrl;
+            translation.sections[index].mediaType = inferMediaTypeFromFile(
+              file,
+              translation.sections[index].mediaType
+            );
             renderEditor();
             showStatus(text.statusSaved);
           } catch (error) {
@@ -2289,6 +2437,13 @@
       titleInput.value = translation.title;
       subtitleInput.value = translation.subtitle;
 
+      if (featureMediaTypeSelect) {
+        featureMediaTypeSelect.value = normalizeMediaType(
+          translation.featureMediaType,
+          inferMediaTypeFromUrl(translation.featureImage, "image")
+        );
+      }
+
       if (featureImageInput) {
         featureImageInput.value = translation.featureImage || "";
       }
@@ -2298,6 +2453,10 @@
 
       sectionsWrap.innerHTML = "";
       translation.sections.forEach((section, index) => {
+        const sectionMediaType = normalizeMediaType(
+          section.mediaType,
+          inferMediaTypeFromUrl(section.image, "image")
+        );
         const sectionCard = document.createElement("article");
         sectionCard.className = "section-editor";
         sectionCard.innerHTML = `
@@ -2309,10 +2468,19 @@
           <input type="text" data-section-heading="${index}" value="${encodeHtml(section.heading)}" />
           <label>${encodeHtml(text.sectionBodyLabel)}</label>
           <textarea rows="4" data-section-body="${index}">${encodeHtml(section.body)}</textarea>
+          <label>${encodeHtml(text.sectionMediaTypeLabel)}</label>
+          <select data-section-media-type="${index}">
+            <option value="image" ${sectionMediaType === "image" ? "selected" : ""}>${encodeHtml(
+              text.mediaTypeImage
+            )}</option>
+            <option value="video" ${sectionMediaType === "video" ? "selected" : ""}>${encodeHtml(
+              text.mediaTypeVideo
+            )}</option>
+          </select>
           <label>${encodeHtml(text.sectionImageLabel)}</label>
           <input type="url" data-section-image="${index}" value="${encodeHtml(section.image || "")}" />
           <label>${encodeHtml(text.sectionImageUploadLabel)}</label>
-          <input type="file" accept="image/*" data-section-image-file="${index}" />
+          <input type="file" accept="image/*,video/*" data-section-image-file="${index}" />
         `;
         sectionsWrap.append(sectionCard);
       });
@@ -3032,6 +3200,24 @@
       featureImageInput.addEventListener("input", () => {
         const translation = ensureTranslation();
         translation.featureImage = featureImageInput.value;
+        translation.featureMediaType = inferMediaTypeFromUrl(
+          featureImageInput.value,
+          translation.featureMediaType
+        );
+        if (featureMediaTypeSelect) {
+          featureMediaTypeSelect.value = translation.featureMediaType;
+        }
+        syncJsonPreview();
+      });
+    }
+
+    if (featureMediaTypeSelect) {
+      featureMediaTypeSelect.addEventListener("change", () => {
+        const translation = ensureTranslation();
+        translation.featureMediaType = normalizeMediaType(
+          featureMediaTypeSelect.value,
+          inferMediaTypeFromUrl(translation.featureImage, "image")
+        );
         syncJsonPreview();
       });
     }
@@ -3055,6 +3241,10 @@
           const dataUrl = await fileToDataUrl(file);
           const translation = ensureTranslation();
           translation.featureImage = dataUrl;
+          translation.featureMediaType = inferMediaTypeFromFile(
+            file,
+            translation.featureMediaType
+          );
           renderEditor();
           showStatus(adminText().statusSaved);
         } catch (error) {
@@ -3072,7 +3262,8 @@
         translation.sections.push({
           heading: "",
           body: "",
-          image: ""
+          image: "",
+          mediaType: "image"
         });
         renderEditor();
       });

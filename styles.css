@@ -654,13 +654,15 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   font-family: "Sora", sans-serif;
 }
 
-.detail-section-image {
+.detail-section-image,
+.detail-section-video {
   width: 100%;
   margin: 0 0 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
   object-fit: cover;
   max-height: 320px;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .detail-section p {
@@ -891,13 +893,15 @@ textarea {
   font-size: 0.94rem;
 }
 
-.detail-feature-image {
+.detail-feature-image,
+.detail-feature-video {
   width: 100%;
   max-height: 420px;
   object-fit: cover;
   border-radius: 16px;
   border: 1px solid var(--line);
   margin: 14px 0 16px;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .post-grid {

@@ -13,7 +13,7 @@
     />
     <link rel="icon" type="image/svg+xml" href="../assets/brand/favicon.svg" />
     <link rel="shortcut icon" href="../assets/brand/favicon.svg" />
-    <link rel="stylesheet" href="../styles.css?v=20260324fullpass" />
+    <link rel="stylesheet" href="../styles.css?v=20260324media" />
   </head>
   <body data-page="admin">
     <div class="page-bg" aria-hidden="true"></div>
@@ -109,6 +109,13 @@
               <textarea id="admin-subtitle-input" rows="4"></textarea>
             </div>
             <div class="field-group">
+              <label for="admin-feature-media-type" data-admin-label-feature-media-type></label>
+              <select id="admin-feature-media-type">
+                <option value="image" data-admin-media-type-image></option>
+                <option value="video" data-admin-media-type-video></option>
+              </select>
+            </div>
+            <div class="field-group">
               <label for="admin-feature-image-input" data-admin-label-feature-image></label>
               <input id="admin-feature-image-input" type="url" placeholder="https://..." />
             </div>
@@ -118,7 +125,7 @@
             </div>
             <div class="field-group">
               <label for="admin-feature-image-file" data-admin-label-feature-upload></label>
-              <input id="admin-feature-image-file" type="file" accept="image/*" />
+              <input id="admin-feature-image-file" type="file" accept="image/*,video/*" />
             </div>
 
             <div class="sections-wrap">
@@ -161,7 +168,7 @@
       </section>
     </main>
 
-    <script src="../content.js?v=20260324fullpass"></script>
-    <script src="../app.js?v=20260324fullpass"></script>
+    <script src="../content.js?v=20260324media"></script>
+    <script src="../app.js?v=20260324media"></script>
   </body>
 </html>
