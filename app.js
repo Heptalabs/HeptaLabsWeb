@@ -2485,6 +2485,47 @@
     return { menuId, itemId, postId, page };
   };
 
+  const normalizePublicPathUrl = () => {
+    const page = document.body.dataset.page;
+    if (page === "admin") {
+      return;
+    }
+
+    const pathname = asString(window.location.pathname);
+
+    if (page === "home") {
+      if (/\/index\.html$/i.test(pathname) || pathname === "/") {
+        const targetUrl = ROUTE_PATHS.home;
+        if (`${window.location.pathname}${window.location.search}` !== targetUrl) {
+          window.history.replaceState({}, "", targetUrl);
+        }
+      }
+      return;
+    }
+
+    if (page === "detail") {
+      const isLegacyDetailPath = /\/detail\.html$/i.test(pathname);
+      const isMenuPath = Boolean(resolveMenuFromPath(pathname));
+      if (!isLegacyDetailPath && isMenuPath) {
+        return;
+      }
+
+      const { menuId, itemId, postId, page: currentPage } = resolveDetailParams();
+      const extraParams = {};
+      if (postId) {
+        extraParams.post = postId;
+      }
+      if (currentPage && currentPage > 1) {
+        extraParams.page = currentPage;
+      }
+
+      const targetUrl = buildDetailUrl(menuId, itemId, extraParams);
+      if (`${window.location.pathname}${window.location.search}` !== targetUrl) {
+        window.history.replaceState({}, "", targetUrl);
+      }
+    }
+  };
+
   const createDetailMediaNode = ({
     url,
     mediaType,
@@ -4770,6 +4811,7 @@
     ensureSeededNewsPostsOnce();
     ensureSeededNoticesOnce();
     ensureSeededInquiriesOnce();
+    normalizePublicPathUrl();
     initThemeAndLangControls();
     initReveal();
     initOrbParallax();
