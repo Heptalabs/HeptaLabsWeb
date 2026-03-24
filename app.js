@@ -252,10 +252,14 @@
         siteHeroImageLabel: "홈 이미지 URL",
         siteHeroImageAltLabel: "홈 이미지 ALT",
         siteHeroImageUploadLabel: "홈 이미지 업로드",
+        siteSpotlightHeading: "메인 소개 박스 3개",
+        siteSpotlightTitleLabel: "박스 제목",
+        siteSpotlightDescriptionLabel: "박스 설명",
+        siteSpotlightLinkLabel: "박스 링크 URL",
         siteFooterHeading: "푸터",
         siteFooterCopyrightLabel: "저작권 문구",
         siteFooterCommunityLabel: "커뮤니티 문구",
-        siteSave: "홈/푸터 저장"
+        siteSave: "홈/박스/푸터 저장"
       },
       en: {
         title: "Hepta Labs Content Admin",
@@ -362,10 +366,14 @@
         siteHeroImageLabel: "Home Image URL",
         siteHeroImageAltLabel: "Home Image ALT",
         siteHeroImageUploadLabel: "Upload Home Image",
+        siteSpotlightHeading: "Home Intro Cards (3)",
+        siteSpotlightTitleLabel: "Card Title",
+        siteSpotlightDescriptionLabel: "Card Description",
+        siteSpotlightLinkLabel: "Card Link URL",
         siteFooterHeading: "Footer",
         siteFooterCopyrightLabel: "Copyright",
         siteFooterCommunityLabel: "Community",
-        siteSave: "Save Home/Footer"
+        siteSave: "Save Home/Cards/Footer"
       },
       zh: {
         title: "Hepta Labs 内容管理",
@@ -471,10 +479,14 @@
         siteHeroImageLabel: "首页图片 URL",
         siteHeroImageAltLabel: "首页图片 ALT",
         siteHeroImageUploadLabel: "上传首页图片",
+        siteSpotlightHeading: "首页介绍卡片（3个）",
+        siteSpotlightTitleLabel: "卡片标题",
+        siteSpotlightDescriptionLabel: "卡片说明",
+        siteSpotlightLinkLabel: "卡片链接 URL",
         siteFooterHeading: "页脚",
         siteFooterCopyrightLabel: "版权文案",
         siteFooterCommunityLabel: "社区文案",
-        siteSave: "保存首页/页脚"
+        siteSave: "保存首页/卡片/页脚"
       }
     }
   };
@@ -708,6 +720,17 @@
       ko: ensurePostTranslation(source.ko, fallbackMap.ko),
       en: ensurePostTranslation(source.en, fallbackMap.en),
       zh: ensurePostTranslation(source.zh, fallbackMap.zh)
+    };
+  };
+
+  const ensureSpotlightCard = (value, fallback = {}) => {
+    const source = value && typeof value === "object" ? value : {};
+    const fallbackCard = fallback && typeof fallback === "object" ? fallback : {};
+
+    return {
+      title: asString(source.title || fallbackCard.title),
+      description: asString(source.description || fallbackCard.description),
+      link: asString(source.link || fallbackCard.link)
     };
   };
 
@@ -1548,6 +1571,7 @@
     const fallback = defaults.site && typeof defaults.site === "object" ? defaults.site : {};
 
     const hero = {};
+    const spotlights = {};
     const footer = {};
 
     SUPPORTED_LANGS.forEach((lang) => {
@@ -1566,6 +1590,17 @@
         ctaSecondary: asString(sourceHero.ctaSecondary || fallbackHero.ctaSecondary)
       };
 
+      const sourceSpotlights =
+        source.spotlights && Array.isArray(source.spotlights[lang]) ? source.spotlights[lang] : [];
+      const fallbackSpotlights =
+        fallback.spotlights && Array.isArray(fallback.spotlights[lang])
+          ? fallback.spotlights[lang]
+          : [];
+
+      spotlights[lang] = [0, 1, 2].map((index) =>
+        ensureSpotlightCard(sourceSpotlights[index], fallbackSpotlights[index] || {})
+      );
+
       const sourceFooter = source.footer && source.footer[lang] ? source.footer[lang] : {};
       const fallbackFooter = fallback.footer && fallback.footer[lang] ? fallback.footer[lang] : {};
 
@@ -1580,6 +1615,7 @@
 
     return {
       hero,
+      spotlights,
       footer,
       media: {
         heroImage: asString(sourceMedia.heroImage || fallbackMedia.heroImage || ""),
@@ -2346,23 +2382,30 @@
         ? infoMenu.items[0].labels[state.lang] || infoMenu.items[0].labels.en
         : "";
 
-    const cardData = [
-      {
-        title: cardTitles[0],
-        description: businessLabels.slice(0, 3).join(" · "),
-        link: buildDetailUrl("business", "mining")
-      },
-      {
-        title: cardTitles[1],
-        description: businessLabels.slice(1).join(" · "),
-        link: buildDetailUrl("business", "development")
-      },
-      {
-        title: cardTitles[2],
-        description: [aboutVisionLabel, infoNewsLabel].filter(Boolean).join(" · "),
-        link: buildDetailUrl("about", "vision")
-      }
+    const fallbackDescriptions = [
+      businessLabels.slice(0, 3).join(" · "),
+      businessLabels.slice(1).join(" · "),
+      [aboutVisionLabel, infoNewsLabel].filter(Boolean).join(" · ")
     ];
+    const fallbackLinks = [
+      buildDetailUrl("business", "mining"),
+      buildDetailUrl("business", "development"),
+      buildDetailUrl("about", "vision")
+    ];
+
+    const siteSpotlights =
+      (state.content.site.spotlights &&
+        (state.content.site.spotlights[state.lang] || state.content.site.spotlights.en)) ||
+      [];
+
+    const cardData = [0, 1, 2].map((index) => {
+      const source = siteSpotlights[index] || {};
+      return {
+        title: asString(source.title) || cardTitles[index] || `Card ${index + 1}`,
+        description: asString(source.description) || fallbackDescriptions[index] || "",
+        link: asString(source.link) || fallbackLinks[index]
+      };
+    });
 
     cards.innerHTML = "";
     cardData.forEach((card) => {
@@ -4092,6 +4135,16 @@
       const text = adminText();
 
       const hero = adminState.content.site.hero[adminState.editLang];
+      if (!adminState.content.site.spotlights) {
+        adminState.content.site.spotlights = { ko: [], en: [], zh: [] };
+      }
+      const spotlightCards = Array.isArray(adminState.content.site.spotlights[adminState.editLang])
+        ? adminState.content.site.spotlights[adminState.editLang]
+        : [];
+      while (spotlightCards.length < 3) {
+        spotlightCards.push({ title: "", description: "", link: "" });
+      }
+      adminState.content.site.spotlights[adminState.editLang] = spotlightCards;
       const footer = adminState.content.site.footer[adminState.editLang];
       const media = adminState.content.site.media;
 
@@ -4141,6 +4194,40 @@
               <label for="admin-site-image-file">${encodeHtml(text.siteHeroImageUploadLabel)}</label>
               <input id="admin-site-image-file" type="file" accept="image/*" />
             </div>
+          </div>
+          <h3 class="post-card-title">${encodeHtml(text.siteSpotlightHeading)}</h3>
+          <div class="admin-module-grid two">
+            ${[0, 1, 2]
+              .map((index) => {
+                const card = spotlightCards[index] || { title: "", description: "", link: "" };
+                return `
+                  <div class="field-group">
+                    <label for="admin-site-spotlight-title-${index}">${encodeHtml(
+                      `${text.siteSpotlightTitleLabel} ${index + 1}`
+                    )}</label>
+                    <input id="admin-site-spotlight-title-${index}" type="text" value="${encodeHtml(
+                      card.title
+                    )}" />
+                  </div>
+                  <div class="field-group">
+                    <label for="admin-site-spotlight-description-${index}">${encodeHtml(
+                      `${text.siteSpotlightDescriptionLabel} ${index + 1}`
+                    )}</label>
+                    <input id="admin-site-spotlight-description-${index}" type="text" value="${encodeHtml(
+                      card.description
+                    )}" />
+                  </div>
+                  <div class="field-group">
+                    <label for="admin-site-spotlight-link-${index}">${encodeHtml(
+                      `${text.siteSpotlightLinkLabel} ${index + 1}`
+                    )}</label>
+                    <input id="admin-site-spotlight-link-${index}" type="text" value="${encodeHtml(
+                      card.link
+                    )}" />
+                  </div>
+                `;
+              })
+              .join("")}
           </div>
           <h3 class="post-card-title">${encodeHtml(text.siteFooterHeading)}</h3>
           <div class="admin-module-grid two">
@@ -4195,6 +4282,7 @@
       if (saveButton) {
         saveButton.addEventListener("click", () => {
           const heroContent = adminState.content.site.hero[adminState.editLang];
+          const spotlightContent = adminState.content.site.spotlights[adminState.editLang];
           const footerContent = adminState.content.site.footer[adminState.editLang];
 
           heroContent.kicker = asString(document.getElementById("admin-site-kicker").value).trim();
@@ -4213,6 +4301,20 @@
           adminState.content.site.media.heroImageAlt[adminState.editLang] = asString(
             document.getElementById("admin-site-image-alt").value
           ).trim();
+
+          [0, 1, 2].forEach((index) => {
+            const current = spotlightContent[index] || { title: "", description: "", link: "" };
+            current.title = asString(
+              document.getElementById(`admin-site-spotlight-title-${index}`).value
+            ).trim();
+            current.description = asString(
+              document.getElementById(`admin-site-spotlight-description-${index}`).value
+            ).trim();
+            current.link = asString(
+              document.getElementById(`admin-site-spotlight-link-${index}`).value
+            ).trim();
+            spotlightContent[index] = current;
+          });
 
           footerContent.copyright = asString(
             document.getElementById("admin-site-footer-copyright").value

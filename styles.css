@@ -99,50 +99,80 @@ body {
   --parallax-x: 0px;
   --parallax-y: 0px;
   position: fixed;
-  border-radius: 50%;
   pointer-events: none;
   z-index: -2;
-  opacity: var(--ring-opacity);
-  filter: saturate(0.58) contrast(1.2);
+  opacity: 0.74;
   transform: translate3d(var(--parallax-x), var(--parallax-y), 0) rotate(0deg);
-  animation: floatRing 11.8s ease-in-out infinite, spinRing 21s linear infinite;
-  background:
-    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.85) 0%, rgba(230, 230, 230, 0.18) 28%, transparent 44%),
-    radial-gradient(circle at 74% 75%, rgba(0, 0, 0, 0.55), transparent 56%),
-    conic-gradient(
-      from 120deg,
-      rgba(250, 250, 250, 0.78),
-      rgba(62, 62, 62, 0.82),
-      rgba(192, 192, 192, 0.85),
-      rgba(45, 45, 45, 0.92),
-      rgba(242, 242, 242, 0.8)
-    );
-  box-shadow: inset 0 14px 36px rgba(255, 255, 255, 0.24), inset 0 -24px 40px rgba(0, 0, 0, 0.35),
-    var(--glow);
-  mask-image: radial-gradient(circle at center, transparent 29%, black 35%, black 63%, transparent 68%);
+  animation: floatRing 11.4s ease-in-out infinite, spinRing 27s linear infinite;
+  filter: blur(0.55px);
 }
 
 .orb::before {
   content: "";
   position: absolute;
-  inset: 11%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 64% 40%, rgba(255, 255, 255, 0.35), transparent 55%);
-  filter: blur(0.5px);
+  inset: 0;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(245, 245, 245, 0.92) 0%,
+      rgba(185, 185, 185, 0.72) 34%,
+      rgba(36, 36, 36, 0.86) 66%,
+      rgba(210, 210, 210, 0.82) 100%
+    );
+  -webkit-mask: url("./assets/brand/symbol-black.svg") center / contain no-repeat;
+  mask: url("./assets/brand/symbol-black.svg") center / contain no-repeat;
+  transform: perspective(920px) rotateX(22deg) rotateY(-18deg);
+  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.32));
+}
+
+.orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.48), transparent 56%),
+    radial-gradient(circle at 74% 78%, rgba(0, 0, 0, 0.33), transparent 58%);
+  -webkit-mask: url("./assets/brand/symbol-black.svg") center / contain no-repeat;
+  mask: url("./assets/brand/symbol-black.svg") center / contain no-repeat;
+  transform: perspective(920px) rotateX(22deg) rotateY(-18deg) translateY(3px);
+  opacity: 0.66;
+}
+
+:root[data-theme="night"] .orb {
+  opacity: 0.82;
+}
+
+:root[data-theme="night"] .orb::before {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(244, 244, 244, 0.95) 0%,
+      rgba(196, 196, 196, 0.78) 30%,
+      rgba(78, 78, 78, 0.84) 64%,
+      rgba(248, 248, 248, 0.87) 100%
+    );
+  -webkit-mask: url("./assets/brand/symbol-white.svg") center / contain no-repeat;
+  mask: url("./assets/brand/symbol-white.svg") center / contain no-repeat;
+}
+
+:root[data-theme="night"] .orb::after {
+  -webkit-mask: url("./assets/brand/symbol-white.svg") center / contain no-repeat;
+  mask: url("./assets/brand/symbol-white.svg") center / contain no-repeat;
+  opacity: 0.46;
 }
 
 .orb-top {
-  width: clamp(360px, 38vw, 720px);
+  width: clamp(420px, 41vw, 720px);
   aspect-ratio: 1;
-  top: 8vh;
-  right: clamp(-90px, -8vw, -30px);
+  top: 6vh;
+  right: clamp(-110px, -10vw, -38px);
 }
 
 .orb-bottom {
-  width: clamp(280px, 28vw, 490px);
+  width: clamp(320px, 31vw, 540px);
   aspect-ratio: 1;
-  bottom: -14vh;
-  left: clamp(-120px, -7vw, -22px);
+  bottom: -13vh;
+  left: clamp(-140px, -9vw, -26px);
   animation-delay: -3.4s;
 }
 
@@ -171,9 +201,9 @@ body {
 
 .brand-logo {
   display: block;
-  height: clamp(24px, 2.3vw, 36px);
+  height: clamp(18px, 1.65vw, 26px);
   width: auto;
-  max-width: min(56vw, 292px);
+  max-width: min(50vw, 220px);
 }
 
 .brand-logo-night {
@@ -341,7 +371,14 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   color: var(--muted);
 }
 
-.hero h1,
+.hero h1 {
+  margin: 14px 0 18px;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(2.12rem, 4.9vw, 4.9rem);
+  line-height: 0.93;
+  letter-spacing: 0.01em;
+}
+
 .detail-content h1 {
   margin: 14px 0 18px;
   font-family: "Sora", sans-serif;
@@ -352,8 +389,8 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 
 .hero-line {
   margin: 0;
-  font-size: clamp(1.14rem, 1.9vw, 2.08rem);
-  line-height: 1.42;
+  font-size: clamp(0.96rem, 1.22vw, 1.28rem);
+  line-height: 1.6;
   color: var(--muted);
   max-width: 33ch;
 }
@@ -437,7 +474,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 .spotlight-card {
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: var(--bg-elev);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(16px);
   padding: 26px;
   box-shadow: var(--glow);
@@ -445,14 +482,12 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   overflow: hidden;
 }
 
+:root[data-theme="night"] .spotlight-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
 .spotlight-card::before {
-  content: "";
-  position: absolute;
-  inset: -35% auto auto -14%;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  display: none;
 }
 
 .spotlight-card h2 {
@@ -493,7 +528,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .footer-brand-lockup {
-  width: min(204px, 52vw);
+  width: min(132px, 40vw);
 }
 
 .footer-brand-logo {
@@ -1402,19 +1437,22 @@ textarea {
 }
 
 @media (max-width: 760px) {
-  .hero h1,
+  .hero h1 {
+    font-size: clamp(1.86rem, 9.8vw, 2.96rem);
+  }
+
   .detail-content h1 {
     font-size: clamp(2.35rem, 12vw, 3.86rem);
   }
 
   .brand-logo {
-    height: 26px;
-    max-width: 68vw;
+    height: 20px;
+    max-width: 58vw;
   }
 
   .hero-line {
-    font-size: clamp(1.06rem, 5.4vw, 1.36rem);
-    line-height: 1.5;
+    font-size: clamp(0.9rem, 4.4vw, 1.06rem);
+    line-height: 1.56;
   }
 
   .hero-actions {
@@ -1431,7 +1469,7 @@ textarea {
   }
 
   .footer-brand-lockup {
-    width: min(184px, 72vw);
+    width: min(118px, 58vw);
   }
 
   .spotlight-grid,
@@ -1460,13 +1498,13 @@ textarea {
   }
 
   .orb-top {
-    width: min(62vw, 420px);
-    right: -24vw;
+    width: min(66vw, 380px);
+    right: -25vw;
   }
 
   .orb-bottom {
-    width: min(58vw, 340px);
-    left: -20vw;
+    width: min(62vw, 320px);
+    left: -22vw;
   }
 
   .lang-switch button {
