@@ -68,7 +68,8 @@
         qnaShowAnswer: "답변 보기",
         qnaHideAnswer: "답변 숨기기",
         qnaAnonymous: "익명",
-        qnaPending: "답변 준비중",
+        qnaPending: "답변 대기중",
+        qnaAnswered: "답변 완료",
         qnaNoEntries: "아직 등록된 문의가 없습니다.",
         qnaInvalidName: "이름을 2자 이상 입력해 주세요.",
         qnaInvalidPhone: "전화번호 형식이 올바르지 않습니다.",
@@ -102,6 +103,7 @@
         qnaHideAnswer: "Hide Answer",
         qnaAnonymous: "Anonymous",
         qnaPending: "Answer pending",
+        qnaAnswered: "Answered",
         qnaNoEntries: "No inquiries yet.",
         qnaInvalidName: "Please enter at least 2 characters for your name.",
         qnaInvalidPhone: "Please enter a valid phone number.",
@@ -135,6 +137,7 @@
         qnaHideAnswer: "收起回复",
         qnaAnonymous: "匿名",
         qnaPending: "待回复",
+        qnaAnswered: "已回复",
         qnaNoEntries: "暂无咨询记录。",
         qnaInvalidName: "姓名请至少输入 2 个字符。",
         qnaInvalidPhone: "请输入有效的电话号码。",
@@ -2130,8 +2133,15 @@
       local.length <= 2
         ? `${local.slice(0, 1)}*`
         : `${local.slice(0, 1)}${"*".repeat(Math.max(local.length - 2, 2))}${local.slice(-1)}`;
+    const domainParts = domain.split(".");
+    const domainHead = asString(domainParts.shift());
+    const domainTail = asString(domainParts.join("."));
+    const domainMasked =
+      domainHead.length <= 2
+        ? `${domainHead.slice(0, 1)}*`
+        : `${domainHead.slice(0, 1)}${"*".repeat(Math.max(domainHead.length - 2, 2))}${domainHead.slice(-1)}`;
 
-    return `${localMasked}@${domain}`;
+    return domainTail ? `${localMasked}@${domainMasked}.${domainTail}` : `${localMasked}@${domainMasked}`;
   };
 
   const maskPhone = (phone) => {
@@ -2767,10 +2777,12 @@
     }
   };
 
-  const renderQnaBoard = (target, selectedEntryId, pageNumber = 1) => {
+  const renderQnaBoard = (target, selectedEntryId, pageNumber = 1, options = {}) => {
     const detailText = getLangText(UI_TEXT.detail);
     const entries = [...state.content.dynamic.inquiries].sort(sortByDateDesc);
     const entriesPerPage = 5;
+    const onToggle = options && typeof options.onToggle === "function" ? options.onToggle : null;
+    const onPageChange = options && typeof options.onPageChange === "function" ? options.onPageChange : null;
 
     target.innerHTML = "";
 
@@ -2799,14 +2811,13 @@
     pageEntries.forEach((entry) => {
       const isExpanded = selectedEntryId === entry.id;
       const answerText = getLocalizedAnswer(entry);
+      const hasAnswer = asString(answerText).trim().length > 0;
       const maskedName = maskName(entry.name) || detailText.qnaAnonymous;
       const maskedPhone = maskPhone(entry.phone);
       const maskedEmail = maskEmail(entry.email);
       const contactText = [maskedEmail, maskedPhone].filter(Boolean).join(" · ");
-
-      const toggleUrl = isExpanded
-        ? buildDetailUrl("help", "qna", { page: currentPage })
-        : buildDetailUrl("help", "qna", { post: entry.id, page: currentPage });
+      const statusText = hasAnswer ? detailText.qnaAnswered : detailText.qnaPending;
+      const statusClass = hasAnswer ? "is-answered" : "is-pending";
 
       const article = document.createElement("article");
       article.className = "post-card qna-post-card";
@@ -2815,9 +2826,12 @@
       }
 
       article.innerHTML = `
-        <a class="post-card-link qna-post-link" href="${encodeHtml(toggleUrl)}">
+        <button class="post-card-link qna-post-link qna-toggle-btn" type="button" data-qna-toggle>
           <div class="post-card-body">
-            <p class="post-card-meta">${encodeHtml(formatDisplayDate(entry.createdAt))}</p>
+            <div class="qna-meta-row">
+              <p class="post-card-meta">${encodeHtml(formatDisplayDate(entry.createdAt))}</p>
+              <span class="qna-status-badge ${encodeHtml(statusClass)}">${encodeHtml(statusText)}</span>
+            </div>
             <h3 class="post-card-title">${encodeHtml(maskedName)}</h3>
             ${contactText ? `<p class="qna-item-contact">${encodeHtml(contactText)}</p>` : ""}
             <p class="qna-item-question">${encodeHtml(truncateText(entry.question, 180))}</p>
@@ -2825,7 +2839,7 @@
               isExpanded ? detailText.qnaHideAnswer : detailText.qnaShowAnswer
             )}</span>
           </div>
-        </a>
+        </button>
         ${
           isExpanded
             ? `<div class="qna-answer-panel">
@@ -2836,6 +2850,24 @@
             : ""
         }
       `;
+
+      const toggleButton = article.querySelector("[data-qna-toggle]");
+      if (toggleButton) {
+        toggleButton.addEventListener("click", () => {
+          const nextEntryId = isExpanded ? null : entry.id;
+
+          if (onToggle) {
+            onToggle(nextEntryId, currentPage);
+            return;
+          }
+
+          const nextUrl = nextEntryId
+            ? buildDetailUrl("help", "qna", { post: nextEntryId, page: currentPage })
+            : buildDetailUrl("help", "qna", { page: currentPage });
+          window.history.replaceState({}, "", nextUrl);
+          renderQnaBoard(target, nextEntryId, currentPage);
+        });
+      }
 
       board.append(article);
     });
@@ -2848,30 +2880,62 @@
       pagination.setAttribute("aria-label", "QnA pagination");
 
       if (currentPage > 1) {
-        const prevLink = document.createElement("a");
-        prevLink.className = "news-page-btn";
-        prevLink.href = buildDetailUrl("help", "qna", { page: currentPage - 1 });
-        prevLink.textContent = detailText.pagePrev;
-        pagination.append(prevLink);
+        if (onPageChange) {
+          const prevButton = document.createElement("button");
+          prevButton.type = "button";
+          prevButton.className = "news-page-btn";
+          prevButton.textContent = detailText.pagePrev;
+          prevButton.addEventListener("click", () => onPageChange(currentPage - 1));
+          pagination.append(prevButton);
+        } else {
+          const prevLink = document.createElement("a");
+          prevLink.className = "news-page-btn";
+          prevLink.href = buildDetailUrl("help", "qna", { page: currentPage - 1 });
+          prevLink.textContent = detailText.pagePrev;
+          pagination.append(prevLink);
+        }
       }
 
       for (let page = 1; page <= totalPages; page += 1) {
-        const pageLink = document.createElement("a");
-        pageLink.className = "news-page-btn";
-        if (page === currentPage) {
-          pageLink.classList.add("is-active");
+        if (onPageChange) {
+          const pageButton = document.createElement("button");
+          pageButton.type = "button";
+          pageButton.className = "news-page-btn";
+          if (page === currentPage) {
+            pageButton.classList.add("is-active");
+          }
+          pageButton.textContent = String(page);
+          if (page !== currentPage) {
+            pageButton.addEventListener("click", () => onPageChange(page));
+          }
+          pagination.append(pageButton);
+        } else {
+          const pageLink = document.createElement("a");
+          pageLink.className = "news-page-btn";
+          if (page === currentPage) {
+            pageLink.classList.add("is-active");
+          }
+          pageLink.href = buildDetailUrl("help", "qna", { page });
+          pageLink.textContent = String(page);
+          pagination.append(pageLink);
         }
-        pageLink.href = buildDetailUrl("help", "qna", { page });
-        pageLink.textContent = String(page);
-        pagination.append(pageLink);
       }
 
       if (currentPage < totalPages) {
-        const nextLink = document.createElement("a");
-        nextLink.className = "news-page-btn";
-        nextLink.href = buildDetailUrl("help", "qna", { page: currentPage + 1 });
-        nextLink.textContent = detailText.pageNext;
-        pagination.append(nextLink);
+        if (onPageChange) {
+          const nextButton = document.createElement("button");
+          nextButton.type = "button";
+          nextButton.className = "news-page-btn";
+          nextButton.textContent = detailText.pageNext;
+          nextButton.addEventListener("click", () => onPageChange(currentPage + 1));
+          pagination.append(nextButton);
+        } else {
+          const nextLink = document.createElement("a");
+          nextLink.className = "news-page-btn";
+          nextLink.href = buildDetailUrl("help", "qna", { page: currentPage + 1 });
+          nextLink.textContent = detailText.pageNext;
+          pagination.append(nextLink);
+        }
       }
 
       target.append(pagination);
@@ -2880,6 +2944,8 @@
 
   const renderQnaDetail = (translation, target, selectedPostId, pageNumber = 1) => {
     const detailText = getLangText(UI_TEXT.detail);
+    let expandedEntryId = asString(selectedPostId).trim() || null;
+    let currentPage = Math.max(Number(pageNumber) || 1, 1);
 
     appendFeatureImage(translation, target);
 
@@ -2990,13 +3056,40 @@
 
       form.reset();
       showStatus(detailText.qnaSuccess, false);
-      window.history.replaceState({}, "", buildDetailUrl("help", "qna", { page: 1 }));
-      renderQnaBoard(listWrap, null, 1);
+      expandedEntryId = null;
+      currentPage = 1;
+      window.history.replaceState({}, "", buildDetailUrl("help", "qna", { page: currentPage }));
+      renderBoard();
     });
+
+    const syncQnaUrl = () => {
+      const params = { page: currentPage };
+      if (expandedEntryId) {
+        params.post = expandedEntryId;
+      }
+      window.history.replaceState({}, "", buildDetailUrl("help", "qna", params));
+    };
+
+    const renderBoard = () => {
+      renderQnaBoard(listWrap, expandedEntryId, currentPage, {
+        onToggle: (nextEntryId, resolvedPage) => {
+          expandedEntryId = nextEntryId;
+          currentPage = resolvedPage;
+          syncQnaUrl();
+          renderBoard();
+        },
+        onPageChange: (nextPage) => {
+          currentPage = Math.max(Number(nextPage) || 1, 1);
+          expandedEntryId = null;
+          syncQnaUrl();
+          renderBoard();
+        }
+      });
+    };
 
     target.append(listHeading);
     target.append(listWrap);
-    renderQnaBoard(listWrap, selectedPostId, pageNumber);
+    renderBoard();
     target.append(form);
   };
 
