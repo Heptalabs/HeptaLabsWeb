@@ -13,7 +13,7 @@
     />
     <link rel="icon" type="image/svg+xml" href="../assets/brand/favicon.svg" />
     <link rel="shortcut icon" href="../assets/brand/favicon.svg" />
-    <link rel="stylesheet" href="../styles.css?v=20260324cleanRoutes3" />
+    <link rel="stylesheet" href="../styles.css?v=20260324cleanRoutes4" />
   </head>
   <body data-page="admin">
     <div class="page-bg" aria-hidden="true"></div>
@@ -24,9 +24,11 @@
         <img class="brand-logo brand-logo-night" src="../assets/brand/logo-lr-white.svg" alt="Hepta Labs" />
       </a>
 
-      <nav class="primary-nav admin-nav">
-        <a href="/main" data-admin-home-link></a>
-        <a href="/about/hepta-labs" data-admin-detail-link></a>
+      <nav class="primary-nav admin-nav" id="admin-page-tabs">
+        <button type="button" data-admin-page-tab="home"></button>
+        <button type="button" data-admin-page-tab="content"></button>
+        <button type="button" data-admin-page-tab="cms"></button>
+        <button type="button" data-admin-page-tab="preview"></button>
       </nav>
 
       <div class="header-controls">
@@ -76,99 +78,182 @@
         <h1 data-admin-title></h1>
         <p class="admin-subtitle" data-admin-subtitle></p>
 
-        <div class="admin-grid">
+        <section class="admin-section" data-admin-section="home">
           <div class="admin-card">
-            <h2 data-admin-select-heading></h2>
-            <div class="field-group">
-              <label for="admin-menu" data-admin-label-menu></label>
-              <select id="admin-menu"></select>
+            <h2 data-admin-dashboard-heading></h2>
+            <p class="admin-advanced-subtitle" data-admin-dashboard-subtitle></p>
+            <div class="admin-dashboard-grid">
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="todayVisitors"></p>
+                <strong id="admin-kpi-today-visitors">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="weeklyVisitors"></p>
+                <strong id="admin-kpi-weekly-visitors">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="todayViews"></p>
+                <strong id="admin-kpi-today-views">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="totalViews"></p>
+                <strong id="admin-kpi-total-views">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="newsCount"></p>
+                <strong id="admin-kpi-news-count">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="noticeCount"></p>
+                <strong id="admin-kpi-notice-count">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="popupNoticeCount"></p>
+                <strong id="admin-kpi-popup-notice-count">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="inquiryTotal"></p>
+                <strong id="admin-kpi-inquiry-total">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="inquiryPending"></p>
+                <strong id="admin-kpi-inquiry-pending">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="inquiryAnswered"></p>
+                <strong id="admin-kpi-inquiry-answered">0</strong>
+              </article>
+              <article class="admin-kpi-card">
+                <p data-admin-kpi-label="lastContentSync"></p>
+                <strong id="admin-kpi-last-content-sync">-</strong>
+              </article>
             </div>
-            <div class="field-group">
-              <label for="admin-item" data-admin-label-item></label>
-              <select id="admin-item"></select>
-            </div>
-            <div class="field-group">
-              <p class="field-label" data-admin-label-language></p>
-              <div class="lang-switch" id="admin-lang-tabs">
-                <button type="button" data-admin-lang="ko">KO</button>
-                <button type="button" data-admin-lang="en">EN</button>
-                <button type="button" data-admin-lang="zh">ZH</button>
+            <p class="admin-inline-meta" data-admin-dashboard-note></p>
+          </div>
+        </section>
+
+        <section class="admin-section" data-admin-section="content" hidden>
+          <div class="admin-grid">
+            <div class="admin-card">
+              <h2 data-admin-select-heading></h2>
+              <div class="field-group">
+                <label for="admin-menu" data-admin-label-menu></label>
+                <select id="admin-menu"></select>
+              </div>
+              <div class="field-group">
+                <label for="admin-item" data-admin-label-item></label>
+                <select id="admin-item"></select>
+              </div>
+              <div class="field-group">
+                <p class="field-label" data-admin-label-language></p>
+                <div class="lang-switch" id="admin-lang-tabs">
+                  <button type="button" data-admin-lang="ko">KO</button>
+                  <button type="button" data-admin-lang="en">EN</button>
+                  <button type="button" data-admin-lang="zh">ZH</button>
+                </div>
               </div>
             </div>
-            <a class="cta ghost small" id="admin-preview" target="_blank" rel="noreferrer" data-admin-preview></a>
-          </div>
 
-          <div class="admin-card admin-editor" id="admin-editor">
-            <h2 data-admin-edit-heading></h2>
-            <div class="field-group">
-              <label for="admin-title-input" data-admin-label-title></label>
-              <input id="admin-title-input" type="text" />
-            </div>
-            <div class="field-group">
-              <label for="admin-subtitle-input" data-admin-label-subtitle></label>
-              <textarea id="admin-subtitle-input" rows="4"></textarea>
-            </div>
-            <div class="field-group">
-              <label for="admin-feature-media-type" data-admin-label-feature-media-type></label>
-              <select id="admin-feature-media-type">
-                <option value="image" data-admin-media-type-image></option>
-                <option value="video" data-admin-media-type-video></option>
-              </select>
-            </div>
-            <div class="field-group">
-              <label for="admin-feature-image-input" data-admin-label-feature-image></label>
-              <input id="admin-feature-image-input" type="url" placeholder="https://..." />
-            </div>
-            <div class="field-group">
-              <label for="admin-feature-image-alt-input" data-admin-label-feature-alt></label>
-              <input id="admin-feature-image-alt-input" type="text" />
-            </div>
-            <div class="field-group">
-              <label for="admin-feature-image-file" data-admin-label-feature-upload></label>
-              <input id="admin-feature-image-file" type="file" accept="image/*,video/*" />
-            </div>
-
-            <div class="sections-wrap">
-              <div class="section-header-row">
-                <p data-admin-sections-heading></p>
-                <button class="cta ghost small" id="admin-add-section" type="button" data-admin-add-section></button>
+            <div class="admin-card admin-editor" id="admin-editor">
+              <h2 data-admin-edit-heading></h2>
+              <div class="field-group">
+                <label for="admin-title-input" data-admin-label-title></label>
+                <input id="admin-title-input" type="text" />
               </div>
-              <div id="admin-sections"></div>
+              <div class="field-group">
+                <label for="admin-subtitle-input" data-admin-label-subtitle></label>
+                <textarea id="admin-subtitle-input" rows="4"></textarea>
+              </div>
+              <div class="field-group">
+                <label for="admin-feature-media-type" data-admin-label-feature-media-type></label>
+                <select id="admin-feature-media-type">
+                  <option value="image" data-admin-media-type-image></option>
+                  <option value="video" data-admin-media-type-video></option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="admin-feature-image-input" data-admin-label-feature-image></label>
+                <input id="admin-feature-image-input" type="url" placeholder="https://..." />
+              </div>
+              <div class="field-group">
+                <label for="admin-feature-image-alt-input" data-admin-label-feature-alt></label>
+                <input id="admin-feature-image-alt-input" type="text" />
+              </div>
+              <div class="field-group">
+                <label for="admin-feature-image-file" data-admin-label-feature-upload></label>
+                <input id="admin-feature-image-file" type="file" accept="image/*,video/*" />
+              </div>
+
+              <div class="sections-wrap">
+                <div class="section-header-row">
+                  <p data-admin-sections-heading></p>
+                  <button
+                    class="cta ghost small"
+                    id="admin-add-section"
+                    type="button"
+                    data-admin-add-section
+                  ></button>
+                </div>
+                <div id="admin-sections"></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="admin-actions">
-          <button class="cta primary" id="admin-save" type="button" data-admin-save></button>
-          <button class="cta ghost" id="admin-reset-item" type="button" data-admin-reset-item></button>
-          <button class="cta ghost" id="admin-reset-all" type="button" data-admin-reset-all></button>
-          <button class="cta ghost" id="admin-export" type="button" data-admin-export></button>
-          <label class="cta ghost file-btn" for="admin-import" data-admin-import></label>
-          <input id="admin-import" type="file" accept="application/json" />
-        </div>
-
-        <p class="admin-status" id="admin-status" aria-live="polite"></p>
-
-        <div class="admin-card json-card">
-          <h2 data-admin-json-heading></h2>
-          <pre id="admin-json"></pre>
-        </div>
-
-        <div class="admin-card admin-advanced-card">
-          <h2 data-admin-advanced-heading></h2>
-          <p class="admin-advanced-subtitle" data-admin-advanced-subtitle></p>
-          <div class="admin-module-tabs" id="admin-module-tabs">
-            <button type="button" data-admin-module="news"></button>
-            <button type="button" data-admin-module="notice"></button>
-            <button type="button" data-admin-module="qna"></button>
-            <button type="button" data-admin-module="site"></button>
+          <div class="admin-actions">
+            <button class="cta primary" id="admin-save" type="button" data-admin-save></button>
+            <button class="cta ghost" id="admin-reset-item" type="button" data-admin-reset-item></button>
+            <button class="cta ghost" id="admin-reset-all" type="button" data-admin-reset-all></button>
+            <button class="cta ghost" id="admin-export" type="button" data-admin-export></button>
+            <label class="cta ghost file-btn" for="admin-import" data-admin-import></label>
+            <input id="admin-import" type="file" accept="application/json" />
           </div>
-          <div id="admin-module-content"></div>
-        </div>
+
+          <p class="admin-status" id="admin-status" aria-live="polite"></p>
+        </section>
+
+        <section class="admin-section" data-admin-section="cms" hidden>
+          <div class="admin-card admin-advanced-card">
+            <h2 data-admin-advanced-heading></h2>
+            <p class="admin-advanced-subtitle" data-admin-advanced-subtitle></p>
+            <div class="admin-module-tabs" id="admin-module-tabs">
+              <button type="button" data-admin-module="news"></button>
+              <button type="button" data-admin-module="notice"></button>
+              <button type="button" data-admin-module="qna"></button>
+              <button type="button" data-admin-module="site"></button>
+            </div>
+            <div id="admin-module-content"></div>
+          </div>
+        </section>
+
+        <section class="admin-section" data-admin-section="preview" hidden>
+          <div class="admin-card admin-preview-card">
+            <h2 data-admin-preview-heading></h2>
+            <p class="admin-advanced-subtitle" data-admin-preview-subtitle></p>
+            <div class="admin-module-grid two">
+              <div class="field-group">
+                <label for="admin-preview-menu" data-admin-label-menu></label>
+                <select id="admin-preview-menu"></select>
+              </div>
+              <div class="field-group">
+                <label for="admin-preview-item" data-admin-label-item></label>
+                <select id="admin-preview-item"></select>
+              </div>
+            </div>
+            <p class="admin-inline-meta">
+              <strong data-admin-preview-current-label></strong>
+              <span id="admin-preview-current-path"></span>
+            </p>
+            <div class="admin-module-actions">
+              <a class="cta primary" id="admin-preview" target="_blank" rel="noreferrer" data-admin-preview></a>
+              <button class="cta ghost" type="button" id="admin-preview-refresh" data-admin-preview-refresh></button>
+            </div>
+            <iframe id="admin-preview-frame" title="Hepta Labs detail preview"></iframe>
+          </div>
+        </section>
       </section>
     </main>
 
-    <script src="../content.js?v=20260324cleanRoutes3"></script>
-    <script src="../app.js?v=20260324cleanRoutes3"></script>
+    <script src="../content.js?v=20260324cleanRoutes4"></script>
+    <script src="../app.js?v=20260324cleanRoutes4"></script>
   </body>
 </html>

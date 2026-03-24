@@ -10,7 +10,9 @@
     qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1",
     newsSeeded: "heptalabs_news_seeded_v1",
     noticeSeeded: "heptalabs_notice_seeded_v1",
-    qnaSeeded: "heptalabs_qna_seeded_v1"
+    qnaSeeded: "heptalabs_qna_seeded_v1",
+    visitStats: "heptalabs_visit_stats_v1",
+    contentUpdatedAt: "heptalabs_content_updated_at_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
@@ -167,13 +169,36 @@
       ko: {
         title: "Hepta Labs Content Admin",
         subtitle: "로컬 CMS로 메뉴별 다국어 콘텐츠를 편집하고 즉시 반영할 수 있습니다.",
+        tabHome: "홈",
+        tabContent: "콘텐츠 수정",
+        tabCms: "CMS",
+        tabPreview: "상세 미리보기",
+        dashboardHeading: "운영 대시보드",
+        dashboardSubtitle: "방문/문의/게시물 현황을 한 번에 확인합니다.",
+        dashboardNote: "방문 통계는 현재 브라우저 기준 로컬 집계입니다.",
+        kpiTodayVisitors: "일간 방문자수",
+        kpiWeeklyVisitors: "최근 7일 방문자수",
+        kpiTodayViews: "오늘 페이지뷰",
+        kpiTotalViews: "누적 페이지뷰",
+        kpiNewsCount: "뉴스 게시글",
+        kpiNoticeCount: "공지 게시글",
+        kpiPopupNoticeCount: "팝업 공지",
+        kpiInquiryTotal: "전체 문의",
+        kpiInquiryPending: "답변 대기",
+        kpiInquiryAnswered: "답변 완료",
+        kpiLastContentSync: "최근 콘텐츠 저장",
+        kpiNoData: "기록 없음",
         homeLink: "홈",
         detailLink: "상세 미리보기",
         selectHeading: "콘텐츠 선택",
         labelMenu: "메뉴",
         labelItem: "항목",
         labelLanguage: "편집 언어",
-        preview: "선택 항목 미리보기",
+        preview: "새 탭에서 열기",
+        previewHeading: "상세 미리보기",
+        previewSubtitle: "선택한 메뉴/항목의 공개 페이지를 바로 확인할 수 있습니다.",
+        previewCurrentLabel: "현재 경로:",
+        previewRefresh: "미리보기 새로고침",
         editHeading: "콘텐츠 편집",
         labelTitle: "제목",
         labelSubtitle: "부제",
@@ -281,13 +306,36 @@
       en: {
         title: "Hepta Labs Content Admin",
         subtitle: "Edit multilingual menu content with a local CMS and apply changes instantly.",
+        tabHome: "Home",
+        tabContent: "Content Edit",
+        tabCms: "CMS",
+        tabPreview: "Detail Preview",
+        dashboardHeading: "Operations Dashboard",
+        dashboardSubtitle: "Check visits, inquiries, and content status at a glance.",
+        dashboardNote: "Visit metrics are locally aggregated in this browser environment.",
+        kpiTodayVisitors: "Daily Visitors",
+        kpiWeeklyVisitors: "Visitors (7 Days)",
+        kpiTodayViews: "Pageviews Today",
+        kpiTotalViews: "Total Pageviews",
+        kpiNewsCount: "News Posts",
+        kpiNoticeCount: "Notice Posts",
+        kpiPopupNoticeCount: "Popup Notices",
+        kpiInquiryTotal: "Total Inquiries",
+        kpiInquiryPending: "Pending Answers",
+        kpiInquiryAnswered: "Answered",
+        kpiLastContentSync: "Last Content Save",
+        kpiNoData: "No data",
         homeLink: "Home",
         detailLink: "Detail Preview",
         selectHeading: "Content Selection",
         labelMenu: "Menu",
         labelItem: "Item",
         labelLanguage: "Edit Language",
-        preview: "Preview Selected Item",
+        preview: "Open in New Tab",
+        previewHeading: "Detail Preview",
+        previewSubtitle: "Preview the selected menu item in the public page layout.",
+        previewCurrentLabel: "Current Path:",
+        previewRefresh: "Refresh Preview",
         editHeading: "Content Editor",
         labelTitle: "Title",
         labelSubtitle: "Subtitle",
@@ -395,13 +443,36 @@
       zh: {
         title: "Hepta Labs 内容管理",
         subtitle: "通过本地 CMS 编辑多语言菜单内容并即时应用。",
+        tabHome: "首页",
+        tabContent: "内容编辑",
+        tabCms: "CMS",
+        tabPreview: "详情预览",
+        dashboardHeading: "运营仪表盘",
+        dashboardSubtitle: "集中查看访问、咨询与内容运营状态。",
+        dashboardNote: "访问数据基于当前浏览器本地统计。",
+        kpiTodayVisitors: "今日访客数",
+        kpiWeeklyVisitors: "近 7 日访客数",
+        kpiTodayViews: "今日浏览量",
+        kpiTotalViews: "累计浏览量",
+        kpiNewsCount: "新闻数量",
+        kpiNoticeCount: "公告数量",
+        kpiPopupNoticeCount: "弹窗公告",
+        kpiInquiryTotal: "咨询总数",
+        kpiInquiryPending: "待回复",
+        kpiInquiryAnswered: "已回复",
+        kpiLastContentSync: "最近保存时间",
+        kpiNoData: "暂无记录",
         homeLink: "首页",
         detailLink: "详情预览",
         selectHeading: "内容选择",
         labelMenu: "菜单",
         labelItem: "条目",
         labelLanguage: "编辑语言",
-        preview: "预览当前条目",
+        preview: "新标签打开",
+        previewHeading: "详情预览",
+        previewSubtitle: "可直接预览当前选择条目的公开页面效果。",
+        previewCurrentLabel: "当前路径：",
+        previewRefresh: "刷新预览",
         editHeading: "内容编辑",
         labelTitle: "标题",
         labelSubtitle: "副标题",
@@ -516,6 +587,76 @@
   const deepClone = (value) => JSON.parse(JSON.stringify(value));
   const asString = (value) => (typeof value === "string" ? value : "");
   const nowIso = () => new Date().toISOString();
+  const localDateKey = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const recentDateKeys = (days = 7) => {
+    const result = [];
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    for (let offset = 0; offset < days; offset += 1) {
+      const current = new Date(base);
+      current.setDate(base.getDate() - offset);
+      result.push(localDateKey(current));
+    }
+    return result;
+  };
+
+  const readVisitStats = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.visitStats);
+      if (!raw) {
+        return { days: {} };
+      }
+      const parsed = JSON.parse(raw);
+      const days = parsed && typeof parsed === "object" && parsed.days ? parsed.days : {};
+      const normalizedDays = {};
+
+      Object.entries(days).forEach(([key, value]) => {
+        const source = value && typeof value === "object" ? value : {};
+        normalizedDays[key] = {
+          views: Math.max(0, Number.parseInt(source.views || 0, 10) || 0),
+          visitors: Math.max(0, Number.parseInt(source.visitors || 0, 10) || 0)
+        };
+      });
+
+      return { days: normalizedDays };
+    } catch (error) {
+      return { days: {} };
+    }
+  };
+
+  const writeVisitStats = (stats) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.visitStats, JSON.stringify(stats));
+    } catch (error) {
+      // ignore storage failures in public pages
+    }
+  };
+
+  const trackPublicVisit = () => {
+    if (document.body.dataset.page === "admin") {
+      return;
+    }
+
+    const stats = readVisitStats();
+    const todayKey = localDateKey();
+    const dayStats = stats.days[todayKey] || { views: 0, visitors: 0 };
+    dayStats.views += 1;
+
+    const sessionKey = `${STORAGE_KEYS.visitStats}_seen_${todayKey}`;
+    if (!sessionStorage.getItem(sessionKey)) {
+      dayStats.visitors += 1;
+      sessionStorage.setItem(sessionKey, "1");
+    }
+
+    stats.days[todayKey] = dayStats;
+    writeVisitStats(stats);
+  };
 
   const toHex = (buffer) =>
     Array.from(new Uint8Array(buffer))
@@ -3370,6 +3511,7 @@
       menuId: state.content.menus[0].id,
       itemId: state.content.menus[0].items[0].id,
       editLang: state.lang,
+      activePage: "home",
       activeModule: "news",
       selectedNewsId: "",
       selectedNoticeId: "",
@@ -3388,6 +3530,14 @@
     const statusElement = document.getElementById("admin-status");
     const jsonElement = document.getElementById("admin-json");
     const previewLink = document.getElementById("admin-preview");
+    const previewFrame = document.getElementById("admin-preview-frame");
+    const previewCurrentPath = document.getElementById("admin-preview-current-path");
+    const previewRefreshButton = document.getElementById("admin-preview-refresh");
+    const previewMenuSelect = document.getElementById("admin-preview-menu");
+    const previewItemSelect = document.getElementById("admin-preview-item");
+
+    const pageTabsWrap = document.getElementById("admin-page-tabs");
+    const sectionPanels = document.querySelectorAll("[data-admin-section]");
 
     const moduleTabsWrap = document.getElementById("admin-module-tabs");
     const moduleContentWrap = document.getElementById("admin-module-content");
@@ -3437,6 +3587,9 @@
         logoutButton.hidden = !granted;
       }
       document.body.dataset.adminAuth = granted ? "granted" : "locked";
+      if (granted) {
+        renderAdminPages();
+      }
     };
 
     const persistAdminContent = (mainMessage = "", moduleMessage = "") => {
@@ -3447,6 +3600,7 @@
         showModuleStatus(limitMessage);
         return;
       }
+      localStorage.setItem(STORAGE_KEYS.contentUpdatedAt, nowIso());
       document.dispatchEvent(new CustomEvent("hepta:contentchange"));
       if (mainMessage) {
         showStatus(mainMessage);
@@ -3534,18 +3688,135 @@
       return entries.find((entry) => entry.id === adminState.selectedInquiryId) || entries[0];
     };
 
+    const setKpiValue = (id, value) => {
+      const target = document.getElementById(id);
+      if (target) {
+        target.textContent = String(value);
+      }
+    };
+
+    const loadPreviewFrame = (force = false) => {
+      if (!previewFrame) {
+        return;
+      }
+
+      const nextUrl = new URL(buildDetailUrl(adminState.menuId, adminState.itemId), window.location.origin)
+        .toString();
+      if (!force && previewFrame.dataset.src === nextUrl) {
+        return;
+      }
+      previewFrame.src = nextUrl;
+      previewFrame.dataset.src = nextUrl;
+    };
+
+    const renderAdminDashboard = () => {
+      const text = adminText();
+      const visitStats = readVisitStats();
+      const dynamic = getDynamic();
+      const dayMap = visitStats.days || {};
+      const todayKey = localDateKey();
+      const sevenDays = recentDateKeys(7);
+
+      const sumBy = (keys, field) =>
+        keys.reduce((total, key) => total + (dayMap[key] && Number(dayMap[key][field]) ? Number(dayMap[key][field]) : 0), 0);
+
+      const totalViews = Object.values(dayMap).reduce(
+        (total, entry) => total + (entry && Number(entry.views) ? Number(entry.views) : 0),
+        0
+      );
+
+      const todayVisitors = dayMap[todayKey] && Number(dayMap[todayKey].visitors) ? Number(dayMap[todayKey].visitors) : 0;
+      const weekVisitors = sumBy(sevenDays, "visitors");
+      const todayViews = dayMap[todayKey] && Number(dayMap[todayKey].views) ? Number(dayMap[todayKey].views) : 0;
+      const weekViews = sumBy(sevenDays, "views");
+
+      const inquiries = Array.isArray(dynamic.inquiries) ? dynamic.inquiries : [];
+      const answeredCount = inquiries.filter((entry) =>
+        SUPPORTED_LANGS.some((lang) => asString(entry.answers && entry.answers[lang]).trim())
+      ).length;
+      const pendingCount = Math.max(0, inquiries.length - answeredCount);
+      const popupNoticeCount = (Array.isArray(dynamic.notices) ? dynamic.notices : []).filter(
+        (notice) => Boolean(notice.popup)
+      ).length;
+
+      const lastSavedRaw = localStorage.getItem(STORAGE_KEYS.contentUpdatedAt);
+      const lastSavedText = lastSavedRaw ? formatDisplayDate(lastSavedRaw) : text.kpiNoData;
+
+      setKpiValue("admin-kpi-today-visitors", todayVisitors);
+      setKpiValue("admin-kpi-weekly-visitors", weekVisitors);
+      setKpiValue("admin-kpi-today-views", todayViews);
+      setKpiValue("admin-kpi-total-views", totalViews);
+      setKpiValue("admin-kpi-news-count", Array.isArray(dynamic.newsPosts) ? dynamic.newsPosts.length : 0);
+      setKpiValue("admin-kpi-notice-count", Array.isArray(dynamic.notices) ? dynamic.notices.length : 0);
+      setKpiValue("admin-kpi-popup-notice-count", popupNoticeCount);
+      setKpiValue("admin-kpi-inquiry-total", inquiries.length);
+      setKpiValue("admin-kpi-inquiry-pending", pendingCount);
+      setKpiValue("admin-kpi-inquiry-answered", answeredCount);
+      setKpiValue("admin-kpi-last-content-sync", lastSavedText);
+
+      const dashboardNote = document.querySelector("[data-admin-dashboard-note]");
+      if (dashboardNote) {
+        dashboardNote.textContent = `${text.dashboardNote} (${text.kpiTodayViews}: ${todayViews}, 7d: ${weekViews})`;
+      }
+    };
+
+    const renderAdminPages = () => {
+      if (pageTabsWrap) {
+        pageTabsWrap.querySelectorAll("[data-admin-page-tab]").forEach((button) => {
+          button.classList.toggle("is-active", button.dataset.adminPageTab === adminState.activePage);
+        });
+      }
+
+      sectionPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.adminSection !== adminState.activePage;
+      });
+
+      if (adminState.activePage === "home") {
+        renderAdminDashboard();
+      }
+
+      if (adminState.activePage === "preview") {
+        loadPreviewFrame();
+      }
+    };
+
+    const setActiveAdminPage = (nextPage) => {
+      const allowed = new Set(["home", "content", "cms", "preview"]);
+      adminState.activePage = allowed.has(nextPage) ? nextPage : "home";
+      renderAdminPages();
+    };
+
     const renderAdminLabels = () => {
       const text = adminText();
       const map = {
         "[data-admin-title]": text.title,
         "[data-admin-subtitle]": text.subtitle,
-        "[data-admin-home-link]": text.homeLink,
-        "[data-admin-detail-link]": text.detailLink,
+        '[data-admin-page-tab="home"]': text.tabHome,
+        '[data-admin-page-tab="content"]': text.tabContent,
+        '[data-admin-page-tab="cms"]': text.tabCms,
+        '[data-admin-page-tab="preview"]': text.tabPreview,
+        "[data-admin-dashboard-heading]": text.dashboardHeading,
+        "[data-admin-dashboard-subtitle]": text.dashboardSubtitle,
+        '[data-admin-kpi-label="todayVisitors"]': text.kpiTodayVisitors,
+        '[data-admin-kpi-label="weeklyVisitors"]': text.kpiWeeklyVisitors,
+        '[data-admin-kpi-label="todayViews"]': text.kpiTodayViews,
+        '[data-admin-kpi-label="totalViews"]': text.kpiTotalViews,
+        '[data-admin-kpi-label="newsCount"]': text.kpiNewsCount,
+        '[data-admin-kpi-label="noticeCount"]': text.kpiNoticeCount,
+        '[data-admin-kpi-label="popupNoticeCount"]': text.kpiPopupNoticeCount,
+        '[data-admin-kpi-label="inquiryTotal"]': text.kpiInquiryTotal,
+        '[data-admin-kpi-label="inquiryPending"]': text.kpiInquiryPending,
+        '[data-admin-kpi-label="inquiryAnswered"]': text.kpiInquiryAnswered,
+        '[data-admin-kpi-label="lastContentSync"]': text.kpiLastContentSync,
         "[data-admin-select-heading]": text.selectHeading,
         "[data-admin-label-menu]": text.labelMenu,
         "[data-admin-label-item]": text.labelItem,
         "[data-admin-label-language]": text.labelLanguage,
         "[data-admin-preview]": text.preview,
+        "[data-admin-preview-heading]": text.previewHeading,
+        "[data-admin-preview-subtitle]": text.previewSubtitle,
+        "[data-admin-preview-current-label]": text.previewCurrentLabel,
+        "[data-admin-preview-refresh]": text.previewRefresh,
         "[data-admin-edit-heading]": text.editHeading,
         "[data-admin-label-title]": text.labelTitle,
         "[data-admin-label-subtitle]": text.labelSubtitle,
@@ -3586,34 +3857,40 @@
     };
 
     const renderMenuSelect = () => {
-      if (!menuSelect) {
+      const selects = [menuSelect, previewMenuSelect].filter((node) => Boolean(node));
+      if (!selects.length) {
         return;
       }
 
-      menuSelect.innerHTML = "";
-      adminState.content.menus.forEach((menu) => {
-        const option = document.createElement("option");
-        option.value = menu.id;
-        option.textContent = menu.labels[state.lang] || menu.labels.en;
-        menuSelect.append(option);
+      selects.forEach((select) => {
+        select.innerHTML = "";
+        adminState.content.menus.forEach((menu) => {
+          const option = document.createElement("option");
+          option.value = menu.id;
+          option.textContent = menu.labels[state.lang] || menu.labels.en;
+          select.append(option);
+        });
+        select.value = adminState.menuId;
       });
-      menuSelect.value = adminState.menuId;
     };
 
     const renderItemSelect = () => {
-      if (!itemSelect) {
+      const selects = [itemSelect, previewItemSelect].filter((node) => Boolean(node));
+      if (!selects.length) {
         return;
       }
 
       const menu = getCurrentMenu();
-      itemSelect.innerHTML = "";
-      menu.items.forEach((item) => {
-        const option = document.createElement("option");
-        option.value = item.id;
-        option.textContent = item.labels[state.lang] || item.labels.en;
-        itemSelect.append(option);
+      selects.forEach((select) => {
+        select.innerHTML = "";
+        menu.items.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.labels[state.lang] || item.labels.en;
+          select.append(option);
+        });
+        select.value = adminState.itemId;
       });
-      itemSelect.value = adminState.itemId;
     };
 
     const renderLangTabs = () => {
@@ -3624,7 +3901,11 @@
 
     const renderPreviewLink = () => {
       if (previewLink) {
-        previewLink.href = buildDetailUrl(adminState.menuId, adminState.itemId);
+        const targetUrl = buildDetailUrl(adminState.menuId, adminState.itemId);
+        previewLink.href = targetUrl;
+        if (previewCurrentPath) {
+          previewCurrentPath.textContent = targetUrl;
+        }
       }
     };
 
@@ -4627,19 +4908,47 @@
       });
     });
 
+    const handleMenuChange = (nextMenuId) => {
+      adminState.menuId = nextMenuId;
+      adminState.itemId = getCurrentMenu().items[0].id;
+      renderMenuSelect();
+      renderItemSelect();
+      renderEditor();
+      if (adminState.activePage === "preview") {
+        loadPreviewFrame(true);
+      }
+    };
+
+    const handleItemChange = (nextItemId) => {
+      adminState.itemId = nextItemId;
+      renderItemSelect();
+      renderEditor();
+      if (adminState.activePage === "preview") {
+        loadPreviewFrame(true);
+      }
+    };
+
     if (menuSelect) {
       menuSelect.addEventListener("change", () => {
-        adminState.menuId = menuSelect.value;
-        adminState.itemId = getCurrentMenu().items[0].id;
-        renderItemSelect();
-        renderEditor();
+        handleMenuChange(menuSelect.value);
       });
     }
 
     if (itemSelect) {
       itemSelect.addEventListener("change", () => {
-        adminState.itemId = itemSelect.value;
-        renderEditor();
+        handleItemChange(itemSelect.value);
+      });
+    }
+
+    if (previewMenuSelect) {
+      previewMenuSelect.addEventListener("change", () => {
+        handleMenuChange(previewMenuSelect.value);
+      });
+    }
+
+    if (previewItemSelect) {
+      previewItemSelect.addEventListener("change", () => {
+        handleItemChange(previewItemSelect.value);
       });
     }
 
@@ -4754,6 +5063,20 @@
       });
     }
 
+    if (pageTabsWrap) {
+      pageTabsWrap.querySelectorAll("[data-admin-page-tab]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setActiveAdminPage(button.dataset.adminPageTab);
+        });
+      });
+    }
+
+    if (previewRefreshButton) {
+      previewRefreshButton.addEventListener("click", () => {
+        loadPreviewFrame(true);
+      });
+    }
+
     if (loginForm) {
       loginForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -4800,6 +5123,7 @@
       renderItemSelect();
       renderEditor();
       renderAdminModule();
+      renderAdminPages();
     });
 
     renderAdminLabels();
@@ -4807,6 +5131,7 @@
     renderItemSelect();
     renderEditor();
     renderAdminModule();
+    renderAdminPages();
     setAdminAccess(authGranted);
 
     if (!authGranted && loginIdInput) {
@@ -4834,6 +5159,7 @@
     ensureSeededNewsPostsOnce();
     ensureSeededNoticesOnce();
     ensureSeededInquiriesOnce();
+    trackPublicVisit();
     normalizePublicPathUrl();
     initThemeAndLangControls();
     initReveal();
