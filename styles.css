@@ -513,18 +513,27 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .spotlight-card {
-  border: 1px solid var(--line);
+  border: 1px solid var(--header-line);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
-  backdrop-filter: blur(16px);
+  background: linear-gradient(165deg, rgba(252, 253, 253, 0.96), rgba(241, 246, 247, 0.96));
+  backdrop-filter: none;
   padding: 26px;
-  box-shadow: var(--glow);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
   position: relative;
   overflow: hidden;
 }
 
 :root[data-theme="night"] .spotlight-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  border-color: var(--header-line);
+  background:
+    linear-gradient(
+      126deg,
+      rgba(90, 243, 255, 0.08) 0%,
+      rgba(90, 243, 255, 0.02) 34%,
+      rgba(90, 243, 255, 0) 58%
+    ),
+    linear-gradient(180deg, rgba(7, 10, 13, 0.97), rgba(3, 5, 8, 0.97));
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48);
 }
 
 .spotlight-card::before {
