@@ -401,6 +401,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 .hero {
   max-width: min(820px, 94vw);
   position: relative;
+  margin-left: clamp(18px, 2vw, 34px);
 }
 
 .hero-kicker {
@@ -1493,9 +1494,17 @@ textarea {
   .news-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .hero {
+    margin-left: clamp(8px, 1.4vw, 16px);
+  }
 }
 
 @media (max-width: 760px) {
+  .hero {
+    margin-left: 0;
+  }
+
   .hero h1 {
     font-size: clamp(1.86rem, 9.8vw, 2.96rem);
   }
