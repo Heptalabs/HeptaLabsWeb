@@ -2010,7 +2010,8 @@
     localStorage.setItem(STORAGE_KEYS.theme, state.theme);
 
     document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-      button.textContent = state.theme === "night" ? "☼" : "◐";
+      button.textContent = "";
+      button.dataset.themeIcon = state.theme === "night" ? "sun" : "moon";
       button.setAttribute(
         "aria-label",
         state.theme === "night" ? "Switch to day mode" : "Switch to night mode"

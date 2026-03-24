@@ -333,6 +333,53 @@ body {
   transition: transform 200ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
+.icon-btn[data-theme-toggle] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  font-size: 0;
+}
+
+.icon-btn[data-theme-toggle]::before,
+.icon-btn[data-theme-toggle]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.icon-btn[data-theme-toggle][data-theme-icon="moon"]::before {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.8px solid currentColor;
+  background: linear-gradient(90deg, currentColor 0 49%, transparent 49% 100%);
+}
+
+.icon-btn[data-theme-toggle][data-theme-icon="moon"]::after {
+  display: none;
+}
+
+.icon-btn[data-theme-toggle][data-theme-icon="sun"]::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.icon-btn[data-theme-toggle][data-theme-icon="sun"]::after {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.95;
+}
+
 .icon-btn:hover {
   transform: translateY(-1px) scale(1.03);
   border-color: var(--accent);
