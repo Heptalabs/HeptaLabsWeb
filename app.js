@@ -6,11 +6,14 @@
     lang: "heptalabs_lang",
     content: "heptalabs_content_v1",
     adminSession: "heptalabs_admin_session_v1",
-    noticeSeen: "heptalabs_notice_seen_v1"
+    noticeSeen: "heptalabs_notice_seen_v1",
+    qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
   const SUPPORTED_THEMES = ["day", "night"];
+  const PRIMARY_MENU_IDS = ["about", "business", "infos", "help"];
+  const QNA_MIN_SUBMIT_INTERVAL_MS = 30000;
   const LOCALE_BY_LANG = {
     ko: "ko-KR",
     en: "en-US",
@@ -34,6 +37,11 @@
       en: ["Core Business", "Solution Stack", "Operating Principles"],
       zh: ["核心业务", "方案栈", "运营理念"]
     },
+    homeCardCta: {
+      ko: "자세히 보기",
+      en: "Explore",
+      zh: "查看详情"
+    },
     detail: {
       ko: {
         menuCaption: "Menu",
@@ -51,8 +59,14 @@
         qnaSubmit: "문의 등록",
         qnaSuccess: "문의가 등록되었습니다. 빠르게 확인 후 답변드리겠습니다.",
         qnaListTitle: "문의 / 답변",
+        qnaAnonymous: "익명",
         qnaPending: "답변 준비중",
         qnaNoEntries: "아직 등록된 문의가 없습니다.",
+        qnaInvalidName: "이름을 2자 이상 입력해 주세요.",
+        qnaInvalidPhone: "전화번호 형식이 올바르지 않습니다.",
+        qnaInvalidEmail: "이메일 형식이 올바르지 않습니다.",
+        qnaInvalidQuestion: "문의 내용은 5자 이상 입력해 주세요.",
+        qnaSubmitCooldown: "연속 등록은 30초 후 다시 시도해 주세요.",
         popupLabel: "중요 공지",
         popupClose: "닫기",
         popupView: "공지 확인"
@@ -73,8 +87,14 @@
         qnaSubmit: "Send Inquiry",
         qnaSuccess: "Your inquiry has been submitted.",
         qnaListTitle: "Inquiries / Answers",
+        qnaAnonymous: "Anonymous",
         qnaPending: "Answer pending",
         qnaNoEntries: "No inquiries yet.",
+        qnaInvalidName: "Please enter at least 2 characters for your name.",
+        qnaInvalidPhone: "Please enter a valid phone number.",
+        qnaInvalidEmail: "Please enter a valid email address.",
+        qnaInvalidQuestion: "Please enter at least 5 characters for your inquiry.",
+        qnaSubmitCooldown: "Please wait 30 seconds before submitting again.",
         popupLabel: "Important Notice",
         popupClose: "Close",
         popupView: "View Notice"
@@ -95,8 +115,14 @@
         qnaSubmit: "提交咨询",
         qnaSuccess: "咨询已提交，我们会尽快回复。",
         qnaListTitle: "咨询 / 回复",
+        qnaAnonymous: "匿名",
         qnaPending: "待回复",
         qnaNoEntries: "暂无咨询记录。",
+        qnaInvalidName: "姓名请至少输入 2 个字符。",
+        qnaInvalidPhone: "请输入有效的电话号码。",
+        qnaInvalidEmail: "请输入有效的邮箱地址。",
+        qnaInvalidQuestion: "咨询内容请至少输入 5 个字符。",
+        qnaSubmitCooldown: "请在 30 秒后再次提交。",
         popupLabel: "重要公告",
         popupClose: "关闭",
         popupView: "查看公告"
@@ -982,6 +1008,8 @@
   };
 
   const getMenu = (menuId) => state.content.menus.find((menu) => menu.id === menuId) || null;
+  const getPublicMenus = () =>
+    PRIMARY_MENU_IDS.map((menuId) => getMenu(menuId)).filter((menu) => Boolean(menu));
 
   const getItem = (menuId, itemId) => {
     const menu = getMenu(menuId);
@@ -1127,6 +1155,31 @@
     return `${digits.slice(0, 3)}-${digits.slice(3, 5)}**-**${digits.slice(-2)}`;
   };
 
+  const maskName = (name) => {
+    const source = asString(name).trim();
+    if (!source) {
+      return "";
+    }
+
+    const chars = Array.from(source);
+    if (chars.length === 1) {
+      return `${chars[0]}*`;
+    }
+
+    if (chars.length === 2) {
+      return `${chars[0]}*`;
+    }
+
+    return `${chars[0]}${"*".repeat(Math.max(chars.length - 2, 1))}${chars[chars.length - 1]}`;
+  };
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(asString(email).trim());
+
+  const isValidPhone = (phone) => {
+    const digits = asString(phone).replace(/\D/g, "");
+    return digits.length >= 8 && digits.length <= 15;
+  };
+
   const getNoticeSeenIds = () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.noticeSeen);
@@ -1171,11 +1224,12 @@
     const navText = getLangText(UI_TEXT.nav);
     const params = new URLSearchParams(window.location.search);
     const activeMenu = params.get("menu");
+    const publicMenus = getPublicMenus();
 
     document.querySelectorAll("[data-primary-nav]").forEach((nav) => {
       nav.innerHTML = "";
 
-      state.content.menus.forEach((menu) => {
+      publicMenus.forEach((menu) => {
         const firstItem = menu.items[0];
         if (!firstItem) {
           return;
@@ -1242,6 +1296,7 @@
 
   const renderFooter = () => {
     const footerText = state.content.site.footer[state.lang] || state.content.site.footer.en;
+    const publicMenus = getPublicMenus();
 
     document.querySelectorAll("[data-footer-copyright]").forEach((element) => {
       element.textContent = footerText.copyright;
@@ -1254,7 +1309,7 @@
     document.querySelectorAll("[data-footer-columns]").forEach((container) => {
       container.innerHTML = "";
 
-      state.content.menus.forEach((menu) => {
+      publicMenus.forEach((menu) => {
         const block = document.createElement("section");
         block.className = "footer-col";
 
@@ -1317,32 +1372,37 @@
     }
 
     const cardTitles = getLangText(UI_TEXT.homeCards);
+    const cardCta = getLangText(UI_TEXT.homeCardCta);
     const businessMenu = getMenu("business");
     const aboutMenu = getMenu("about");
     const infoMenu = getMenu("infos");
 
+    const businessLabels = businessMenu
+      ? businessMenu.items.map((item) => item.labels[state.lang] || item.labels.en)
+      : [];
+    const aboutVisionLabel =
+      aboutMenu && aboutMenu.items[1]
+        ? aboutMenu.items[1].labels[state.lang] || aboutMenu.items[1].labels.en
+        : "";
+    const infoNewsLabel =
+      infoMenu && infoMenu.items[0]
+        ? infoMenu.items[0].labels[state.lang] || infoMenu.items[0].labels.en
+        : "";
+
     const cardData = [
       {
         title: cardTitles[0],
-        description: businessMenu.items
-          .slice(0, 3)
-          .map((item) => item.labels[state.lang] || item.labels.en)
-          .join(" · "),
+        description: businessLabels.slice(0, 3).join(" · "),
         link: buildDetailUrl("business", "mining")
       },
       {
         title: cardTitles[1],
-        description: ["Infrastructure", "Exchange SaaS", "AI Trading", "Custom Development"].join(
-          " · "
-        ),
+        description: businessLabels.slice(1).join(" · "),
         link: buildDetailUrl("business", "development")
       },
       {
         title: cardTitles[2],
-        description:
-          (aboutMenu.items[1].labels[state.lang] || aboutMenu.items[1].labels.en) +
-          " · " +
-          (infoMenu.items[0].labels[state.lang] || infoMenu.items[0].labels.en),
+        description: [aboutVisionLabel, infoNewsLabel].filter(Boolean).join(" · "),
         link: buildDetailUrl("about", "vision")
       }
     ];
@@ -1353,7 +1413,7 @@
       article.className = "spotlight-card";
       article.innerHTML = `<h2>${encodeHtml(card.title)}</h2><p>${encodeHtml(card.description)}</p><a href="${encodeHtml(
         card.link
-      )}">Explore</a>`;
+      )}">${encodeHtml(cardCta)}</a>`;
       cards.append(article);
     });
   };
@@ -1364,9 +1424,14 @@
     let itemId = params.get("item");
     const postId = params.get("post");
 
-    const firstMenu = state.content.menus[0];
+    const publicMenus = getPublicMenus();
+    const firstMenu = publicMenus[0];
 
-    if (!menuId || !getMenu(menuId)) {
+    if (!firstMenu) {
+      return { menuId: "about", itemId: "hepta-labs", postId };
+    }
+
+    if (!menuId || !publicMenus.some((menu) => menu.id === menuId)) {
       menuId = firstMenu.id;
     }
 
@@ -1569,12 +1634,13 @@
       article.className = "qna-item";
 
       const answerText = getLocalizedAnswer(entry);
+      const maskedName = maskName(entry.name) || detailText.qnaAnonymous;
       const maskedPhone = maskPhone(entry.phone);
       const maskedEmail = maskEmail(entry.email);
       const contactText = [maskedEmail, maskedPhone].filter(Boolean).join(" · ");
       article.innerHTML = `
         <div class="qna-item-head">
-          <span class="qna-item-name">${encodeHtml(entry.name || "Anonymous")}</span>
+          <span class="qna-item-name">${encodeHtml(maskedName)}</span>
           <span class="qna-item-date">${encodeHtml(formatDisplayDate(entry.createdAt))}</span>
         </div>
         ${contactText ? `<p class="qna-item-contact">${encodeHtml(contactText)}</p>` : ""}
@@ -1629,14 +1695,49 @@
     form.addEventListener("submit", (event) => {
       event.preventDefault();
 
+      const status = form.querySelector(".qna-submit-status");
+      const showStatus = (message, isError = false) => {
+        if (!status) {
+          return;
+        }
+        status.textContent = message;
+        status.classList.toggle("is-error", isError);
+      };
+
       const formData = new FormData(form);
       const name = asString(formData.get("name")).trim();
       const phone = asString(formData.get("phone")).trim();
       const email = asString(formData.get("email")).trim();
       const question = asString(formData.get("question")).trim();
 
-      if (!name || !phone || !email || !question) {
+      if (name.length < 2) {
+        showStatus(detailText.qnaInvalidName, true);
         return;
+      }
+
+      if (!isValidPhone(phone)) {
+        showStatus(detailText.qnaInvalidPhone, true);
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showStatus(detailText.qnaInvalidEmail, true);
+        return;
+      }
+
+      if (question.length < 5) {
+        showStatus(detailText.qnaInvalidQuestion, true);
+        return;
+      }
+
+      try {
+        const lastSubmittedAt = Number(localStorage.getItem(STORAGE_KEYS.qnaLastSubmitAt) || 0);
+        if (Date.now() - lastSubmittedAt < QNA_MIN_SUBMIT_INTERVAL_MS) {
+          showStatus(detailText.qnaSubmitCooldown, true);
+          return;
+        }
+      } catch (error) {
+        // Continue without cooldown when storage access is blocked.
       }
 
       const newEntry = normalizeInquiry({
@@ -1656,12 +1757,15 @@
 
       state.content.dynamic.inquiries.unshift(newEntry);
       saveContent(state.content);
-      form.reset();
 
-      const status = form.querySelector(".qna-submit-status");
-      if (status) {
-        status.textContent = detailText.qnaSuccess;
+      try {
+        localStorage.setItem(STORAGE_KEYS.qnaLastSubmitAt, String(Date.now()));
+      } catch (error) {
+        // Ignore storage failures for this best-effort guard.
       }
+
+      form.reset();
+      showStatus(detailText.qnaSuccess, false);
 
       renderQnaPublicList(listWrap);
     });

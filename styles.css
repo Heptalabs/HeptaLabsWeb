@@ -1052,6 +1052,10 @@ textarea {
   font-size: 0.86rem;
 }
 
+.qna-submit-status.is-error {
+  color: #ff6b8a;
+}
+
 .qna-list {
   margin-top: 16px;
   display: grid;
