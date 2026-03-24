@@ -690,10 +690,18 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   border-radius: 11px;
 }
 
-.detail-list a.is-active,
 .detail-list a:hover {
   border-color: var(--line);
   background: rgba(255, 255, 255, 0.08);
+}
+
+.detail-list a.is-active {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="night"] .detail-list a.is-active {
+  background: rgba(90, 243, 255, 0.08);
 }
 
 .detail-content {
