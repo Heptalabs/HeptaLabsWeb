@@ -1172,6 +1172,18 @@ textarea {
   gap: 12px;
 }
 
+.qna-board {
+  gap: 12px;
+}
+
+.qna-post-link {
+  display: block;
+}
+
+.qna-post-card .post-card-body {
+  padding: 14px;
+}
+
 .qna-item {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1203,6 +1215,10 @@ textarea {
   line-height: 1.6;
 }
 
+.qna-post-card .qna-item-question {
+  margin-top: 8px;
+}
+
 .qna-item-contact {
   margin: 0 0 8px;
   color: var(--muted);
@@ -1215,6 +1231,17 @@ textarea {
   padding-top: 10px;
   border-top: 1px dashed var(--line);
   line-height: 1.62;
+}
+
+.qna-answer-panel {
+  border-top: 1px dashed var(--line);
+  padding: 0 14px 14px;
+}
+
+.qna-answer-panel .qna-item-answer {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 12px;
 }
 
 .admin-advanced-card {

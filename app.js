@@ -9,7 +9,8 @@
     noticeSeen: "heptalabs_notice_seen_v1",
     qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1",
     newsSeeded: "heptalabs_news_seeded_v1",
-    noticeSeeded: "heptalabs_notice_seeded_v1"
+    noticeSeeded: "heptalabs_notice_seeded_v1",
+    qnaSeeded: "heptalabs_qna_seeded_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
@@ -64,6 +65,8 @@
         qnaSubmit: "문의 등록",
         qnaSuccess: "문의가 등록되었습니다. 빠르게 확인 후 답변드리겠습니다.",
         qnaListTitle: "문의 / 답변",
+        qnaShowAnswer: "답변 보기",
+        qnaHideAnswer: "답변 숨기기",
         qnaAnonymous: "익명",
         qnaPending: "답변 준비중",
         qnaNoEntries: "아직 등록된 문의가 없습니다.",
@@ -95,6 +98,8 @@
         qnaSubmit: "Send Inquiry",
         qnaSuccess: "Your inquiry has been submitted.",
         qnaListTitle: "Inquiries / Answers",
+        qnaShowAnswer: "View Answer",
+        qnaHideAnswer: "Hide Answer",
         qnaAnonymous: "Anonymous",
         qnaPending: "Answer pending",
         qnaNoEntries: "No inquiries yet.",
@@ -126,6 +131,8 @@
         qnaSubmit: "提交咨询",
         qnaSuccess: "咨询已提交，我们会尽快回复。",
         qnaListTitle: "咨询 / 回复",
+        qnaShowAnswer: "查看回复",
+        qnaHideAnswer: "收起回复",
         qnaAnonymous: "匿名",
         qnaPending: "待回复",
         qnaNoEntries: "暂无咨询记录。",
@@ -1278,7 +1285,163 @@
         }
       }
     ],
-    inquiries: []
+    inquiries: [
+      {
+        id: "qna-20260324-enterprise-onboarding",
+        name: "김도현",
+        phone: "010-9234-1120",
+        email: "dohyun.kim@samplemail.com",
+        question:
+          "화이트라벨 거래소 구축을 검토 중입니다. 브랜드 커스텀 범위와 초기 오픈까지 평균 일정이 어느 정도인지 알고 싶습니다.",
+        lang: "ko",
+        createdAt: "2026-03-24T06:10:00.000Z",
+        answeredAt: "2026-03-24T09:40:00.000Z",
+        answers: {
+          ko: "문의 감사합니다. 기본 패키지 기준 3~5주 내 MVP 오픈이 가능하며, 브랜딩/도메인/운영권한 설계는 초기 주차에 함께 확정합니다.",
+          en: "Thanks for reaching out. For the base package, MVP launch is typically possible in 3-5 weeks, with branding, domain, and operation scopes aligned in week one.",
+          zh: "感谢咨询。标准套餐通常可在 3-5 周内完成 MVP 上线，品牌、域名与运营权限范围会在首周一起确认。"
+        }
+      },
+      {
+        id: "qna-20260323-api-monitoring",
+        name: "이수진",
+        phone: "010-5582-9901",
+        email: "sujin.lee@samplemail.com",
+        question:
+          "기존 백오피스가 있는데 Hepta Labs 모니터링 대시보드와 API로 연동 가능한지 궁금합니다.",
+        lang: "ko",
+        createdAt: "2026-03-23T04:30:00.000Z",
+        answers: {
+          ko: "",
+          en: "",
+          zh: ""
+        }
+      },
+      {
+        id: "qna-20260322-security-audit",
+        name: "박현우",
+        phone: "010-4142-7231",
+        email: "hyunwoo.park@samplemail.com",
+        question:
+          "서비스 런칭 전 보안 점검 항목(계정 권한, 로그 감사, 인프라 취약점 점검)도 포함되는지 확인 부탁드립니다.",
+        lang: "ko",
+        createdAt: "2026-03-22T08:05:00.000Z",
+        answeredAt: "2026-03-22T11:20:00.000Z",
+        answers: {
+          ko: "네, 가능합니다. 프리런치 단계에서 계정 권한 정책/감사로그/인프라 취약점 체크리스트를 포함한 보안 점검 패키지를 제공합니다.",
+          en: "Yes. In the pre-launch phase, we provide a security checklist package covering account permissions, audit logs, and infrastructure vulnerability reviews.",
+          zh: "可以。在上线前阶段，我们提供包含账号权限、审计日志与基础设施漏洞检查的安全审查包。"
+        }
+      },
+      {
+        id: "qna-20260321-sla-request",
+        name: "정하늘",
+        phone: "010-3371-4409",
+        email: "haneul.jeong@samplemail.com",
+        question:
+          "장애 발생 시 1차 응답 SLA와 정기 리포트 제공 주기가 어떻게 되는지 안내 부탁드립니다.",
+        lang: "ko",
+        createdAt: "2026-03-21T02:55:00.000Z",
+        answers: {
+          ko: "",
+          en: "",
+          zh: ""
+        }
+      },
+      {
+        id: "qna-20260320-global-ops",
+        name: "최민석",
+        phone: "010-2851-6643",
+        email: "minseok.choi@samplemail.com",
+        question:
+          "한국/중국 노드 동시 운영 시 대시보드에서 지역별 상태와 알림 우선순위를 개별 설정할 수 있나요?",
+        lang: "ko",
+        createdAt: "2026-03-20T10:45:00.000Z",
+        answeredAt: "2026-03-20T13:35:00.000Z",
+        answers: {
+          ko: "가능합니다. 지역별 노드 그룹을 분리해 경보 임계치와 알림 우선순위를 각각 설정할 수 있으며, 통합 보드에서 동시 모니터링됩니다.",
+          en: "Yes. You can split node groups by region and set independent alert thresholds and priorities while monitoring everything in one unified board.",
+          zh: "支持。可按区域拆分节点组并分别配置告警阈值与优先级，同时在统一看板中集中监控。"
+        }
+      },
+      {
+        id: "qna-20260319-media-upload",
+        name: "양지윤",
+        phone: "010-7781-3312",
+        email: "jiyoon.yang@samplemail.com",
+        question:
+          "어드민에서 영상 업로드 시 권장 파일 포맷과 최대 용량 기준이 있다면 공유 부탁드립니다.",
+        lang: "ko",
+        createdAt: "2026-03-19T07:25:00.000Z",
+        answers: {
+          ko: "",
+          en: "",
+          zh: ""
+        }
+      },
+      {
+        id: "qna-20260318-custom-domain",
+        name: "오세훈",
+        phone: "010-6192-7704",
+        email: "sehun.oh@samplemail.com",
+        question:
+          "커스텀 도메인 연결 시 www 리다이렉트와 HTTPS 자동 갱신까지 일괄 지원되는지 궁금합니다.",
+        lang: "ko",
+        createdAt: "2026-03-18T05:40:00.000Z",
+        answeredAt: "2026-03-18T08:55:00.000Z",
+        answers: {
+          ko: "네, DNS 설정 가이드와 함께 www 리다이렉트 및 HTTPS 인증서 적용 절차까지 지원합니다. 운영 중 갱신 정책도 함께 안내드립니다.",
+          en: "Yes. We support DNS setup guidance, www redirection, and HTTPS certificate enablement as one flow, including certificate renewal policy notes.",
+          zh: "是的，我们提供 DNS 配置指引，并支持 www 跳转与 HTTPS 证书配置的一体化流程，同时说明证书续期策略。"
+        }
+      },
+      {
+        id: "qna-20260317-kpi-dashboard",
+        name: "배유진",
+        phone: "010-5210-2046",
+        email: "yujin.bae@samplemail.com",
+        question:
+          "뉴스/공지/QnA 반응을 내부 KPI로 보고 싶은데 조회수나 전환 관련 지표 확장 계획이 있는지요?",
+        lang: "ko",
+        createdAt: "2026-03-17T03:10:00.000Z",
+        answers: {
+          ko: "",
+          en: "",
+          zh: ""
+        }
+      },
+      {
+        id: "qna-20260316-launch-support",
+        name: "문재영",
+        phone: "010-8433-1198",
+        email: "jaeyoung.moon@samplemail.com",
+        question:
+          "신규 서비스 오픈 당일에 장애 대응 대기 인력을 별도로 요청할 수 있는지 확인 부탁드립니다.",
+        lang: "ko",
+        createdAt: "2026-03-16T11:15:00.000Z",
+        answeredAt: "2026-03-16T14:05:00.000Z",
+        answers: {
+          ko: "가능합니다. 오픈 데이 전용 온콜 플랜을 통해 모니터링/장애 대응 인력을 탄력적으로 배치할 수 있습니다.",
+          en: "Yes. Through our launch-day on-call plan, dedicated monitoring and incident response resources can be allocated for your release window.",
+          zh: "可以。通过上线日 on-call 方案，我们可在发布窗口内配置专门的监控与故障响应资源。"
+        }
+      },
+      {
+        id: "qna-20260315-content-workflow",
+        name: "신아름",
+        phone: "010-7001-5572",
+        email: "areum.shin@samplemail.com",
+        question:
+          "운영팀과 마케팅팀이 동시에 콘텐츠 수정할 때 권장되는 작업 순서나 백업 방식이 있을까요?",
+        lang: "ko",
+        createdAt: "2026-03-15T02:30:00.000Z",
+        answers: {
+          ko: "",
+          en: "",
+          zh: ""
+        }
+      }
+    ]
   });
 
   const normalizeNewsPost = (value, fallback = {}) => {
@@ -1839,6 +2002,45 @@
 
     try {
       localStorage.setItem(STORAGE_KEYS.noticeSeeded, "1");
+    } catch (error) {
+      return;
+    }
+  };
+
+  const ensureSeededInquiriesOnce = () => {
+    try {
+      if (localStorage.getItem(STORAGE_KEYS.qnaSeeded) === "1") {
+        return;
+      }
+    } catch (error) {
+      return;
+    }
+
+    const seedInquiries = makeDefaultDynamic().inquiries.map((entry) => normalizeInquiry(entry));
+    const existingInquiries =
+      state.content &&
+      state.content.dynamic &&
+      Array.isArray(state.content.dynamic.inquiries)
+        ? state.content.dynamic.inquiries.map((entry) => normalizeInquiry(entry))
+        : [];
+
+    const merged = new Map(existingInquiries.map((entry) => [entry.id, entry]));
+    let hasInsertedSeed = false;
+
+    seedInquiries.forEach((seed) => {
+      if (!merged.has(seed.id)) {
+        merged.set(seed.id, seed);
+        hasInsertedSeed = true;
+      }
+    });
+
+    if (hasInsertedSeed) {
+      state.content.dynamic.inquiries = [...merged.values()].sort(sortByDateDesc);
+      saveContent(state.content);
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.qnaSeeded, "1");
     } catch (error) {
       return;
     }
@@ -2477,11 +2679,6 @@
             <p class="post-card-meta">${encodeHtml(formatDisplayDate(notice.createdAt))}</p>
             <h3 class="post-card-title">${encodeHtml(postTranslation.title)}</h3>
             <p class="post-card-excerpt">${encodeHtml(excerpt)}</p>
-            ${
-              notice.popup
-                ? `<span class="post-card-badge">${encodeHtml(detailText.noticePopupBadge)}</span>`
-                : ""
-            }
           </div>
         </a>
       `;
@@ -2527,9 +2724,10 @@
     }
   };
 
-  const renderQnaPublicList = (target) => {
+  const renderQnaBoard = (target, selectedEntryId, pageNumber = 1) => {
     const detailText = getLangText(UI_TEXT.detail);
     const entries = [...state.content.dynamic.inquiries].sort(sortByDateDesc);
+    const entriesPerPage = 5;
 
     target.innerHTML = "";
 
@@ -2541,35 +2739,113 @@
       return;
     }
 
-    entries.forEach((entry) => {
-      const article = document.createElement("article");
-      article.className = "qna-item";
+    const totalPages = Math.max(1, Math.ceil(entries.length / entriesPerPage));
+    let currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+    const selectedIndex = selectedEntryId ? entries.findIndex((entry) => entry.id === selectedEntryId) : -1;
 
+    if (selectedIndex >= 0) {
+      currentPage = Math.floor(selectedIndex / entriesPerPage) + 1;
+    }
+
+    const start = (currentPage - 1) * entriesPerPage;
+    const pageEntries = entries.slice(start, start + entriesPerPage);
+
+    const board = document.createElement("div");
+    board.className = "post-grid qna-board";
+
+    pageEntries.forEach((entry) => {
+      const isExpanded = selectedEntryId === entry.id;
       const answerText = getLocalizedAnswer(entry);
       const maskedName = maskName(entry.name) || detailText.qnaAnonymous;
       const maskedPhone = maskPhone(entry.phone);
       const maskedEmail = maskEmail(entry.email);
       const contactText = [maskedEmail, maskedPhone].filter(Boolean).join(" · ");
+
+      const toggleUrl = isExpanded
+        ? buildDetailUrl("help", "qna", { page: currentPage })
+        : buildDetailUrl("help", "qna", { post: entry.id, page: currentPage });
+
+      const article = document.createElement("article");
+      article.className = "post-card qna-post-card";
+      if (isExpanded) {
+        article.classList.add("is-active");
+      }
+
       article.innerHTML = `
-        <div class="qna-item-head">
-          <span class="qna-item-name">${encodeHtml(maskedName)}</span>
-          <span class="qna-item-date">${encodeHtml(formatDisplayDate(entry.createdAt))}</span>
-        </div>
-        ${contactText ? `<p class="qna-item-contact">${encodeHtml(contactText)}</p>` : ""}
-        <p class="qna-item-question">${richText(entry.question)}</p>
-        <p class="qna-item-answer"><strong>A.</strong> ${
-          answerText ? richText(answerText) : encodeHtml(detailText.qnaPending)
-        }</p>
+        <a class="post-card-link qna-post-link" href="${encodeHtml(toggleUrl)}">
+          <div class="post-card-body">
+            <p class="post-card-meta">${encodeHtml(formatDisplayDate(entry.createdAt))}</p>
+            <h3 class="post-card-title">${encodeHtml(maskedName)}</h3>
+            ${contactText ? `<p class="qna-item-contact">${encodeHtml(contactText)}</p>` : ""}
+            <p class="qna-item-question">${encodeHtml(truncateText(entry.question, 180))}</p>
+            <span class="post-card-link-text">${encodeHtml(
+              isExpanded ? detailText.qnaHideAnswer : detailText.qnaShowAnswer
+            )}</span>
+          </div>
+        </a>
+        ${
+          isExpanded
+            ? `<div class="qna-answer-panel">
+                <p class="qna-item-answer"><strong>A.</strong> ${
+                  answerText ? richText(answerText) : encodeHtml(detailText.qnaPending)
+                }</p>
+              </div>`
+            : ""
+        }
       `;
 
-      target.append(article);
+      board.append(article);
     });
+
+    target.append(board);
+
+    if (totalPages > 1) {
+      const pagination = document.createElement("nav");
+      pagination.className = "news-pagination";
+      pagination.setAttribute("aria-label", "QnA pagination");
+
+      if (currentPage > 1) {
+        const prevLink = document.createElement("a");
+        prevLink.className = "news-page-btn";
+        prevLink.href = buildDetailUrl("help", "qna", { page: currentPage - 1 });
+        prevLink.textContent = detailText.pagePrev;
+        pagination.append(prevLink);
+      }
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        const pageLink = document.createElement("a");
+        pageLink.className = "news-page-btn";
+        if (page === currentPage) {
+          pageLink.classList.add("is-active");
+        }
+        pageLink.href = buildDetailUrl("help", "qna", { page });
+        pageLink.textContent = String(page);
+        pagination.append(pageLink);
+      }
+
+      if (currentPage < totalPages) {
+        const nextLink = document.createElement("a");
+        nextLink.className = "news-page-btn";
+        nextLink.href = buildDetailUrl("help", "qna", { page: currentPage + 1 });
+        nextLink.textContent = detailText.pageNext;
+        pagination.append(nextLink);
+      }
+
+      target.append(pagination);
+    }
   };
 
-  const renderQnaDetail = (translation, target) => {
+  const renderQnaDetail = (translation, target, selectedPostId, pageNumber = 1) => {
     const detailText = getLangText(UI_TEXT.detail);
 
     appendFeatureImage(translation, target);
+
+    const listHeading = document.createElement("h2");
+    listHeading.textContent = detailText.qnaListTitle;
+    listHeading.className = "post-card-title";
+
+    const listWrap = document.createElement("div");
+    listWrap.className = "qna-list";
 
     const form = document.createElement("form");
     form.className = "qna-form";
@@ -2596,13 +2872,6 @@
       <button class="cta primary" type="submit">${encodeHtml(detailText.qnaSubmit)}</button>
       <p class="qna-submit-status" aria-live="polite"></p>
     `;
-
-    const listHeading = document.createElement("h2");
-    listHeading.textContent = detailText.qnaListTitle;
-    listHeading.className = "post-card-title";
-
-    const listWrap = document.createElement("div");
-    listWrap.className = "qna-list";
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -2678,14 +2947,14 @@
 
       form.reset();
       showStatus(detailText.qnaSuccess, false);
-
-      renderQnaPublicList(listWrap);
+      window.history.replaceState({}, "", buildDetailUrl("help", "qna", { page: 1 }));
+      renderQnaBoard(listWrap, null, 1);
     });
 
-    target.append(form);
     target.append(listHeading);
     target.append(listWrap);
-    renderQnaPublicList(listWrap);
+    renderQnaBoard(listWrap, selectedPostId, pageNumber);
+    target.append(form);
   };
 
   const renderDetail = () => {
@@ -2709,7 +2978,6 @@
     const titleElement = document.querySelector("[data-detail-title]");
     const subtitleElement = document.querySelector("[data-detail-subtitle]");
     const sectionsElement = document.querySelector("[data-detail-sections]");
-    const ctaElement = document.querySelector("[data-detail-cta]");
 
     if (menuLabelElement) {
       menuLabelElement.textContent = `${pathText.menuCaption}: ${menuLabel}`;
@@ -2750,15 +3018,11 @@
       } else if (menuId === "infos" && itemId === "notice") {
         renderNoticeDetail(translation, sectionsElement, postId, page);
       } else if (menuId === "help" && itemId === "qna") {
-        renderQnaDetail(translation, sectionsElement);
+        renderQnaDetail(translation, sectionsElement, postId, page);
       } else {
         appendFeatureImage(translation, sectionsElement);
         appendTranslationSections(translation, sectionsElement);
       }
-    }
-
-    if (ctaElement) {
-      ctaElement.textContent = pathText.contactCta;
     }
   };
 
@@ -4280,6 +4544,7 @@
   const init = () => {
     ensureSeededNewsPostsOnce();
     ensureSeededNoticesOnce();
+    ensureSeededInquiriesOnce();
     initThemeAndLangControls();
     initReveal();
     initOrbParallax();
