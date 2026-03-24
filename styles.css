@@ -68,18 +68,18 @@ body {
   inset: 0;
   z-index: -4;
   background:
-    radial-gradient(1100px 520px at -8% -10%, rgba(255, 255, 255, 0.72), transparent 62%),
-    radial-gradient(980px 460px at 108% 20%, rgba(92, 191, 255, 0.3), transparent 64%),
-    radial-gradient(820px 420px at 52% 120%, rgba(168, 184, 210, 0.3), transparent 70%),
-    linear-gradient(162deg, #f3f5f8 0%, #e5e9ef 54%, #d9dfe8 100%);
+    radial-gradient(1100px 520px at -8% -10%, rgba(255, 255, 255, 0.74), transparent 62%),
+    radial-gradient(980px 460px at 108% 20%, rgba(0, 212, 255, 0.24), transparent 64%),
+    radial-gradient(820px 420px at 52% 120%, rgba(88, 238, 213, 0.2), transparent 70%),
+    linear-gradient(162deg, #f4f8f8 0%, #e4efef 54%, #d8e8e9 100%);
 }
 
 :root[data-theme="night"] .page-bg {
   background:
     radial-gradient(1040px 500px at -8% -10%, rgba(255, 255, 255, 0.1), transparent 64%),
-    radial-gradient(940px 450px at 108% 20%, rgba(86, 200, 255, 0.2), transparent 66%),
-    radial-gradient(760px 400px at 48% 120%, rgba(72, 92, 128, 0.22), transparent 72%),
-    linear-gradient(160deg, #05070b 0%, #0a0f16 56%, #111923 100%);
+    radial-gradient(940px 450px at 108% 20%, rgba(90, 243, 255, 0.22), transparent 66%),
+    radial-gradient(760px 400px at 48% 120%, rgba(83, 210, 212, 0.2), transparent 72%),
+    linear-gradient(160deg, #05090a 0%, #071214 56%, #0b191b 100%);
 }
 
 .page-bg::before {
@@ -91,9 +91,9 @@ body {
     linear-gradient(
       112deg,
       transparent 22%,
-      rgba(115, 210, 255, 0.22) 42%,
+      rgba(0, 212, 255, 0.22) 42%,
       rgba(255, 255, 255, 0.2) 50%,
-      rgba(115, 210, 255, 0.14) 56%,
+      rgba(87, 238, 213, 0.16) 56%,
       transparent 74%
     ),
     linear-gradient(292deg, transparent 58%, rgba(255, 255, 255, 0.14) 72%, transparent 84%);
@@ -107,9 +107,9 @@ body {
   background: linear-gradient(
     112deg,
     transparent 18%,
-    rgba(90, 212, 255, 0.3) 38%,
+    rgba(90, 243, 255, 0.3) 38%,
     rgba(255, 255, 255, 0.2) 48%,
-    rgba(120, 170, 255, 0.22) 58%,
+    rgba(103, 237, 216, 0.24) 58%,
     transparent 76%
   );
 }
@@ -120,8 +120,8 @@ body {
   inset: 0;
   pointer-events: none;
   background-image:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, rgba(0, 212, 255, 0.08) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(96, 236, 215, 0.06) 0 1px, transparent 1px 72px),
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 72%);
   background-size: 100% 100%, 100% 100%, 100% 100%;
   opacity: 0.34;
