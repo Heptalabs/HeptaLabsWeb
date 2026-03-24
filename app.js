@@ -482,6 +482,76 @@
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
   const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
+  const TOPIC_MEDIA_DEFAULTS = {
+    about: {
+      "hepta-labs": {
+        url: "/assets/topic-media/about-hepta-labs.svg",
+        alt: {
+          ko: "Hepta Labs 회사 소개 대표 비주얼",
+          en: "Hepta Labs company overview visual",
+          zh: "Hepta Labs 公司介绍主视觉"
+        }
+      },
+      vision: {
+        url: "/assets/topic-media/about-vision.svg",
+        alt: {
+          ko: "Hepta Labs 비전 대표 비주얼",
+          en: "Hepta Labs vision visual",
+          zh: "Hepta Labs 愿景主视觉"
+        }
+      },
+      greeting: {
+        url: "/assets/topic-media/about-greeting.svg",
+        alt: {
+          ko: "Hepta Labs 인사말 대표 비주얼",
+          en: "Hepta Labs greeting visual",
+          zh: "Hepta Labs 致辞主视觉"
+        }
+      }
+    },
+    business: {
+      mining: {
+        url: "/assets/topic-media/business-mining.svg",
+        alt: {
+          ko: "마이닝 사업 대표 비주얼",
+          en: "Mining business visual",
+          zh: "矿业业务主视觉"
+        }
+      },
+      "white-label": {
+        url: "/assets/topic-media/business-white-label.svg",
+        alt: {
+          ko: "화이트라벨 사업 대표 비주얼",
+          en: "White label business visual",
+          zh: "白标业务主视觉"
+        }
+      },
+      "crypto-exchange": {
+        url: "/assets/topic-media/business-crypto-exchange.svg",
+        alt: {
+          ko: "가상자산 거래소 사업 대표 비주얼",
+          en: "Crypto exchange business visual",
+          zh: "加密交易所业务主视觉"
+        }
+      },
+      "ai-trading-bot": {
+        url: "/assets/topic-media/business-ai-trading-bot.svg",
+        alt: {
+          ko: "AI 트레이딩 봇 사업 대표 비주얼",
+          en: "AI trading bot business visual",
+          zh: "AI 交易机器人业务主视觉"
+        }
+      },
+      development: {
+        url: "/assets/topic-media/business-development.svg",
+        alt: {
+          ko: "개발 사업 대표 비주얼",
+          en: "Development business visual",
+          zh: "开发业务主视觉"
+        }
+      }
+    }
+  };
 
   const normalizeMediaType = (value, fallback = "image") => {
     const source = asString(value).trim().toLowerCase();
@@ -901,15 +971,55 @@
     };
   };
 
+  const applyTopicMediaDefaults = (content) => {
+    if (!content || !Array.isArray(content.menus)) {
+      return content;
+    }
+
+    content.menus.forEach((menu) => {
+      const menuDefaults = TOPIC_MEDIA_DEFAULTS[menu.id];
+      if (!menuDefaults || !Array.isArray(menu.items)) {
+        return;
+      }
+
+      menu.items.forEach((item) => {
+        const itemDefaults = menuDefaults[item.id];
+        if (!itemDefaults || !item.translations) {
+          return;
+        }
+
+        SUPPORTED_LANGS.forEach((lang) => {
+          const translation = ensureItemTranslation(item.translations[lang], {});
+
+          if (!asString(translation.featureImage).trim()) {
+            translation.featureImage = itemDefaults.url;
+          }
+
+          translation.featureMediaType = normalizeMediaType(
+            translation.featureMediaType,
+            inferMediaTypeFromUrl(translation.featureImage || itemDefaults.url, "image")
+          );
+
+          translation.featureImageAlt = ensureLangMap(translation.featureImageAlt, itemDefaults.alt);
+          item.translations[lang] = translation;
+        });
+      });
+    });
+
+    return content;
+  };
+
   const normalizeContentShape = (value) => {
     const source = value && typeof value === "object" ? value : {};
 
-    return {
+    const normalized = {
       version: Number(source.version || defaults.version || 1),
       site: normalizeSite(source.site),
       menus: normalizeMenus(source.menus),
       dynamic: normalizeDynamic(source.dynamic)
     };
+
+    return applyTopicMediaDefaults(normalized);
   };
 
   const isValidContent = (value) => {
