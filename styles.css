@@ -388,7 +388,6 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 
 .home-main,
 .detail-main,
-.footer-panel,
 .admin-auth-wrap,
 .admin-main {
   width: min(1380px, calc(100% - 50px));
@@ -552,6 +551,9 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .footer-panel {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
   margin-top: clamp(104px, 12.5vw, 188px);
   border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   padding: clamp(30px, 4.8vw, 52px);
@@ -1457,7 +1459,6 @@ textarea {
 
   .home-main,
   .detail-main,
-  .footer-panel,
   .admin-auth-wrap,
   .admin-main {
     width: min(calc(100% - 20px), 1380px);
