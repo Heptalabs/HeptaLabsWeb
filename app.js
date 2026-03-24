@@ -1194,6 +1194,52 @@
     });
   };
 
+  const isAdminHref = (value) => {
+    const href = asString(value).trim();
+    if (!href) {
+      return false;
+    }
+
+    try {
+      const url = new URL(href, window.location.origin);
+      const pathname = asString(url.pathname).toLowerCase();
+      return pathname === "/admin" || pathname === "/admin/" || pathname.endsWith("/admin.html");
+    } catch (error) {
+      const normalized = href.toLowerCase().replace(/\?.*$/, "").replace(/#.*$/, "");
+      return (
+        normalized === "/admin" ||
+        normalized === "/admin/" ||
+        normalized === "./admin" ||
+        normalized === "./admin/" ||
+        normalized === "admin" ||
+        normalized === "admin/" ||
+        normalized === "admin.html" ||
+        normalized.endsWith("/admin") ||
+        normalized.endsWith("/admin/") ||
+        normalized.endsWith("/admin.html")
+      );
+    }
+  };
+
+  const removePublicAdminEntryPoints = () => {
+    if (document.body.dataset.page === "admin") {
+      return;
+    }
+
+    const directTargets = document.querySelectorAll(
+      ".site-header .admin-chip, .site-header [data-admin-link]"
+    );
+    directTargets.forEach((node) => node.remove());
+
+    document.querySelectorAll(".site-header a").forEach((anchor) => {
+      const href = anchor.getAttribute("href");
+      const label = asString(anchor.textContent).trim().toLowerCase();
+      if (isAdminHref(href) || label === "admin") {
+        anchor.remove();
+      }
+    });
+  };
+
   const renderFooter = () => {
     const footerText = state.content.site.footer[state.lang] || state.content.site.footer.en;
 
@@ -3125,6 +3171,7 @@
 
   const rerenderPage = () => {
     renderPrimaryNav();
+    removePublicAdminEntryPoints();
     renderFooter();
 
     if (document.body.dataset.page === "home") {

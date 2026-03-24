@@ -310,6 +310,11 @@ body {
   transform: translateY(-1px);
 }
 
+body:not([data-page="admin"]) .site-header .admin-chip,
+body:not([data-page="admin"]) .site-header [data-admin-link] {
+  display: none !important;
+}
+
 .home-main,
 .detail-main,
 .footer-panel,
