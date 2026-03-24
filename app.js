@@ -2129,17 +2129,11 @@
       return "***";
     }
 
-    const localMasked =
-      local.length <= 2
-        ? `${local.slice(0, 1)}*`
-        : `${local.slice(0, 1)}${"*".repeat(Math.max(local.length - 2, 2))}${local.slice(-1)}`;
+    const localMasked = `${local.slice(0, 1)}${"*".repeat(Math.max(local.length - 1, 3))}`;
     const domainParts = domain.split(".");
     const domainHead = asString(domainParts.shift());
     const domainTail = asString(domainParts.join("."));
-    const domainMasked =
-      domainHead.length <= 2
-        ? `${domainHead.slice(0, 1)}*`
-        : `${domainHead.slice(0, 1)}${"*".repeat(Math.max(domainHead.length - 2, 2))}${domainHead.slice(-1)}`;
+    const domainMasked = `${domainHead.slice(0, 1)}${"*".repeat(Math.max(domainHead.length - 1, 3))}`;
 
     return domainTail ? `${localMasked}@${domainMasked}.${domainTail}` : `${localMasked}@${domainMasked}`;
   };
@@ -2151,11 +2145,14 @@
     }
 
     const digits = source.replace(/\D/g, "");
-    if (digits.length < 8) {
-      return "***-***";
+    if (digits.length < 6) {
+      return "***";
     }
 
-    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}**-**${digits.slice(-2)}`;
+    const head = digits.slice(0, 3);
+    const tail = digits.slice(-2);
+    const middleMask = "*".repeat(Math.max(digits.length - 5, 4));
+    return `${head}-${middleMask}-${tail}`;
   };
 
   const maskName = (name) => {
