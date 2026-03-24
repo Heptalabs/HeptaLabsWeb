@@ -167,6 +167,8 @@
         statusImportOk: "JSON을 성공적으로 불러왔습니다.",
         statusImportFail: "유효하지 않은 JSON 형식입니다.",
         statusExport: "JSON 파일을 내보냈습니다.",
+        statusStorageLimit:
+          "저장 용량 한도를 초과했습니다. 대용량 동영상은 URL 링크 방식 사용을 권장합니다.",
         confirmResetAll: "전체 콘텐츠를 기본값으로 되돌릴까요?",
         logout: "로그아웃",
         authTitle: "관리자 로그인",
@@ -275,6 +277,8 @@
         statusImportOk: "JSON was imported successfully.",
         statusImportFail: "Invalid JSON format.",
         statusExport: "JSON file exported.",
+        statusStorageLimit:
+          "Storage quota exceeded. For large videos, use URL links instead of file embedding.",
         confirmResetAll: "Reset all content to defaults?",
         logout: "Logout",
         authTitle: "Admin Sign In",
@@ -383,6 +387,7 @@
         statusImportOk: "JSON 导入成功。",
         statusImportFail: "JSON 格式无效。",
         statusExport: "JSON 文件已导出。",
+        statusStorageLimit: "存储空间不足。大型视频建议使用 URL 链接而非直接上传嵌入。",
         confirmResetAll: "确定将全部内容重置为默认值吗？",
         logout: "退出登录",
         authTitle: "管理员登录",
@@ -1075,7 +1080,12 @@
   const saveContent = (content) => {
     const normalized = normalizeContentShape(content);
     state.content = normalized;
-    localStorage.setItem(STORAGE_KEYS.content, JSON.stringify(normalized));
+    try {
+      localStorage.setItem(STORAGE_KEYS.content, JSON.stringify(normalized));
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   const getMenu = (menuId) => state.content.menus.find((menu) => menu.id === menuId) || null;
@@ -2155,7 +2165,13 @@
     };
 
     const persistAdminContent = (mainMessage = "", moduleMessage = "") => {
-      saveContent(adminState.content);
+      const saved = saveContent(adminState.content);
+      if (!saved) {
+        const limitMessage = adminText().statusStorageLimit;
+        showStatus(limitMessage);
+        showModuleStatus(limitMessage);
+        return;
+      }
       document.dispatchEvent(new CustomEvent("hepta:contentchange"));
       if (mainMessage) {
         showStatus(mainMessage);
