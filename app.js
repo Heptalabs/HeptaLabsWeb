@@ -2103,6 +2103,49 @@
     return query ? `${routePath}${itemPath}?${query}` : `${routePath}${itemPath}`;
   };
 
+  const normalizeSpotlightLink = (rawLink, fallbackLink) => {
+    const source = asString(rawLink).trim();
+    if (!source) {
+      return fallbackLink;
+    }
+
+    if (/^(https?:|mailto:|tel:)/i.test(source) || source.startsWith("#")) {
+      return source;
+    }
+
+    const normalizedSource = source.replace(/^\.\/+/, "").replace(/^\/+/, "/");
+    const absolutePath = normalizedSource.startsWith("/") ? normalizedSource : `/${normalizedSource}`;
+
+    try {
+      const parsed = new URL(absolutePath, window.location.origin);
+      const params = parsed.searchParams;
+      const isLegacyDetailPath = /\/detail\.html$/i.test(parsed.pathname);
+      const routeDetail = resolveDetailRouteFromPath(parsed.pathname);
+
+      let menuId = routeDetail.menuId;
+      let itemId = routeDetail.itemId;
+
+      if (isLegacyDetailPath) {
+        menuId = params.get("menu");
+        itemId = params.get("item");
+      } else if (!itemId) {
+        itemId = params.get("item");
+      }
+
+      if (menuId && PRIMARY_MENU_IDS.includes(menuId)) {
+        if (!itemId || !getItem(menuId, itemId)) {
+          const menu = getMenu(menuId);
+          itemId = menu && menu.items[0] ? menu.items[0].id : itemId;
+        }
+        return buildDetailUrl(menuId, itemId);
+      }
+
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch (error) {
+      return fallbackLink;
+    }
+  };
+
   const toDatetimeLocalValue = (iso) => {
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) {
@@ -2580,7 +2623,7 @@
     ];
     const fallbackLinks = [
       buildDetailUrl("business", "mining"),
-      buildDetailUrl("business", "development"),
+      buildDetailUrl("business", "ai-trading-bot"),
       buildDetailUrl("about", "vision")
     ];
 
@@ -2594,7 +2637,7 @@
       return {
         title: asString(source.title) || cardTitles[index] || `Card ${index + 1}`,
         description: asString(source.description) || fallbackDescriptions[index] || "",
-        link: asString(source.link) || fallbackLinks[index]
+        link: normalizeSpotlightLink(source.link, fallbackLinks[index])
       };
     });
 
@@ -2602,9 +2645,24 @@
     cardData.forEach((card) => {
       const article = document.createElement("article");
       article.className = "spotlight-card";
+      article.setAttribute("tabindex", "0");
+      article.setAttribute("role", "link");
       article.innerHTML = `<h2>${encodeHtml(card.title)}</h2><p>${encodeHtml(card.description)}</p><a href="${encodeHtml(
         card.link
       )}">${encodeHtml(cardCta)}</a>`;
+      article.addEventListener("click", (event) => {
+        if (event.target.closest("a")) {
+          return;
+        }
+        window.location.href = card.link;
+      });
+      article.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        window.location.href = card.link;
+      });
       cards.append(article);
     });
   };

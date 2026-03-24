@@ -46,7 +46,7 @@ window.HeptaContentDefaults = {
         {
           title: "솔루션 스택",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business/development"
+          link: "/business/ai-trading-bot"
         },
         {
           title: "운영 철학",
@@ -63,7 +63,7 @@ window.HeptaContentDefaults = {
         {
           title: "Solution Stack",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business/development"
+          link: "/business/ai-trading-bot"
         },
         {
           title: "Operating Principles",
@@ -80,7 +80,7 @@ window.HeptaContentDefaults = {
         {
           title: "方案栈",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business/development"
+          link: "/business/ai-trading-bot"
         },
         {
           title: "运营理念",

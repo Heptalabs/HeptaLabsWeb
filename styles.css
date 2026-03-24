@@ -531,6 +531,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
   transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease,
     transform 220ms ease;
 }
@@ -576,14 +577,17 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .spotlight-card:hover,
-.spotlight-card:focus-within {
+.spotlight-card:focus-within,
+.spotlight-card:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.24), 0 14px 30px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.45), 0 0 0 3px rgba(90, 243, 255, 0.14),
+    0 14px 30px rgba(0, 0, 0, 0.24);
   transform: translateY(-1px);
 }
 
 :root[data-theme="night"] .spotlight-card:hover,
-:root[data-theme="night"] .spotlight-card:focus-within {
+:root[data-theme="night"] .spotlight-card:focus-within,
+:root[data-theme="night"] .spotlight-card:focus-visible {
   background:
     linear-gradient(
       126deg,
@@ -596,17 +600,22 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 
 .spotlight-card:hover h2,
 .spotlight-card:focus-within h2,
+.spotlight-card:focus-visible h2,
 .spotlight-card:hover p,
 .spotlight-card:focus-within p,
+.spotlight-card:focus-visible p,
 .spotlight-card:hover a,
-.spotlight-card:focus-within a {
+.spotlight-card:focus-within a,
+.spotlight-card:focus-visible a {
   color: var(--text);
 }
 
 .spotlight-card:hover h2,
 .spotlight-card:focus-within h2,
+.spotlight-card:focus-visible h2,
 .spotlight-card:hover a,
-.spotlight-card:focus-within a {
+.spotlight-card:focus-within a,
+.spotlight-card:focus-visible a {
   text-shadow: 0 0 12px rgba(90, 243, 255, 0.2);
 }
 
