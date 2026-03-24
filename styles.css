@@ -581,25 +581,14 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 .spotlight-card:focus-within,
 .spotlight-card:focus-visible {
   border-color: var(--accent);
-  background: linear-gradient(165deg, rgba(248, 253, 253, 0.98), rgba(238, 247, 248, 0.98));
-  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.42), 0 0 0 4px rgba(90, 243, 255, 0.1),
-    0 14px 30px rgba(0, 0, 0, 0.24);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.26);
+  transform: none;
 }
 
 :root[data-theme="night"] .spotlight-card:hover,
 :root[data-theme="night"] .spotlight-card:focus-within,
 :root[data-theme="night"] .spotlight-card:focus-visible {
-  background:
-    linear-gradient(
-      126deg,
-      rgba(90, 243, 255, 0.18) 0%,
-      rgba(90, 243, 255, 0.07) 34%,
-      rgba(90, 243, 255, 0.02) 58%
-    ),
-    linear-gradient(180deg, rgba(7, 10, 13, 0.98), rgba(3, 5, 8, 0.98));
-  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.52), 0 0 0 4px rgba(90, 243, 255, 0.14),
-    0 14px 30px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.3);
 }
 
 .spotlight-card:hover h2,
