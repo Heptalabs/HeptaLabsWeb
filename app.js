@@ -7,7 +7,8 @@
     content: "heptalabs_content_v1",
     adminSession: "heptalabs_admin_session_v1",
     noticeSeen: "heptalabs_notice_seen_v1",
-    qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1"
+    qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1",
+    newsSeeded: "heptalabs_news_seeded_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
@@ -705,64 +706,251 @@
   const makeDefaultDynamic = () => ({
     newsPosts: [
       {
-        id: "news-infra-202603",
-        createdAt: "2026-03-20T09:00:00.000Z",
-        updatedAt: "2026-03-20T09:00:00.000Z",
-        image: "",
+        id: "news-20260324-infra-ops",
+        createdAt: "2026-03-24T02:10:00.000Z",
+        updatedAt: "2026-03-24T02:10:00.000Z",
+        image: "/assets/news-media/news-01-infra-ops.svg",
         imageAlt: {
-          ko: "인프라 운영 업데이트",
-          en: "Infrastructure operations update",
-          zh: "基础设施运营更新"
+          ko: "인프라 운영 고도화 뉴스 대표 이미지",
+          en: "Infrastructure operations upgrade news visual",
+          zh: "基础设施运维升级新闻主视觉"
         },
         translations: {
           ko: {
-            title: "운영 자동화 체계 고도화",
-            excerpt: "AI 트레이딩 운영지표와 리스크 모니터링 체계를 업데이트했습니다.",
+            title: "인프라 관제 스택 고도화 완료",
+            excerpt: "멀티 리전 서버 상태를 실시간 추적하는 신규 관제 스택을 운영에 반영했습니다.",
             body:
-              "Hepta Labs는 AI 트레이딩 운영 대시보드의 지표 체계를 개편했습니다.\\n리스크 신호를 더 빠르게 감지하도록 알림 구조를 재설계했고, 운영 대응 시간을 단축했습니다."
+              "Hepta Labs는 한국/중국 거점의 서버 메트릭을 단일 보드에서 확인할 수 있도록 관제 스택을 고도화했습니다.\\n장애 신호 탐지 시간을 단축해 운영 대응 속도와 가용성 지표를 함께 개선했습니다."
           },
           en: {
-            title: "Operations Automation Upgrade",
-            excerpt: "We upgraded AI trading metrics and risk monitoring workflows.",
+            title: "Infrastructure Monitoring Stack Upgrade Completed",
+            excerpt:
+              "A new observability stack was deployed for real-time multi-region server tracking.",
             body:
-              "Hepta Labs updated the metric architecture of its AI trading operations dashboard.\\nBy redesigning alert flows for faster risk detection, we reduced operational response time."
+              "Hepta Labs upgraded its monitoring stack so teams can manage Korea and China nodes from a unified dashboard.\\nThe rollout reduced incident detection time and improved service availability."
           },
           zh: {
-            title: "运营自动化体系升级",
-            excerpt: "我们更新了 AI 交易指标与风控监控流程。",
+            title: "基础设施监控体系升级完成",
+            excerpt: "全新可观测性架构已上线，可实时追踪多地区服务器状态。",
             body:
-              "Hepta Labs 完成了 AI 交易运维看板指标体系升级。\\n通过优化风险告警流程，我们显著缩短了运营响应时间。"
+              "Hepta Labs 完成了韩中节点统一监控体系升级，运维团队可在同一看板执行监控与响应。\\n本次升级显著缩短了故障感知时间并提升了整体可用性。"
           }
         }
       },
       {
-        id: "news-storage-202603",
-        createdAt: "2026-03-12T04:20:00.000Z",
-        updatedAt: "2026-03-12T04:20:00.000Z",
-        image: "",
+        id: "news-20260323-ai-risk-engine",
+        createdAt: "2026-03-23T07:40:00.000Z",
+        updatedAt: "2026-03-23T07:40:00.000Z",
+        image: "/assets/news-media/news-02-ai-risk.svg",
         imageAlt: {
-          ko: "스토리지 인프라 확장",
-          en: "Storage infrastructure expansion",
-          zh: "存储基础设施扩展"
+          ko: "AI 리스크 엔진 업데이트 뉴스 대표 이미지",
+          en: "AI risk engine update news visual",
+          zh: "AI 风控引擎更新新闻主视觉"
         },
         translations: {
           ko: {
-            title: "Web3.0 스토리지 확장 프로젝트 진행",
-            excerpt: "분산 스토리지 처리량과 복구 자동화 범위를 확대했습니다.",
+            title: "AI 리스크 엔진 2.1 릴리스",
+            excerpt: "급격한 변동 구간을 더 빠르게 감지하는 리스크 시그널 엔진을 배포했습니다.",
             body:
-              "Web3.0 스토리지 운영 프로젝트에서 처리량을 개선하고 복구 자동화를 확장했습니다.\\n대규모 데이터 운영 환경에서도 안정적인 가용성을 유지할 수 있도록 운영 시나리오를 고도화했습니다."
+              "새 리스크 엔진은 주문 체결 속도와 손실 제한 로직의 균형을 강화하는 데 중점을 두었습니다.\\n전략별 이상 패턴 분류 정확도를 높여 변동성 구간에서 안정적인 포지션 관리가 가능해졌습니다."
           },
           en: {
-            title: "Web3.0 Storage Expansion in Progress",
-            excerpt: "Throughput and automated recovery coverage were expanded.",
+            title: "AI Risk Engine 2.1 Released",
+            excerpt: "A faster risk-signal engine is now active for high-volatility windows.",
             body:
-              "In our Web3.0 storage operations program, we improved throughput and expanded automated recovery scope.\\nOperational scenarios were refined to maintain consistent availability under high data workloads."
+              "The new risk engine improves balance between execution speed and downside controls.\\nPattern classification for strategy anomalies was upgraded to support more stable position management."
           },
           zh: {
-            title: "Web3.0 存储扩展项目推进中",
-            excerpt: "处理能力与自动恢复覆盖范围已进一步提升。",
+            title: "AI 风控引擎 2.1 正式发布",
+            excerpt: "新引擎可在高波动区间更快识别风险信号。",
             body:
-              "在 Web3.0 存储运营项目中，我们提升了处理性能并扩大了自动恢复范围。\\n通过优化运维场景，确保在大规模数据负载下保持稳定可用性。"
+              "本次升级重点优化了成交速度与风控约束之间的平衡。\\n策略异常模式识别能力提升后，仓位控制的稳定性得到进一步加强。"
+          }
+        }
+      },
+      {
+        id: "news-20260322-storage-zone",
+        createdAt: "2026-03-22T04:25:00.000Z",
+        updatedAt: "2026-03-22T04:25:00.000Z",
+        image: "/assets/news-media/news-03-storage.svg",
+        imageAlt: {
+          ko: "Web3 스토리지 확장 뉴스 대표 이미지",
+          en: "Web3 storage expansion news visual",
+          zh: "Web3 存储扩容新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "Web3 스토리지 고가용성 존 확장",
+            excerpt: "신규 스토리지 존을 추가해 데이터 복원력과 처리량을 동시에 강화했습니다.",
+            body:
+              "Hepta Labs는 파일 분산 저장 운영 구간에 고가용성 존을 추가했습니다.\\n핵심 고객사의 장기 데이터 보관 시나리오를 기준으로 복구 자동화와 트래픽 분산 정책을 재정비했습니다."
+          },
+          en: {
+            title: "Web3 Storage High-Availability Zones Expanded",
+            excerpt: "New storage zones were added to improve resiliency and throughput together.",
+            body:
+              "Hepta Labs expanded high-availability zones across its distributed storage operations.\\nRecovery automation and traffic balancing policies were updated around long-term client workloads."
+          },
+          zh: {
+            title: "Web3 存储高可用区域完成扩容",
+            excerpt: "新增存储区域后，数据韧性与处理能力同步提升。",
+            body:
+              "Hepta Labs 在分布式存储服务中新增高可用区域。\\n围绕客户长期数据托管场景，我们同步优化了恢复自动化与流量分配策略。"
+          }
+        }
+      },
+      {
+        id: "news-20260321-exchange-core",
+        createdAt: "2026-03-21T09:30:00.000Z",
+        updatedAt: "2026-03-21T09:30:00.000Z",
+        image: "/assets/news-media/news-04-exchange.svg",
+        imageAlt: {
+          ko: "거래소 코어 성능 개선 뉴스 대표 이미지",
+          en: "Exchange core performance update news visual",
+          zh: "交易所核心性能升级新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "자체 거래소 실행 코어 성능 개선",
+            excerpt: "주문 라우팅 지연을 낮추고 체결 안정성을 높인 신규 실행 코어를 반영했습니다.",
+            body:
+              "주문 경로 재계산 주기를 최적화해 체결 지연을 줄였고, 순간 트래픽 급증 상황에서 큐 안정성을 개선했습니다.\\n운영 관점에서는 장애 탐지와 롤백 절차를 표준화해 대응 시간을 단축했습니다."
+          },
+          en: {
+            title: "Proprietary Exchange Execution Core Improved",
+            excerpt: "Routing latency was reduced while execution stability was increased.",
+            body:
+              "Order-routing recalculation windows were optimized to reduce execution delay, and queue stability was improved under peak traffic.\\nIncident detection and rollback playbooks were also standardized."
+          },
+          zh: {
+            title: "自营交易所执行核心性能升级",
+            excerpt: "订单路由延迟降低，成交稳定性进一步提升。",
+            body:
+              "通过优化订单路径重计算周期，我们降低了撮合延迟，并提升了高峰流量下的队列稳定性。\\n同时标准化了故障检测与回滚流程，响应效率明显提高。"
+          }
+        }
+      },
+      {
+        id: "news-20260320-white-label",
+        createdAt: "2026-03-20T06:20:00.000Z",
+        updatedAt: "2026-03-20T06:20:00.000Z",
+        image: "/assets/news-media/news-05-white-label.svg",
+        imageAlt: {
+          ko: "화이트라벨 신규 고객 온보딩 뉴스 대표 이미지",
+          en: "White-label onboarding news visual",
+          zh: "白标客户上线新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "화이트라벨 거래소 신규 고객 온보딩",
+            excerpt: "브랜딩/도메인/운영 모듈을 포함한 원스톱 온보딩 패키지를 적용했습니다.",
+            body:
+              "신규 고객사는 템플릿 기반 UI와 운영 모듈을 결합해 빠르게 런칭 준비를 마쳤습니다.\\n설정 자동화 범위를 넓혀 초기 세팅 리드타임을 기존 대비 단축했습니다."
+          },
+          en: {
+            title: "New White-Label Exchange Client Onboarded",
+            excerpt: "A one-stop onboarding package was delivered with branding and ops modules.",
+            body:
+              "The client prepared launch quickly by combining template UI with operations modules.\\nExpanded setup automation reduced initial onboarding lead-time compared to previous projects."
+          },
+          zh: {
+            title: "白标交易所新客户完成上线准备",
+            excerpt: "品牌、域名与运维模块打包的一站式方案已交付。",
+            body:
+              "新客户通过模板化前端与运维模块组合，快速完成上线准备。\\n我们进一步扩大了配置自动化范围，明显缩短了初始交付周期。"
+          }
+        }
+      },
+      {
+        id: "news-20260319-dev-delivery",
+        createdAt: "2026-03-19T11:05:00.000Z",
+        updatedAt: "2026-03-19T11:05:00.000Z",
+        image: "/assets/news-media/news-06-dev-team.svg",
+        imageAlt: {
+          ko: "개발 납기 성과 뉴스 대표 이미지",
+          en: "Development delivery milestone news visual",
+          zh: "开发交付里程碑新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "개발 조직 분기 납기 지표 달성",
+            excerpt: "Web/App 및 블록체인 프로젝트 3건을 예정 일정 내 동시 출시했습니다.",
+            body:
+              "프로덕트, 인프라, QA 스쿼드 간 공통 체크리스트를 적용해 병렬 개발 효율을 높였습니다.\\n릴리스 후 모니터링 구간에서도 주요 지표 안정화를 확인했습니다."
+          },
+          en: {
+            title: "Development Team Hit Quarterly Delivery Milestone",
+            excerpt: "Three Web/App and blockchain projects were launched on schedule.",
+            body:
+              "Shared checklists across product, infra, and QA squads improved parallel delivery efficiency.\\nPost-release monitoring confirmed stabilization of key service indicators."
+          },
+          zh: {
+            title: "开发团队达成季度交付里程碑",
+            excerpt: "3 个 Web/App 与区块链项目按计划同步上线。",
+            body:
+              "通过产品、基础设施与 QA 团队的统一清单机制，我们提升了并行交付效率。\\n上线后的监控阶段也确认了关键指标的稳定性。"
+          }
+        }
+      },
+      {
+        id: "news-20260318-mining-efficiency",
+        createdAt: "2026-03-18T03:50:00.000Z",
+        updatedAt: "2026-03-18T03:50:00.000Z",
+        image: "/assets/news-media/news-07-mining-eff.svg",
+        imageAlt: {
+          ko: "마이닝 효율 최적화 뉴스 대표 이미지",
+          en: "Mining efficiency optimization news visual",
+          zh: "矿业效率优化新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "마이닝 전력 효율 최적화 업데이트",
+            excerpt: "운영 스케줄링 개선으로 에너지 효율 지표를 상향 조정했습니다.",
+            body:
+              "채굴 장비 상태와 전력 단가를 함께 반영하는 스케줄링 규칙을 적용했습니다.\\n장비 운영 안정성을 유지하면서도 단위당 전력 효율을 개선했습니다."
+          },
+          en: {
+            title: "Mining Power Efficiency Optimization Update",
+            excerpt: "Energy efficiency metrics improved through revised scheduling logic.",
+            body:
+              "Scheduling rules now account for both rig condition and power cost in real time.\\nThe update improved energy efficiency while maintaining stable mining operations."
+          },
+          zh: {
+            title: "矿业能效优化更新完成",
+            excerpt: "通过调度策略升级，能效指标实现提升。",
+            body:
+              "我们已将设备状态与实时电价纳入同一调度规则。\\n在保障矿机稳定运行的同时，单位能耗效率得到持续优化。"
+          }
+        }
+      },
+      {
+        id: "news-20260317-korea-china-node",
+        createdAt: "2026-03-17T08:15:00.000Z",
+        updatedAt: "2026-03-17T08:15:00.000Z",
+        image: "/assets/news-media/news-08-kor-chn.svg",
+        imageAlt: {
+          ko: "한국-중국 노드 통합 운영 뉴스 대표 이미지",
+          en: "Korea-China node integration news visual",
+          zh: "韩中节点联动运维新闻主视觉"
+        },
+        translations: {
+          ko: {
+            title: "한국-중국 노드 통합 운영 대시보드 공개",
+            excerpt: "복수 거점 노드 상태를 단일 화면에서 확인하는 운영 대시보드를 적용했습니다.",
+            body:
+              "지역별 운영 지표를 동일 기준으로 비교할 수 있도록 데이터 스키마를 표준화했습니다.\\n장애 대응 및 자원 배분 의사결정 속도가 개선되며 글로벌 운영 일관성이 높아졌습니다."
+          },
+          en: {
+            title: "Unified Korea-China Node Operations Dashboard Launched",
+            excerpt: "A single-pane dashboard now tracks node health across regions.",
+            body:
+              "Data schemas were standardized so operators can compare region-level metrics consistently.\\nFaster response and resource allocation decisions improved global operating consistency."
+          },
+          zh: {
+            title: "韩中节点一体化运维看板上线",
+            excerpt: "跨区域节点状态可在统一界面中实时查看。",
+            body:
+              "我们标准化了区域运维数据结构，使团队可以按同一口径比较关键指标。\\n故障响应与资源调度决策速度提升后，全球运维一致性进一步增强。"
           }
         }
       }
@@ -1287,6 +1475,45 @@
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
     return timeB - timeA;
+  };
+
+  const ensureSeededNewsPostsOnce = () => {
+    try {
+      if (localStorage.getItem(STORAGE_KEYS.newsSeeded) === "1") {
+        return;
+      }
+    } catch (error) {
+      return;
+    }
+
+    const seedPosts = makeDefaultDynamic().newsPosts.map((post) => normalizeNewsPost(post));
+    const existingPosts =
+      state.content &&
+      state.content.dynamic &&
+      Array.isArray(state.content.dynamic.newsPosts)
+        ? state.content.dynamic.newsPosts.map((post) => normalizeNewsPost(post))
+        : [];
+
+    const merged = new Map(existingPosts.map((post) => [post.id, post]));
+    let hasInsertedSeed = false;
+
+    seedPosts.forEach((seed) => {
+      if (!merged.has(seed.id)) {
+        merged.set(seed.id, seed);
+        hasInsertedSeed = true;
+      }
+    });
+
+    if (hasInsertedSeed) {
+      state.content.dynamic.newsPosts = [...merged.values()].sort(sortByDateDesc);
+      saveContent(state.content);
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.newsSeeded, "1");
+    } catch (error) {
+      return;
+    }
   };
 
   const getPostTranslation = (post) =>
@@ -3667,6 +3894,7 @@
   };
 
   const init = () => {
+    ensureSeededNewsPostsOnce();
     initThemeAndLangControls();
     initReveal();
     initOrbParallax();
