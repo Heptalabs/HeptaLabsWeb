@@ -409,7 +409,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .hero {
-  max-width: min(980px, 94vw);
+  max-width: min(1120px, 95vw);
   position: relative;
   margin-left: clamp(18px, 2vw, 34px);
 }
@@ -443,7 +443,8 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   font-size: clamp(0.96rem, 1.22vw, 1.28rem);
   line-height: 1.6;
   color: var(--muted);
-  max-width: min(100%, 72ch);
+  max-width: min(100%, 96ch);
+  text-wrap: pretty;
 }
 
 .hero-line + .hero-line {
