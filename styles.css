@@ -218,8 +218,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 30;
-  margin: 0;
-  width: 100%;
+  margin: 0 auto;
+  width: min(1380px, calc(100% - 50px));
   padding: clamp(16px, 2.2vw, 24px) clamp(30px, 4.8vw, 52px);
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -551,9 +551,9 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
 }
 
 .footer-panel {
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
+  width: min(1380px, calc(100% - 50px));
+  margin-left: auto;
+  margin-right: auto;
   margin-top: clamp(104px, 12.5vw, 188px);
   border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   padding: clamp(30px, 4.8vw, 52px);
@@ -1442,11 +1442,15 @@ textarea {
 
 @media (max-width: 1120px) {
   .site-header {
-    width: 100%;
+    width: min(calc(100% - 20px), 1380px);
     grid-template-columns: 1fr;
     justify-items: start;
     padding: 14px clamp(20px, 4.8vw, 52px);
     gap: 10px;
+  }
+
+  .footer-panel {
+    width: min(calc(100% - 20px), 1380px);
   }
 
   .primary-nav {
