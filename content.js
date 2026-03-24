@@ -41,51 +41,51 @@ window.HeptaContentDefaults = {
         {
           title: "핵심 비즈니스",
           description: "Mining · White Label · Crypto Exchange",
-          link: "/business?item=mining"
+          link: "/business/mining"
         },
         {
           title: "솔루션 스택",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business?item=development"
+          link: "/business/development"
         },
         {
           title: "운영 철학",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "/about?item=vision"
+          link: "/about/vision"
         }
       ],
       en: [
         {
           title: "Core Business",
           description: "Mining · White Label · Crypto Exchange",
-          link: "/business?item=mining"
+          link: "/business/mining"
         },
         {
           title: "Solution Stack",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business?item=development"
+          link: "/business/development"
         },
         {
           title: "Operating Principles",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "/about?item=vision"
+          link: "/about/vision"
         }
       ],
       zh: [
         {
           title: "核心业务",
           description: "Mining · White Label · Crypto Exchange",
-          link: "/business?item=mining"
+          link: "/business/mining"
         },
         {
           title: "方案栈",
           description: "AI Trading Bot · Development · Infra Ops",
-          link: "/business?item=development"
+          link: "/business/development"
         },
         {
           title: "运营理念",
           description: "Vision · Execution · Measurable Outcomes",
-          link: "/about?item=vision"
+          link: "/about/vision"
         }
       ]
     },

@@ -30,9 +30,6 @@
     infos: ROUTE_PATHS.infos,
     help: ROUTE_PATHS.help
   });
-  const ROUTE_MENU_IDS = Object.freeze(
-    Object.fromEntries(Object.entries(MENU_ROUTE_PATHS).map(([menuId, path]) => [path, menuId]))
-  );
   const QNA_MIN_SUBMIT_INTERVAL_MS = 30000;
   const LOCALE_BY_LANG = {
     ko: "ko-KR",
@@ -1926,18 +1923,32 @@
     return normalized;
   };
 
+  const getRoutePathSegments = (pathname) =>
+    normalizeRoutePath(pathname)
+      .split("/")
+      .filter((segment) => Boolean(segment));
+
+  const resolveDetailRouteFromPath = (pathname) => {
+    const [menuSegment, itemSegment] = getRoutePathSegments(pathname);
+    if (!PRIMARY_MENU_IDS.includes(menuSegment)) {
+      return { menuId: null, itemId: null };
+    }
+
+    return {
+      menuId: menuSegment,
+      itemId: itemSegment ? decodeURIComponent(itemSegment) : null
+    };
+  };
+
   const resolveMenuFromPath = (pathname) => {
-    const normalizedPath = normalizeRoutePath(pathname);
-    return ROUTE_MENU_IDS[normalizedPath] || null;
+    return resolveDetailRouteFromPath(pathname).menuId;
   };
 
   const buildDetailUrl = (menuId, itemId, extraParams = null) => {
     const params = new URLSearchParams();
     const routePath = MENU_ROUTE_PATHS[menuId] || MENU_ROUTE_PATHS.about;
-
-    if (itemId) {
-      params.set("item", itemId);
-    }
+    const normalizedItemId = asString(itemId).trim();
+    const itemPath = normalizedItemId ? `/${encodeURIComponent(normalizedItemId)}` : "";
 
     if (extraParams && typeof extraParams === "object") {
       Object.entries(extraParams).forEach(([key, value]) => {
@@ -1948,7 +1959,7 @@
     }
 
     const query = params.toString();
-    return query ? `${routePath}?${query}` : routePath;
+    return query ? `${routePath}${itemPath}?${query}` : `${routePath}${itemPath}`;
   };
 
   const toDatetimeLocalValue = (iso) => {
@@ -2268,7 +2279,7 @@
         }
 
         const anchor = document.createElement("a");
-        anchor.href = buildDetailUrl(menu.id, firstItem.id);
+        anchor.href = MENU_ROUTE_PATHS[menu.id] || buildDetailUrl(menu.id, firstItem.id);
         anchor.textContent = navText[menu.id] || menu.labels[state.lang] || menu.labels.en;
 
         if (activeMenu && activeMenu === menu.id) {
@@ -2459,9 +2470,9 @@
 
   const resolveDetailParams = () => {
     const params = new URLSearchParams(window.location.search);
-    const menuIdFromPath = resolveMenuFromPath(window.location.pathname);
-    let menuId = menuIdFromPath || params.get("menu");
-    let itemId = params.get("item");
+    const routeDetail = resolveDetailRouteFromPath(window.location.pathname);
+    let menuId = routeDetail.menuId || params.get("menu");
+    let itemId = routeDetail.itemId || params.get("item");
     const postId = params.get("post");
     const pageRaw = Number.parseInt(params.get("page") || "1", 10);
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
@@ -2504,9 +2515,21 @@
     }
 
     if (page === "detail") {
+      const params = new URLSearchParams(window.location.search);
       const isLegacyDetailPath = /\/detail\.html$/i.test(pathname);
-      const isMenuPath = Boolean(resolveMenuFromPath(pathname));
-      if (!isLegacyDetailPath && isMenuPath) {
+      const routeDetail = resolveDetailRouteFromPath(pathname);
+      const hasPost = params.has("post");
+      const hasPage = params.has("page") && params.get("page") !== "1";
+      const hasLegacyItemQuery = params.has("item");
+
+      if (
+        !isLegacyDetailPath &&
+        routeDetail.menuId &&
+        !routeDetail.itemId &&
+        !hasLegacyItemQuery &&
+        !hasPost &&
+        !hasPage
+      ) {
         return;
       }
 
