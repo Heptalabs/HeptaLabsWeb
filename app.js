@@ -49,6 +49,9 @@
         contactCta: "문의하기",
         newsEmpty: "등록된 뉴스가 없습니다.",
         newsReadMore: "자세히 보기",
+        newsBackToList: "목록으로",
+        pagePrev: "이전",
+        pageNext: "다음",
         noticeEmpty: "등록된 공지사항이 없습니다.",
         noticePopupBadge: "팝업 공지",
         qnaFormTitle: "문의 등록",
@@ -77,6 +80,9 @@
         contactCta: "Contact Us",
         newsEmpty: "No news posts available yet.",
         newsReadMore: "Read More",
+        newsBackToList: "Back to List",
+        pagePrev: "Previous",
+        pageNext: "Next",
         noticeEmpty: "No notices available yet.",
         noticePopupBadge: "Popup Notice",
         qnaFormTitle: "Submit an Inquiry",
@@ -105,6 +111,9 @@
         contactCta: "联系我们",
         newsEmpty: "暂无新闻内容。",
         newsReadMore: "查看详情",
+        newsBackToList: "返回列表",
+        pagePrev: "上一页",
+        pageNext: "下一页",
         noticeEmpty: "暂无公告。",
         noticePopupBadge: "弹窗公告",
         qnaFormTitle: "提交咨询",
@@ -1614,12 +1623,14 @@
     let menuId = params.get("menu");
     let itemId = params.get("item");
     const postId = params.get("post");
+    const pageRaw = Number.parseInt(params.get("page") || "1", 10);
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
     const publicMenus = getPublicMenus();
     const firstMenu = publicMenus[0];
 
     if (!firstMenu) {
-      return { menuId: "about", itemId: "hepta-labs", postId };
+      return { menuId: "about", itemId: "hepta-labs", postId, page };
     }
 
     if (!menuId || !publicMenus.some((menu) => menu.id === menuId)) {
@@ -1631,7 +1642,7 @@
       itemId = selectedMenu.items[0].id;
     }
 
-    return { menuId, itemId, postId };
+    return { menuId, itemId, postId, page };
   };
 
   const createDetailMediaNode = ({
@@ -1723,8 +1734,9 @@
     return `${plain.slice(0, length)}...`;
   };
 
-  const renderNewsDetail = (translation, target, selectedPostId) => {
+  const renderNewsDetail = (translation, target, selectedPostId, pageNumber = 1) => {
     const detailText = getLangText(UI_TEXT.detail);
+    const postsPerPage = 4;
 
     appendFeatureImage(translation, target);
 
@@ -1737,54 +1749,102 @@
       return;
     }
 
-    const selected = posts.find((post) => post.id === selectedPostId) || posts[0];
+    const totalPages = Math.max(1, Math.ceil(posts.length / postsPerPage));
+    const currentPage = Math.min(Math.max(Number(pageNumber) || 1, 1), totalPages);
+    const selected = selectedPostId ? posts.find((post) => post.id === selectedPostId) : null;
+
+    if (selected) {
+      const selectedTranslation = getPostTranslation(selected);
+      const postDetail = document.createElement("article");
+      postDetail.className = "post-expanded news-post-detail";
+      postDetail.innerHTML = `
+        ${
+          selected.image
+            ? `<img class="news-post-cover" src="${encodeHtml(selected.image)}" alt="${encodeHtml(
+                getLocalizedLabel(selected.imageAlt) || selectedTranslation.title
+              )}" loading="lazy" />`
+            : ""
+        }
+        <p class="post-card-meta">${encodeHtml(formatDisplayDate(selected.createdAt))}</p>
+        <h2 class="post-card-title">${encodeHtml(selectedTranslation.title)}</h2>
+        <p class="post-card-excerpt">${richText(selectedTranslation.body)}</p>
+      `;
+      target.append(postDetail);
+
+      const backLink = document.createElement("a");
+      backLink.className = "cta ghost small news-back-link";
+      backLink.href = buildDetailUrl("infos", "news", { page: currentPage });
+      backLink.textContent = detailText.newsBackToList;
+      target.append(backLink);
+      return;
+    }
+
+    const start = (currentPage - 1) * postsPerPage;
+    const pagePosts = posts.slice(start, start + postsPerPage);
 
     const grid = document.createElement("div");
-    grid.className = "post-grid";
+    grid.className = "news-grid";
 
-    posts.forEach((post) => {
+    pagePosts.forEach((post) => {
       const postTranslation = getPostTranslation(post);
-      const excerpt = postTranslation.excerpt || truncateText(postTranslation.body);
-      const article = document.createElement("article");
-      article.className = "post-card";
-      if (selected.id === post.id) {
-        article.classList.add("is-active");
-      }
+      const title = postTranslation.title || "Untitled";
+      const mediaHtml = post.image
+        ? `<img class="news-card-cover" src="${encodeHtml(post.image)}" alt="${encodeHtml(
+            getLocalizedLabel(post.imageAlt) || title
+          )}" loading="lazy" />`
+        : `<div class="news-card-cover news-card-placeholder" aria-hidden="true"></div>`;
 
-      article.innerHTML = `
-        <a class="post-card-link" href="${encodeHtml(
-          buildDetailUrl("infos", "news", { post: post.id })
+      const card = document.createElement("article");
+      card.className = "news-card";
+      card.innerHTML = `
+        <a class="news-card-link" href="${encodeHtml(
+          buildDetailUrl("infos", "news", { post: post.id, page: currentPage })
         )}">
-          ${
-            post.image
-              ? `<img class="post-card-cover" src="${encodeHtml(post.image)}" alt="${encodeHtml(
-                  getLocalizedLabel(post.imageAlt) || postTranslation.title
-                )}" loading="lazy" />`
-              : ""
-          }
-          <div class="post-card-body">
-            <p class="post-card-meta">${encodeHtml(formatDisplayDate(post.createdAt))}</p>
-            <h3 class="post-card-title">${encodeHtml(postTranslation.title)}</h3>
-            <p class="post-card-excerpt">${encodeHtml(excerpt)}</p>
-            <span class="post-card-link-text">${encodeHtml(detailText.newsReadMore)}</span>
-          </div>
+          ${mediaHtml}
+          <h3 class="news-card-title">${encodeHtml(title)}</h3>
         </a>
       `;
-
-      grid.append(article);
+      grid.append(card);
     });
 
     target.append(grid);
 
-    const selectedTranslation = getPostTranslation(selected);
-    const expanded = document.createElement("article");
-    expanded.className = "post-expanded";
-    expanded.innerHTML = `
-      <p class="post-card-meta">${encodeHtml(formatDisplayDate(selected.createdAt))}</p>
-      <h2 class="post-card-title">${encodeHtml(selectedTranslation.title)}</h2>
-      <p class="post-card-excerpt">${richText(selectedTranslation.body)}</p>
-    `;
-    target.append(expanded);
+    if (totalPages <= 1) {
+      return;
+    }
+
+    const pagination = document.createElement("nav");
+    pagination.className = "news-pagination";
+    pagination.setAttribute("aria-label", "News pagination");
+
+    if (currentPage > 1) {
+      const prevLink = document.createElement("a");
+      prevLink.className = "news-page-btn";
+      prevLink.href = buildDetailUrl("infos", "news", { page: currentPage - 1 });
+      prevLink.textContent = detailText.pagePrev;
+      pagination.append(prevLink);
+    }
+
+    for (let page = 1; page <= totalPages; page += 1) {
+      const pageLink = document.createElement("a");
+      pageLink.className = "news-page-btn";
+      if (page === currentPage) {
+        pageLink.classList.add("is-active");
+      }
+      pageLink.href = buildDetailUrl("infos", "news", { page });
+      pageLink.textContent = String(page);
+      pagination.append(pageLink);
+    }
+
+    if (currentPage < totalPages) {
+      const nextLink = document.createElement("a");
+      nextLink.className = "news-page-btn";
+      nextLink.href = buildDetailUrl("infos", "news", { page: currentPage + 1 });
+      nextLink.textContent = detailText.pageNext;
+      pagination.append(nextLink);
+    }
+
+    target.append(pagination);
   };
 
   const renderNoticeDetail = (translation, target, selectedPostId) => {
@@ -2019,7 +2079,7 @@
 
   const renderDetail = () => {
     const pathText = getLangText(UI_TEXT.detail);
-    const { menuId, itemId, postId } = resolveDetailParams();
+    const { menuId, itemId, postId, page } = resolveDetailParams();
 
     const menu = getMenu(menuId);
     const item = getItem(menuId, itemId);
@@ -2075,7 +2135,7 @@
       sectionsElement.innerHTML = "";
 
       if (menuId === "infos" && itemId === "news") {
-        renderNewsDetail(translation, sectionsElement, postId);
+        renderNewsDetail(translation, sectionsElement, postId, page);
       } else if (menuId === "infos" && itemId === "notice") {
         renderNoticeDetail(translation, sectionsElement, postId);
       } else if (menuId === "help" && itemId === "qna") {
