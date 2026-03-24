@@ -96,6 +96,7 @@ body {
 }
 
 .orb {
+  display: none;
   --parallax-x: 0px;
   --parallax-y: 0px;
   position: fixed;
