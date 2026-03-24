@@ -8,7 +8,8 @@
     adminSession: "heptalabs_admin_session_v1",
     noticeSeen: "heptalabs_notice_seen_v1",
     qnaLastSubmitAt: "heptalabs_qna_last_submit_at_v1",
-    newsSeeded: "heptalabs_news_seeded_v1"
+    newsSeeded: "heptalabs_news_seeded_v1",
+    noticeSeeded: "heptalabs_notice_seeded_v1"
   };
 
   const SUPPORTED_LANGS = ["ko", "en", "zh"];
@@ -957,34 +958,322 @@
     ],
     notices: [
       {
-        id: "notice-maintenance-202603",
-        createdAt: "2026-03-18T01:00:00.000Z",
-        updatedAt: "2026-03-18T01:00:00.000Z",
+        id: "notice-20260324-platform-window",
+        createdAt: "2026-03-24T01:30:00.000Z",
+        updatedAt: "2026-03-24T01:30:00.000Z",
         popup: true,
-        image: "",
+        image: "/assets/notice-media/notice-01-platform-window.svg",
         imageAlt: {
-          ko: "정기 점검 공지",
-          en: "Maintenance notice",
-          zh: "维护公告"
+          ko: "플랫폼 점검 안내 공지 이미지",
+          en: "Platform maintenance notice visual",
+          zh: "平台维护通知主视觉"
         },
         translations: {
           ko: {
-            title: "정기 점검 안내",
-            excerpt: "서비스 안정성 확보를 위한 점검 일정 안내",
+            title: "플랫폼 정기 점검 일정 안내",
+            excerpt: "서비스 안정성 강화를 위한 정기 점검 시간이 공지되었습니다.",
             body:
-              "서비스 안정성 향상을 위해 정기 점검이 진행됩니다.\\n점검 시간 동안 일부 기능이 일시 제한될 수 있으며, 완료 즉시 정상화됩니다."
+              "Hepta Labs 플랫폼은 2026년 3월 27일 02:00~04:00(KST) 정기 점검을 진행합니다.\\n점검 시간에는 일부 조회 기능의 응답이 지연될 수 있으며, 점검 완료 즉시 정상화됩니다."
           },
           en: {
-            title: "Scheduled Maintenance Notice",
-            excerpt: "Maintenance schedule for service stability improvement",
+            title: "Scheduled Platform Maintenance Window",
+            excerpt: "A maintenance window has been announced to improve service stability.",
             body:
-              "Scheduled maintenance will be performed to improve service stability.\\nSome features may be temporarily limited during the window and will be restored immediately after completion."
+              "Hepta Labs will run scheduled maintenance from 02:00 to 04:00 KST on March 27, 2026.\\nSome read-only features may respond slower during the window, then return to normal immediately after completion."
           },
           zh: {
-            title: "定期维护通知",
-            excerpt: "为提升服务稳定性安排的维护计划",
+            title: "平台定期维护时段公告",
+            excerpt: "为提升服务稳定性，现发布定期维护安排。",
             body:
-              "为提升服务稳定性，我们将进行定期维护。\\n维护期间部分功能可能暂时受限，维护完成后将立即恢复。"
+              "Hepta Labs 将于 2026 年 3 月 27 日 02:00~04:00（KST）进行例行维护。\\n维护期间部分查询功能可能出现短暂延迟，维护结束后将立即恢复。"
+          }
+        }
+      },
+      {
+        id: "notice-20260323-risk-policy",
+        createdAt: "2026-03-23T03:15:00.000Z",
+        updatedAt: "2026-03-23T03:15:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-02-risk-policy.svg",
+        imageAlt: {
+          ko: "리스크 운영 정책 개정 공지 이미지",
+          en: "Risk policy update notice visual",
+          zh: "风控政策更新通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "리스크 운영 정책 v2.1 적용 안내",
+            excerpt: "변동성 구간 대응 기준이 업데이트되었습니다.",
+            body:
+              "리스크 운영 정책이 v2.1로 개정되어 고변동 구간의 자동 방어 기준이 강화되었습니다.\\n고객사는 어드민의 정책 문서 탭에서 최신 기준을 확인할 수 있습니다."
+          },
+          en: {
+            title: "Risk Operations Policy v2.1 Applied",
+            excerpt: "Response standards for high-volatility windows have been updated.",
+            body:
+              "Risk operations policy has been updated to v2.1 with stronger automated defense thresholds in volatile markets.\\nClients can review the latest baseline from the policy document tab in admin."
+          },
+          zh: {
+            title: "风控运营政策 v2.1 已生效",
+            excerpt: "高波动区间的响应标准已完成更新。",
+            body:
+              "风控运营政策已升级至 v2.1，并强化了高波动行情下的自动防护阈值。\\n客户可在管理端政策文档页查看最新标准。"
+          }
+        }
+      },
+      {
+        id: "notice-20260322-news-module",
+        createdAt: "2026-03-22T05:20:00.000Z",
+        updatedAt: "2026-03-22T05:20:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-03-news-module.svg",
+        imageAlt: {
+          ko: "뉴스 모듈 개선 공지 이미지",
+          en: "News module enhancement notice visual",
+          zh: "新闻模块优化通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "뉴스 모듈 UI/편집 기능 개선",
+            excerpt: "이미지 중심 카드와 게시글 관리 흐름이 개선되었습니다.",
+            body:
+              "정보 > News 메뉴에서 카드형 목록과 상세 이동 UX가 개선되었습니다.\\n관리자 페이지에서는 이미지 업로드, 본문 편집, 게시 일자 조정이 더 직관적으로 동작합니다."
+          },
+          en: {
+            title: "News Module UI and Editing Flow Updated",
+            excerpt: "Image-first cards and post management flow were improved.",
+            body:
+              "The Infos > News area now has a cleaner card list and detail navigation experience.\\nIn admin, image uploads, body editing, and publish-date controls were streamlined."
+          },
+          zh: {
+            title: "新闻模块界面与编辑流程升级",
+            excerpt: "图片卡片展示与内容管理流程已优化。",
+            body:
+              "资讯 > News 现提供更清晰的卡片列表与详情浏览体验。\\n管理端的图片上传、正文编辑与发布时间调整也更直观。"
+          }
+        }
+      },
+      {
+        id: "notice-20260321-admin-security",
+        createdAt: "2026-03-21T07:40:00.000Z",
+        updatedAt: "2026-03-21T07:40:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-04-admin-security.svg",
+        imageAlt: {
+          ko: "관리자 보안 정책 공지 이미지",
+          en: "Admin security policy notice visual",
+          zh: "管理后台安全策略通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "어드민 보안 정책 업데이트",
+            excerpt: "관리자 접근 정책 및 세션 규칙이 업데이트되었습니다.",
+            body:
+              "관리자 로그인 세션 정책이 정비되어 보안 기준이 강화되었습니다.\\n공용 PC 사용 후에는 반드시 로그아웃을 실행하고, 비밀번호는 주기적으로 변경해 주세요."
+          },
+          en: {
+            title: "Admin Security Policy Update",
+            excerpt: "Access policy and session rules for admin were updated.",
+            body:
+              "Admin session controls were revised to improve security standards.\\nPlease always log out on shared devices and rotate passwords regularly."
+          },
+          zh: {
+            title: "管理后台安全策略更新",
+            excerpt: "后台访问策略与会话规则已完成更新。",
+            body:
+              "管理端会话控制已优化，以提升整体安全基线。\\n在公用设备上使用后请务必退出登录，并定期更换密码。"
+          }
+        }
+      },
+      {
+        id: "notice-20260320-support-hours",
+        createdAt: "2026-03-20T08:55:00.000Z",
+        updatedAt: "2026-03-20T08:55:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-05-support-hours.svg",
+        imageAlt: {
+          ko: "고객 지원 운영시간 공지 이미지",
+          en: "Support hours notice visual",
+          zh: "客户支持时段通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "고객 지원 운영시간 조정 안내",
+            excerpt: "글로벌 고객 대응 강화를 위해 운영시간이 확장됩니다.",
+            body:
+              "2026년 3월 25일부터 고객 지원 운영시간이 09:00~22:00(KST)로 확대됩니다.\\n긴급 이슈는 Help > Contact 채널을 통해 24시간 접수 가능합니다."
+          },
+          en: {
+            title: "Customer Support Hours Extended",
+            excerpt: "Support operation hours are expanded for global response coverage.",
+            body:
+              "Starting March 25, 2026, support hours will run from 09:00 to 22:00 KST.\\nUrgent issues can still be submitted 24/7 through Help > Contact."
+          },
+          zh: {
+            title: "客户支持服务时段调整通知",
+            excerpt: "为增强全球响应能力，服务时段将延长。",
+            body:
+              "自 2026 年 3 月 25 日起，客户支持时段调整为 09:00~22:00（KST）。\\n紧急事项仍可通过 Help > Contact 渠道 24 小时提交。"
+          }
+        }
+      },
+      {
+        id: "notice-20260319-media-guideline",
+        createdAt: "2026-03-19T10:10:00.000Z",
+        updatedAt: "2026-03-19T10:10:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-06-media-guideline.svg",
+        imageAlt: {
+          ko: "콘텐츠 미디어 가이드 공지 이미지",
+          en: "Media guideline notice visual",
+          zh: "内容媒体规范通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "콘텐츠 업로드 미디어 가이드 배포",
+            excerpt: "이미지/GIF/영상 업로드 권장 규격이 공지되었습니다.",
+            body:
+              "사이트 전반의 품질 일관성을 위해 미디어 업로드 가이드가 배포되었습니다.\\n권장 해상도, 용량 제한, 파일 포맷 규칙을 확인한 뒤 등록해 주세요."
+          },
+          en: {
+            title: "Media Upload Guidelines Published",
+            excerpt: "Recommended specs for image/GIF/video uploads are now available.",
+            body:
+              "To keep visual quality consistent, a media guideline has been published for all sections.\\nPlease check recommended resolution, file size limits, and format rules before upload."
+          },
+          zh: {
+            title: "媒体上传规范已发布",
+            excerpt: "图片/GIF/视频上传建议规格已公告。",
+            body:
+              "为保持站点视觉质量一致，我们已发布统一媒体上传规范。\\n上传前请确认推荐分辨率、容量限制与文件格式要求。"
+          }
+        }
+      },
+      {
+        id: "notice-20260318-qna-response",
+        createdAt: "2026-03-18T09:25:00.000Z",
+        updatedAt: "2026-03-18T09:25:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-07-qna-response.svg",
+        imageAlt: {
+          ko: "QnA 답변 정책 공지 이미지",
+          en: "QnA response policy notice visual",
+          zh: "QnA 回复政策通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "QnA 답변 SLA 안내",
+            excerpt: "문의 접수 후 답변 제공 기준 시간이 공지되었습니다.",
+            body:
+              "QnA 접수 건은 영업일 기준 24시간 이내 1차 답변을 원칙으로 운영합니다.\\n고난도 기술 문의는 분석 범위에 따라 추가 시간이 소요될 수 있습니다."
+          },
+          en: {
+            title: "QnA Response SLA Notice",
+            excerpt: "Standard response timelines are now published for inquiries.",
+            body:
+              "QnA submissions receive an initial response within 24 business hours by default.\\nComplex technical questions may require additional analysis time."
+          },
+          zh: {
+            title: "QnA 回复时效说明",
+            excerpt: "问询处理的标准回复时限已公布。",
+            body:
+              "QnA 提交后，原则上将在 24 个工作小时内提供首次回复。\\n复杂技术问题可能根据分析范围延长处理时间。"
+          }
+        }
+      },
+      {
+        id: "notice-20260317-domain-https",
+        createdAt: "2026-03-17T04:45:00.000Z",
+        updatedAt: "2026-03-17T04:45:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-08-domain-https.svg",
+        imageAlt: {
+          ko: "도메인 HTTPS 적용 공지 이미지",
+          en: "Domain HTTPS notice visual",
+          zh: "域名 HTTPS 通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "커스텀 도메인 HTTPS 적용 완료",
+            excerpt: "heptalabs.co.kr 도메인의 HTTPS 구성이 완료되었습니다.",
+            body:
+              "커스텀 도메인 구성이 완료되어 모든 접속 경로가 HTTPS로 제공됩니다.\\n브라우저 캐시가 남아 있는 경우 새로고침 후 최신 인증서를 확인해 주세요."
+          },
+          en: {
+            title: "Custom Domain HTTPS Enabled",
+            excerpt: "HTTPS provisioning for heptalabs.co.kr has been completed.",
+            body:
+              "Custom domain setup is complete and all traffic is now served over HTTPS.\\nIf your browser has stale cache, refresh once to fetch the latest certificate path."
+          },
+          zh: {
+            title: "自定义域名 HTTPS 已启用",
+            excerpt: "heptalabs.co.kr 的 HTTPS 配置已完成。",
+            body:
+              "自定义域名配置已完成，所有访问路径均通过 HTTPS 提供。\\n如浏览器缓存较旧，请刷新后再次确认最新证书。"
+          }
+        }
+      },
+      {
+        id: "notice-20260316-language-sync",
+        createdAt: "2026-03-16T06:05:00.000Z",
+        updatedAt: "2026-03-16T06:05:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-09-language-sync.svg",
+        imageAlt: {
+          ko: "다국어 콘텐츠 동기화 공지 이미지",
+          en: "Multilingual sync notice visual",
+          zh: "多语言同步通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "한/영/중 콘텐츠 동기화 업데이트",
+            excerpt: "핵심 메뉴의 다국어 콘텐츠 정합성이 개선되었습니다.",
+            body:
+              "회사소개/비즈니스/정보/도움말 전 영역의 다국어 표현을 재정비했습니다.\\n동일 의미 기준으로 톤을 맞춰 언어 전환 시 일관된 메시지를 제공합니다."
+          },
+          en: {
+            title: "KO/EN/ZH Content Sync Update",
+            excerpt: "Cross-language consistency has been improved across key menus.",
+            body:
+              "Language parity was refined across About, Business, Infos, and Help.\\nUsers now get consistent messaging semantics when switching languages."
+          },
+          zh: {
+            title: "韩英中文内容同步更新",
+            excerpt: "核心菜单的多语言一致性已完成优化。",
+            body:
+              "关于、业务、资讯、帮助等主要栏目已完成多语言语义对齐。\\n切换语言时可获得更一致的品牌表达体验。"
+          }
+        }
+      },
+      {
+        id: "notice-20260315-admin-backup",
+        createdAt: "2026-03-15T11:35:00.000Z",
+        updatedAt: "2026-03-15T11:35:00.000Z",
+        popup: false,
+        image: "/assets/notice-media/notice-10-admin-backup.svg",
+        imageAlt: {
+          ko: "어드민 백업 정책 공지 이미지",
+          en: "Admin backup policy notice visual",
+          zh: "后台备份策略通知主视觉"
+        },
+        translations: {
+          ko: {
+            title: "어드민 데이터 백업 권장 절차 안내",
+            excerpt: "운영 안정성을 위한 JSON 내보내기 백업 절차를 권장합니다.",
+            body:
+              "콘텐츠 변경 전후로 어드민의 JSON 내보내기 기능을 활용해 백업을 보관해 주세요.\\n예기치 않은 브라우저 저장소 이슈가 발생해도 빠르게 복원할 수 있습니다."
+          },
+          en: {
+            title: "Recommended Admin Backup Procedure",
+            excerpt: "JSON export backups are recommended for operational safety.",
+            body:
+              "Please export JSON backups before and after major content updates in admin.\\nThis allows fast recovery if browser storage issues occur unexpectedly."
+          },
+          zh: {
+            title: "后台数据备份建议流程",
+            excerpt: "建议使用 JSON 导出功能进行例行备份。",
+            body:
+              "建议在重要内容修改前后执行管理端 JSON 导出备份。\\n即使浏览器存储发生异常，也可快速恢复内容。"
           }
         }
       }
@@ -1511,6 +1800,45 @@
 
     try {
       localStorage.setItem(STORAGE_KEYS.newsSeeded, "1");
+    } catch (error) {
+      return;
+    }
+  };
+
+  const ensureSeededNoticesOnce = () => {
+    try {
+      if (localStorage.getItem(STORAGE_KEYS.noticeSeeded) === "1") {
+        return;
+      }
+    } catch (error) {
+      return;
+    }
+
+    const seedNotices = makeDefaultDynamic().notices.map((notice) => normalizeNoticePost(notice));
+    const existingNotices =
+      state.content &&
+      state.content.dynamic &&
+      Array.isArray(state.content.dynamic.notices)
+        ? state.content.dynamic.notices.map((notice) => normalizeNoticePost(notice))
+        : [];
+
+    const merged = new Map(existingNotices.map((notice) => [notice.id, notice]));
+    let hasInsertedSeed = false;
+
+    seedNotices.forEach((seed) => {
+      if (!merged.has(seed.id)) {
+        merged.set(seed.id, seed);
+        hasInsertedSeed = true;
+      }
+    });
+
+    if (hasInsertedSeed) {
+      state.content.dynamic.notices = [...merged.values()].sort(sortByDateDesc);
+      saveContent(state.content);
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.noticeSeeded, "1");
     } catch (error) {
       return;
     }
@@ -3944,6 +4272,7 @@
 
   const init = () => {
     ensureSeededNewsPostsOnce();
+    ensureSeededNoticesOnce();
     initThemeAndLangControls();
     initReveal();
     initOrbParallax();

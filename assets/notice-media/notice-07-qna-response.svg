@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">QnA Response Notice</title>
+  <desc id="desc">Chat bubble visual for QnA SLA notice.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f131c"/>
+      <stop offset="100%" stop-color="#25344c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <rect x="120" y="160" width="960" height="400" rx="30" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.24)"/>
+  <path d="M230 280 h360 a30 30 0 0 1 30 30 v130 a30 30 0 0 1 -30 30 h-210 l-70 70 v-70 h-80 a30 30 0 0 1 -30 -30 v-130 a30 30 0 0 1 30 -30 z" fill="rgba(56,189,248,0.22)" stroke="#7dd3fc"/>
+  <text x="690" y="332" fill="#ffffff" font-size="56" font-family="Sora, Arial, sans-serif" font-weight="700">QnA SLA Notice</text>
+  <text x="690" y="392" fill="#cbd5e1" font-size="31" font-family="Space Grotesk, Arial, sans-serif">Initial Response: 24h</text>
+</svg>

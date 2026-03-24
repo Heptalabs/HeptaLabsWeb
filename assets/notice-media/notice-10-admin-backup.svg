@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Admin Backup Notice</title>
+  <desc id="desc">Backup archive visual for admin backup notice.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1115"/>
+      <stop offset="100%" stop-color="#27364a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <rect x="140" y="150" width="920" height="420" rx="26" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.24)"/>
+  <rect x="760" y="230" width="220" height="250" rx="18" fill="rgba(56,189,248,0.18)" stroke="#7dd3fc"/>
+  <path d="M805 270 h130 v40 h-130 z M805 330 h130 v20 h-130 z M805 370 h100 v20 h-100 z" fill="#dbeafe" opacity="0.9"/>
+  <text x="200" y="320" fill="#ffffff" font-size="54" font-family="Sora, Arial, sans-serif" font-weight="700">Admin Backup Guide</text>
+  <text x="200" y="382" fill="#cbd5e1" font-size="30" font-family="Space Grotesk, Arial, sans-serif">Export JSON Before Updates</text>
+</svg>

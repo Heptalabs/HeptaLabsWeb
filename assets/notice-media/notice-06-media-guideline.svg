@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Media Guideline Notice</title>
+  <desc id="desc">Framed content visual for media upload guideline notice.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1016"/>
+      <stop offset="100%" stop-color="#27354c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <rect x="110" y="130" width="980" height="460" rx="24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/>
+  <rect x="150" y="180" width="320" height="200" rx="16" fill="rgba(56,189,248,0.22)"/>
+  <rect x="150" y="405" width="320" height="140" rx="16" fill="rgba(148,163,184,0.22)"/>
+  <rect x="500" y="180" width="550" height="365" rx="16" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.26)"/>
+  <text x="545" y="305" fill="#ffffff" font-size="52" font-family="Sora, Arial, sans-serif" font-weight="700">Media Guideline</text>
+  <text x="545" y="365" fill="#cbd5e1" font-size="30" font-family="Space Grotesk, Arial, sans-serif">Image / GIF / Video Specs</text>
+</svg>

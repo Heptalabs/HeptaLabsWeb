@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">News Module Improvement</title>
+  <desc id="desc">Grid-like visual for news module notice.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1115"/>
+      <stop offset="100%" stop-color="#1f2937"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <g opacity="0.25" fill="#94a3b8">
+    <rect x="130" y="130" width="200" height="130" rx="16"/>
+    <rect x="360" y="130" width="200" height="130" rx="16"/>
+    <rect x="590" y="130" width="200" height="130" rx="16"/>
+    <rect x="820" y="130" width="250" height="130" rx="16"/>
+  </g>
+  <rect x="130" y="280" width="940" height="310" rx="28" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)"/>
+  <text x="185" y="395" fill="#ffffff" font-size="58" font-family="Sora, Arial, sans-serif" font-weight="700">News Module Upgrade</text>
+  <text x="185" y="458" fill="#cbd5e1" font-size="32" font-family="Space Grotesk, Arial, sans-serif">Card View + Better Editing</text>
+</svg>
