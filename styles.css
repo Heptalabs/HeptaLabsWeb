@@ -521,6 +521,8 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
   position: relative;
   overflow: hidden;
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease,
+    transform 220ms ease;
 }
 
 :root[data-theme="night"] .spotlight-card {
@@ -544,6 +546,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   margin: 0;
   font-family: "Sora", sans-serif;
   font-size: 1.18rem;
+  transition: color 220ms ease, text-shadow 220ms ease;
 }
 
 .spotlight-card p {
@@ -552,12 +555,49 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   min-height: 64px;
   line-height: 1.62;
   font-size: 0.98rem;
+  transition: color 220ms ease;
 }
 
 .spotlight-card a {
   color: var(--text);
   text-decoration: none;
   font-weight: 700;
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+
+.spotlight-card:hover,
+.spotlight-card:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.24), 0 14px 30px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="night"] .spotlight-card:hover,
+:root[data-theme="night"] .spotlight-card:focus-within {
+  background:
+    linear-gradient(
+      126deg,
+      rgba(90, 243, 255, 0.14) 0%,
+      rgba(90, 243, 255, 0.05) 34%,
+      rgba(90, 243, 255, 0.01) 58%
+    ),
+    linear-gradient(180deg, rgba(7, 10, 13, 0.98), rgba(3, 5, 8, 0.98));
+}
+
+.spotlight-card:hover h2,
+.spotlight-card:focus-within h2,
+.spotlight-card:hover p,
+.spotlight-card:focus-within p,
+.spotlight-card:hover a,
+.spotlight-card:focus-within a {
+  color: var(--text);
+}
+
+.spotlight-card:hover h2,
+.spotlight-card:focus-within h2,
+.spotlight-card:hover a,
+.spotlight-card:focus-within a {
+  text-shadow: 0 0 12px rgba(90, 243, 255, 0.2);
 }
 
 .footer-panel {
@@ -1044,6 +1084,8 @@ textarea {
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease,
+    transform 220ms ease;
 }
 
 .news-card-link {
@@ -1071,6 +1113,26 @@ textarea {
   font-family: "Sora", sans-serif;
   font-size: 1.05rem;
   line-height: 1.35;
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+
+.news-card:hover,
+.news-card:focus-within {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="night"] .news-card:hover,
+:root[data-theme="night"] .news-card:focus-within {
+  background: linear-gradient(180deg, rgba(90, 243, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.news-card:hover .news-card-title,
+.news-card:focus-within .news-card-title {
+  color: var(--text);
+  text-shadow: 0 0 10px rgba(90, 243, 255, 0.18);
 }
 
 .news-pagination {
@@ -1111,10 +1173,25 @@ textarea {
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease,
+    transform 220ms ease;
 }
 
 .post-card.is-active {
   border-color: var(--accent);
+}
+
+.post-card:hover,
+.post-card:focus-within {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(90, 243, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="night"] .post-card:hover,
+:root[data-theme="night"] .post-card:focus-within {
+  background: linear-gradient(180deg, rgba(90, 243, 255, 0.08), rgba(255, 255, 255, 0.02));
 }
 
 .post-card-link {
@@ -1163,18 +1240,21 @@ textarea {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+  transition: color 220ms ease;
 }
 
 .post-card-title {
   margin: 0;
   font-family: "Sora", sans-serif;
   font-size: 1.08rem;
+  transition: color 220ms ease, text-shadow 220ms ease;
 }
 
 .post-card-excerpt {
   margin: 10px 0 0;
   color: var(--muted);
   line-height: 1.62;
+  transition: color 220ms ease;
 }
 
 .post-card-link-text {
@@ -1185,6 +1265,7 @@ textarea {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text);
+  transition: color 220ms ease, text-shadow 220ms ease;
 }
 
 .post-card-badge {
@@ -1386,6 +1467,7 @@ textarea {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
+  transition: color 220ms ease;
 }
 
 .qna-post-card .qna-item-question {
@@ -1397,6 +1479,26 @@ textarea {
   color: var(--muted);
   font-size: 0.82rem;
   letter-spacing: 0.02em;
+  transition: color 220ms ease;
+}
+
+.post-card:hover .post-card-title,
+.post-card:focus-within .post-card-title,
+.post-card:hover .post-card-link-text,
+.post-card:focus-within .post-card-link-text {
+  color: var(--text);
+  text-shadow: 0 0 10px rgba(90, 243, 255, 0.18);
+}
+
+.post-card:hover .post-card-meta,
+.post-card:focus-within .post-card-meta,
+.post-card:hover .post-card-excerpt,
+.post-card:focus-within .post-card-excerpt,
+.post-card:hover .qna-item-contact,
+.post-card:focus-within .qna-item-contact,
+.post-card:hover .qna-item-question,
+.post-card:focus-within .qna-item-question {
+  color: var(--text);
 }
 
 .qna-item-answer {
