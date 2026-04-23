@@ -10,32 +10,47 @@
     />
     <style>
       :root {
-        --bg-0: #000000;
-        --bg-1: #070f1f;
-        --bg-2: #0c1a32;
+        color-scheme: dark;
+        --bg: #050505;
+        --bg-soft: #0d0e10;
+        --panel: rgba(18, 19, 22, 0.9);
         --line: rgba(255, 255, 255, 0.14);
-        --text: #f7f9ff;
-        --muted: #9ea9bf;
-        --brand: #ff6d3a;
-        --brand-strong: #ff5a1f;
-        --panel: rgba(10, 22, 44, 0.72);
+        --text: #f5f6f8;
+        --muted: #a8adb6;
+        --accent: #e8a63a;
+        --accent-strong: #f0b24f;
+        --accent-text: #111111;
+        --shadow: 0 28px 66px rgba(0, 0, 0, 0.5);
+      }
+
+      body.light {
+        color-scheme: light;
+        --bg: #f4f5f7;
+        --bg-soft: #ffffff;
+        --panel: rgba(255, 255, 255, 0.96);
+        --line: rgba(19, 24, 33, 0.14);
+        --text: #171b22;
+        --muted: #687181;
+        --accent: #e6a134;
+        --accent-strong: #eeb44d;
+        --accent-text: #18130a;
+        --shadow: 0 20px 50px rgba(17, 22, 31, 0.14);
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
+        min-height: 100%;
+        font-family: "Pretendard", "SF Pro Display", "Noto Sans KR", "PingFang SC", "Segoe UI", sans-serif;
         color: var(--text);
-        font-family: "Sora", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-        min-height: 100vh;
         background:
-          radial-gradient(1200px 500px at 10% -20%, rgba(255, 109, 58, 0.28), transparent 60%),
-          radial-gradient(900px 480px at 100% 15%, rgba(77, 158, 255, 0.26), transparent 58%),
-          linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 48%, var(--bg-0) 100%);
-        display: flex;
-        flex-direction: column;
+          radial-gradient(880px 460px at 0% -15%, rgba(232, 166, 58, 0.22), transparent 62%),
+          radial-gradient(700px 380px at 100% 5%, rgba(255, 255, 255, 0.1), transparent 60%),
+          linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
       }
 
       .container {
@@ -46,121 +61,145 @@
       .site-header {
         position: sticky;
         top: 0;
-        z-index: 50;
-        backdrop-filter: blur(10px);
-        background: rgba(0, 0, 0, 0.34);
+        z-index: 30;
+        backdrop-filter: blur(12px);
+        background: color-mix(in srgb, var(--bg) 74%, transparent);
         border-bottom: 1px solid var(--line);
       }
 
       .header-inner {
-        min-height: 76px;
+        min-height: 74px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 14px;
       }
 
-      .brand-wrap {
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand img {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+      }
+
+      .brand-title {
+        font-size: 1.03rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+
+      .header-right {
         display: flex;
         align-items: center;
         gap: 10px;
       }
 
-      .brand-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 9px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+      .lang-group,
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--panel) 80%, transparent);
+        padding: 3px;
       }
 
-      .brand-text {
-        font-weight: 800;
-        letter-spacing: 0.02em;
-      }
-
-      .brand-note {
+      .lang-btn,
+      .theme-btn {
+        min-width: 46px;
+        height: 32px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
         color: var(--muted);
-        font-size: 0.9rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        cursor: pointer;
+        padding: 0 11px;
+      }
+
+      .lang-btn.active,
+      .theme-btn.active {
+        background: var(--accent);
+        color: var(--accent-text);
       }
 
       main {
-        flex: 1;
-        padding: 48px 0 54px;
+        padding: 42px 0 52px;
       }
 
       .hero {
-        display: grid;
-        grid-template-columns: 1.05fr 0.95fr;
-        gap: 24px;
         border: 1px solid var(--line);
-        border-radius: 28px;
-        background: linear-gradient(145deg, rgba(18, 33, 64, 0.84), rgba(8, 17, 34, 0.88));
-        box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+        border-radius: 30px;
+        background: color-mix(in srgb, var(--panel) 96%, transparent);
+        box-shadow: var(--shadow);
         overflow: hidden;
       }
 
-      .hero-copy {
-        padding: clamp(24px, 4vw, 48px);
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
       }
 
-      .kicker {
+      .hero-copy {
+        padding: clamp(22px, 4vw, 48px);
+      }
+
+      .hero-kicker {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         margin: 0;
-        color: #ffd9c9;
-        letter-spacing: 0.14em;
-        font-size: 0.78rem;
+        color: var(--muted);
+        letter-spacing: 0.12em;
+        font-size: 0.76rem;
         font-weight: 800;
         text-transform: uppercase;
       }
 
-      .kicker::before {
+      .hero-kicker::before {
         content: "";
-        width: 22px;
+        width: 20px;
         height: 2px;
         border-radius: 1px;
-        background: var(--brand);
+        background: var(--accent);
       }
 
       h1 {
-        margin: 14px 0 0;
-        font-size: clamp(1.8rem, 4.1vw, 2.9rem);
-        line-height: 1.16;
+        margin: 13px 0 0;
+        font-size: clamp(1.8rem, 4vw, 2.9rem);
+        line-height: 1.15;
         letter-spacing: -0.02em;
       }
 
-      .intro {
+      .hero-desc {
         margin: 16px 0 0;
         color: var(--muted);
+        font-size: 1rem;
         line-height: 1.72;
         max-width: 560px;
       }
 
-      .features {
-        margin: 22px 0 0;
-        padding: 0;
-        list-style: none;
+      .feature-grid {
+        margin: 24px 0 0;
         display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 10px;
       }
 
-      .features li {
-        min-height: 42px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.04);
-        display: flex;
-        align-items: center;
-        padding: 0 12px;
-        color: #dde6f9;
-        font-size: 0.92rem;
-      }
-
-      .features li::before {
-        content: "•";
-        color: var(--brand);
-        margin-right: 10px;
+      .feature {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: color-mix(in srgb, var(--bg-soft) 70%, transparent);
+        padding: 11px 12px;
+        color: var(--text);
+        font-size: 0.88rem;
+        line-height: 1.45;
       }
 
       .actions {
@@ -179,152 +218,178 @@
         text-decoration: none;
         font-weight: 800;
         letter-spacing: 0.01em;
-        transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
       }
 
       .btn-primary {
-        background: linear-gradient(180deg, #ff8358 0%, #ff6d3a 52%, #f2501b 100%);
-        color: #120902;
-      }
-
-      .btn-primary:hover {
-        transform: translateY(-1px);
-        filter: brightness(1.03);
+        color: var(--accent-text);
+        background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 100%);
       }
 
       .btn-ghost {
-        border-color: rgba(255, 255, 255, 0.16);
         color: var(--text);
-        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--line);
+        background: color-mix(in srgb, var(--bg-soft) 72%, transparent);
       }
 
       .btn-disabled {
-        opacity: 0.45;
+        opacity: 0.48;
         pointer-events: none;
         cursor: not-allowed;
       }
 
-      .help {
+      .hint {
         margin-top: 12px;
-        color: var(--muted);
-        font-size: 0.88rem;
-      }
-
-      .hero-visual {
-        position: relative;
-        min-height: 380px;
-        display: grid;
-        place-items: center;
-        background:
-          radial-gradient(260px 200px at 66% 34%, rgba(255, 109, 58, 0.42), transparent 70%),
-          radial-gradient(320px 260px at 30% 75%, rgba(128, 174, 255, 0.32), transparent 72%),
-          linear-gradient(180deg, rgba(6, 12, 24, 0.45) 0%, rgba(6, 12, 24, 0.88) 100%);
-      }
-
-      .hero-device {
-        width: min(92%, 460px);
-        border-radius: 28px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: linear-gradient(160deg, rgba(0, 0, 0, 0.55), rgba(6, 18, 36, 0.62));
-        box-shadow: 0 26px 64px rgba(0, 0, 0, 0.5);
-        padding: 28px 20px;
-      }
-
-      .hero-logo {
-        width: min(86%, 330px);
-        display: block;
-        margin: 0 auto;
-      }
-
-      .hero-caption {
-        margin-top: 18px;
-        text-align: center;
-        color: #d6e3ff;
-        font-size: 0.9rem;
-        line-height: 1.65;
-      }
-
-      .site-footer {
-        border-top: 1px solid var(--line);
-        padding: 18px 0;
-        background: rgba(0, 0, 0, 0.28);
-      }
-
-      .footer-inner {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
         color: var(--muted);
         font-size: 0.84rem;
       }
 
-      @media (max-width: 920px) {
-        .hero {
+      .hint code {
+        background: color-mix(in srgb, var(--bg-soft) 74%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 2px 7px;
+        color: var(--text);
+      }
+
+      .hero-visual {
+        position: relative;
+        min-height: 420px;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(280px 200px at 66% 34%, rgba(232, 166, 58, 0.34), transparent 72%),
+          radial-gradient(260px 220px at 32% 70%, rgba(255, 255, 255, 0.12), transparent 72%);
+      }
+
+      .visual-card {
+        width: min(96%, 450px);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: color-mix(in srgb, var(--bg-soft) 76%, transparent);
+        box-shadow: 0 22px 50px rgba(0, 0, 0, 0.35);
+        padding: 26px 20px;
+      }
+
+      .hero-logo {
+        width: min(88%, 320px);
+        display: block;
+        margin: 0 auto;
+      }
+
+      .visual-caption {
+        margin: 16px auto 0;
+        max-width: 300px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.55;
+        text-align: center;
+      }
+
+      .site-footer {
+        border-top: 1px solid var(--line);
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+      }
+
+      .footer-inner {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.83rem;
+      }
+
+      @media (max-width: 960px) {
+        .hero-grid {
           grid-template-columns: 1fr;
         }
 
         .hero-visual {
-          min-height: 300px;
-          padding: 16px;
+          min-height: 320px;
         }
       }
 
-      @media (max-width: 620px) {
+      @media (max-width: 640px) {
         .header-inner,
         .footer-inner {
           flex-direction: column;
           align-items: flex-start;
           justify-content: center;
+          padding: 12px 0;
         }
 
-        .hero-copy {
-          padding: 22px;
+        .header-right {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .feature-grid {
+          grid-template-columns: 1fr;
         }
       }
     </style>
   </head>
-  <body>
+  <body class="dark">
     <header class="site-header">
       <div class="container header-inner">
-        <div class="brand-wrap">
-          <img class="brand-icon" src="./assets/imwallet-app-icon.png" alt="IMWallet App Icon" />
-          <div class="brand-text">IMWallet</div>
+        <div class="brand">
+          <img src="./assets/imwallet-app-icon.png" alt="IMWallet" />
+          <div class="brand-title">IMWallet</div>
         </div>
-        <div class="brand-note">Official Download</div>
+        <div class="header-right">
+          <div class="lang-group" role="group" aria-label="Language">
+            <button class="lang-btn active" data-lang="ko">KO</button>
+            <button class="lang-btn" data-lang="en">EN</button>
+            <button class="lang-btn" data-lang="zh">中文</button>
+          </div>
+          <div class="theme-toggle" role="group" aria-label="Theme">
+            <button class="theme-btn active" data-theme="dark">Dark</button>
+            <button class="theme-btn" data-theme="light">Light</button>
+          </div>
+        </div>
       </div>
     </header>
 
     <main>
       <section class="container hero">
-        <div class="hero-copy">
-          <p class="kicker">Download</p>
-          <h1>IMWallet 모바일 앱을<br />안전하게 다운로드하세요</h1>
-          <p class="intro">
-            IMWallet은 다중 체인 자산과 NFT를 하나의 경험으로 연결하는 Web3 지갑입니다.
-            아래 버튼으로 최신 Android APK를 바로 설치할 수 있으며,
-            스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.
-          </p>
-
-          <ul class="features">
-            <li>멀티 지갑 · 자산 · NFT 통합 관리</li>
-            <li>시드 구문/보안 잠금/생체인증 플로우 지원</li>
-            <li>전송 · 수신 · 기록 중심의 빠른 실행 UX</li>
-          </ul>
-
-          <div class="actions">
-            <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download>Android APK 다운로드</a>
-            <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">Google Play (준비 중)</a>
-            <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">App Store (준비 중)</a>
-          </div>
-          <p class="help">APK 파일 경로: <code>/downloads/imwallet-latest.apk</code></p>
-        </div>
-
-        <div class="hero-visual">
-          <div class="hero-device">
-            <img class="hero-logo" src="./assets/imwallet-hero-logo.png" alt="IMWallet Intro" />
-            <p class="hero-caption">
-              Fast, secure, and focused wallet experience<br />for your daily on-chain actions.
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="hero-kicker" data-i18n="kicker">Official Download</p>
+            <h1 data-i18n="title">IMWallet 모바일 앱을 안전하게 다운로드하세요</h1>
+            <p class="hero-desc" data-i18n="description">
+              IMWallet은 멀티 체인 자산과 NFT를 하나로 연결하는 Web3 지갑입니다.
+              최신 Android APK를 바로 설치할 수 있고, 스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.
             </p>
+
+            <div class="feature-grid">
+              <div class="feature" data-i18n="feature1">멀티 지갑 · 자산 · NFT 통합 관리</div>
+              <div class="feature" data-i18n="feature2">시드/보안 잠금/생체인증 플로우 지원</div>
+              <div class="feature" data-i18n="feature3">전송 · 수신 · 기록 중심의 빠른 UX</div>
+            </div>
+
+            <div class="actions">
+              <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download data-i18n="apkButton">Android APK 다운로드</a>
+              <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true" data-i18n="playButton"
+                >Google Play (준비 중)</a
+              >
+              <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true" data-i18n="appStoreButton"
+                >App Store (준비 중)</a
+              >
+            </div>
+
+            <p class="hint"><span data-i18n="hintLabel">APK 파일 경로</span>: <code>/downloads/imwallet-latest.apk</code></p>
+          </div>
+
+          <div class="hero-visual">
+            <div class="visual-card">
+              <img class="hero-logo" src="./assets/imwallet-hero-logo.png" alt="IMWallet Symbol and Logo" />
+              <p class="visual-caption" data-i18n="caption">
+                Dark/Light 테마를 모두 지원하는 IMWallet으로,
+                일상적인 온체인 액션을 빠르고 안전하게 실행하세요.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -336,5 +401,85 @@
         <div>download.imwallet.app</div>
       </div>
     </footer>
+
+    <script>
+      const translations = {
+        ko: {
+          kicker: "Official Download",
+          title: "IMWallet 모바일 앱을 안전하게 다운로드하세요",
+          description:
+            "IMWallet은 멀티 체인 자산과 NFT를 하나로 연결하는 Web3 지갑입니다. 최신 Android APK를 바로 설치할 수 있고, 스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.",
+          feature1: "멀티 지갑 · 자산 · NFT 통합 관리",
+          feature2: "시드/보안 잠금/생체인증 플로우 지원",
+          feature3: "전송 · 수신 · 기록 중심의 빠른 UX",
+          apkButton: "Android APK 다운로드",
+          playButton: "Google Play (준비 중)",
+          appStoreButton: "App Store (준비 중)",
+          hintLabel: "APK 파일 경로",
+          caption: "Dark/Light 테마를 모두 지원하는 IMWallet으로, 일상적인 온체인 액션을 빠르고 안전하게 실행하세요."
+        },
+        en: {
+          kicker: "Official Download",
+          title: "Download IMWallet Mobile App Safely",
+          description:
+            "IMWallet is a Web3 wallet that unifies multi-chain assets and NFTs in one flow. Install the latest Android APK now, and store links will open after final review.",
+          feature1: "Unified multi-wallet, asset, and NFT management",
+          feature2: "Seed backup, security lock, and biometric flow",
+          feature3: "Fast UX focused on send, receive, and history",
+          apkButton: "Download Android APK",
+          playButton: "Google Play (Coming Soon)",
+          appStoreButton: "App Store (Coming Soon)",
+          hintLabel: "APK path",
+          caption: "Run daily on-chain actions faster and safer with IMWallet across both Dark and Light themes."
+        },
+        zh: {
+          kicker: "Official Download",
+          title: "安全下载 IMWallet 移动应用",
+          description:
+            "IMWallet 是一款整合多链资产与 NFT 的 Web3 钱包。你可以立即安装最新 Android APK，商店链接将在审核完成后开放。",
+          feature1: "多钱包、资产与 NFT 一体化管理",
+          feature2: "助记词备份、安全锁与生物识别流程",
+          feature3: "围绕发送、接收与记录的高效体验",
+          apkButton: "下载 Android APK",
+          playButton: "Google Play（即将上线）",
+          appStoreButton: "App Store（即将上线）",
+          hintLabel: "APK 路径",
+          caption: "IMWallet 同时支持深色与浅色主题，让你的链上操作更快、更安全。"
+        }
+      };
+
+      const langButtons = document.querySelectorAll(".lang-btn");
+      const themeButtons = document.querySelectorAll(".theme-btn");
+
+      function applyLanguage(lang) {
+        const dict = translations[lang] || translations.ko;
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-i18n]").forEach((node) => {
+          const key = node.getAttribute("data-i18n");
+          if (key && dict[key]) node.textContent = dict[key];
+        });
+        langButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
+      }
+
+      function applyTheme(theme) {
+        const isLight = theme === "light";
+        document.body.classList.toggle("light", isLight);
+        document.body.classList.toggle("dark", !isLight);
+        themeButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.theme === theme));
+      }
+
+      langButtons.forEach((btn) => {
+        btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
+      });
+
+      themeButtons.forEach((btn) => {
+        btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
+      });
+
+      const browserLang = (navigator.language || "ko").toLowerCase();
+      const initialLang = browserLang.startsWith("zh") ? "zh" : browserLang.startsWith("en") ? "en" : "ko";
+      applyLanguage(initialLang);
+      applyTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    </script>
   </body>
 </html>

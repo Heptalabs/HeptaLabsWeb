@@ -9,6 +9,7 @@ import {
   Easing,
   Image,
   InteractionManager,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -218,6 +219,9 @@ type SendDraft = {
   tokenSymbol: string;
   chainCode: ChainCode;
   network: string;
+  assetType?: 'asset' | 'nft';
+  nftId?: string;
+  nftName?: string;
   recipient: string;
   recipientLabel?: string;
   amount: number;
@@ -3098,7 +3102,7 @@ const copy: Record<Language, Copy> = {
     about: '앱 정보',
     preferences: '환경설정',
     allowPush: '푸시 알림 허용',
-    sendReceiveNoti: '송금/입금 알림',
+    sendReceiveNoti: '보내기/받기 알림',
     announcements: '제품 공지',
     biometric: '생체 인증',
     confirmSign: '트랜잭션 서명',
@@ -5229,6 +5233,7 @@ function AppInner() {
       lang === 'ko'
         ? {
             sendTitle: 'NFT 보내기',
+            sendConfirmTitle: 'NFT 전송 확인',
             selectNft: 'NFT 선택',
             recipientPlaceholder: '받는 주소 입력',
             memoPlaceholder: '전송 메모 (선택)',
@@ -5245,6 +5250,7 @@ function AppInner() {
         : lang === 'zh'
           ? {
               sendTitle: '发送 NFT',
+              sendConfirmTitle: 'NFT 发送确认',
               selectNft: '选择 NFT',
               recipientPlaceholder: '输入接收地址',
               memoPlaceholder: '转账备注（可选）',
@@ -5260,6 +5266,7 @@ function AppInner() {
             }
           : {
               sendTitle: 'Send NFT',
+              sendConfirmTitle: 'NFT Send Confirmation',
               selectNft: 'Select NFT',
               recipientPlaceholder: 'Recipient address',
               memoPlaceholder: 'Transfer memo (optional)',
@@ -5481,7 +5488,7 @@ function AppInner() {
   );
 
   const insets = useSafeAreaInsets();
-  const effectiveBottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 20) : insets.bottom;
+  const effectiveBottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 24) : insets.bottom;
   const styles = useMemo(
     () => createStyles(palette, themeMode, insets),
     [insets.bottom, insets.left, insets.right, insets.top, palette, themeMode]
@@ -10265,7 +10272,7 @@ function AppInner() {
     const feeNative = estimateNativeFee(selectedSendToken.chainCode, sendGasSettings.gasPrice, sendGasSettings.gasLimit);
     const feeUsd = calculateFeeUsd(selectedSendToken.chainCode, feeNative);
     const recipient = recipientInput.trim();
-    return buildSendDraftFromInput({
+    const draft = buildSendDraftFromInput({
       tokenId: selectedSendToken.id,
       tokenSymbol: selectedSendToken.symbol,
       chainCode: selectedSendToken.chainCode,
@@ -10279,6 +10286,7 @@ function AppInner() {
       feeNative,
       gas: { ...sendGasSettings }
     });
+    return { ...draft, assetType: 'asset' };
   };
 
   const openSendConfirm = () => {
@@ -10348,6 +10356,7 @@ function AppInner() {
   };
 
   const completeSendTransaction = (draft: SendDraft) => {
+    const isNftDraft = draft.assetType === 'nft';
     const txHash = generateTxHash(draft.chainCode);
     const createdAt = nowStamp();
     const txId = `tx-${Date.now()}`;
@@ -10355,7 +10364,7 @@ function AppInner() {
     setTxs((prev) => [
       {
         id: txId,
-        tokenSymbol: draft.tokenSymbol,
+        tokenSymbol: isNftDraft ? 'NFT' : draft.tokenSymbol,
         network: draft.network,
         chain: draft.chainCode,
         type: 'send',
@@ -10373,7 +10382,7 @@ function AppInner() {
       const nativeAsset = chainNativeAssetMap[draft.chainCode];
       return prev.map((token) => {
         if (token.chainCode !== draft.chainCode) return token;
-        const isTransferToken = token.id === draft.tokenId;
+        const isTransferToken = !isNftDraft && token.id === draft.tokenId;
         const isNativeToken = token.assetKey === nativeAsset;
         if (!isTransferToken && !isNativeToken) return token;
 
@@ -10383,11 +10392,14 @@ function AppInner() {
         return { ...token, balance: Math.max(0, nextBalance) };
       });
     });
+    if (isNftDraft && draft.nftId) {
+      setCollectibles((prev) => prev.map((item) => (item.id === draft.nftId ? { ...item, owned: Math.max(0, item.owned - 1) } : item)));
+    }
 
     setTxDetailData({
       hash: txHash,
       txType: 'send',
-      tokenSymbol: draft.tokenSymbol,
+      tokenSymbol: isNftDraft ? 'NFT' : draft.tokenSymbol,
       chainCode: draft.chainCode,
       network: draft.network,
       amount: draft.amount,
@@ -10404,11 +10416,15 @@ function AppInner() {
     setSendDraft(draft);
     setSendIsProcessing(false);
     setSendIsDone(true);
-    setAmountInput('');
-    setRecipientInput('');
-    setSendMemoInput('');
-    setRecipientTouched(false);
-    setAmountTouched(false);
+    if (isNftDraft) {
+      resetNftSendState();
+    } else {
+      setAmountInput('');
+      setRecipientInput('');
+      setSendMemoInput('');
+      setRecipientTouched(false);
+      setAmountTouched(false);
+    }
     logEvent({
       type: 'send.completed',
       payload: {
@@ -10416,7 +10432,8 @@ function AppInner() {
         txHash,
         chain: draft.chainCode,
         symbol: draft.tokenSymbol,
-        amount: draft.amount
+        amount: draft.amount,
+        assetType: isNftDraft ? 'nft' : 'asset'
       }
     });
     if (sendFlowStartedAtRef.current) {
@@ -10427,7 +10444,7 @@ function AppInner() {
       });
       sendFlowStartedAtRef.current = null;
     }
-    setBannerMessage(text.sendSuccess);
+    setBannerMessage(isNftDraft ? nftUi.sent : text.sendSuccess);
   };
 
   const confirmSendWithAuth = async (overrideInput?: string) => {
@@ -10467,12 +10484,14 @@ function AppInner() {
 
   const getTxStatusText = (status: TxDetailData['status']) =>
     status === 'completed' ? flow.completed : status === 'pending' ? flow.pending : flow.failed;
+  const getTxDetailTitle = (txType: TxDetailData['txType']) => (txType === 'receive' ? text.receive : text.send);
 
   const shareTxDetail = async () => {
     if (!txDetailData) return;
     const explorerUrl = buildTxExplorerUrl(txDetailData.chainCode, txDetailData.hash);
     const statusText = getTxStatusText(txDetailData.status);
-    const shareTitle = `${flow.txDetailTitle} ${txDetailData.tokenSymbol}`;
+    const txTitle = getTxDetailTitle(txDetailData.txType);
+    const shareTitle = `${txTitle} ${txDetailData.tokenSymbol}`;
     const shareMessage = [
       `${flow.txHash}: ${txDetailData.hash}`,
       `${flow.status}: ${statusText}`,
@@ -10655,8 +10674,6 @@ function AppInner() {
 
     const chainCode = getCollectibleChainCode(selectedNftForSend);
     const recipientLabel = findNftAddressBookLabel(chainCode, recipient);
-    const createdAt = nowStamp();
-    const txHash = generateTxHash(chainCode);
     const gas = { ...DEFAULT_SEND_GAS_SETTINGS };
     const feeNative = estimateNativeFee(chainCode, gas.gasPrice, gas.gasLimit);
     const feeUsd = calculateFeeUsd(chainCode, feeNative);
@@ -10672,55 +10689,30 @@ function AppInner() {
     }
     const memoText = nftSendMemoInput.trim();
     const txMemo = `${selectedNftForSend.name}${memoText ? ` / ${memoText}` : ''}`;
-
-    setTokens((prev) => {
-      const nativeAsset = chainNativeAssetMap[chainCode];
-      return prev.map((token) => {
-        if (token.chainCode !== chainCode || token.assetKey !== nativeAsset) return token;
-        return { ...token, balance: Math.max(0, token.balance - feeNative) };
-      });
-    });
-
-    setCollectibles((prev) =>
-      prev.map((item) => (item.id === selectedNftForSend.id ? { ...item, owned: Math.max(0, item.owned - 1) } : item))
-    );
-    setTxs((prev) => [
-      {
-        id: `tx-${Date.now()}`,
-        tokenSymbol: 'NFT',
-        network: selectedNftForSend.network,
-        chain: chainCode,
-        type: 'send',
-        status: 'completed',
-        amount: 1,
-        usdValue: selectedNftForSend.floorPriceUsd,
-        counterparty: recipient,
-        memo: txMemo,
-        createdAt
-      },
-      ...prev
-    ]);
-    setTxDetailData({
-      hash: txHash,
-      txType: 'send',
+    const nftDraft: SendDraft = {
+      tokenId: '__NFT__',
       tokenSymbol: 'NFT',
       chainCode,
       network: selectedNftForSend.network,
-      amount: 1,
-      usdValue: selectedNftForSend.floorPriceUsd,
-      createdAt,
+      assetType: 'nft',
+      nftId: selectedNftForSend.id,
+      nftName: selectedNftForSend.name,
       recipient,
       recipientLabel,
-      status: 'completed',
-      feeNative,
+      amount: 1,
+      memo: txMemo,
+      usdValue: selectedNftForSend.floorPriceUsd,
       feeUsd,
-      gas,
-      memo: txMemo
-    });
-    setTxDetailHeaderMode('postSend');
-    setBannerMessage(nftUi.sent);
-    resetNftSendState();
-    navigate('sendTxDetail');
+      feeNative,
+      gas
+    };
+    sendFlowStartedAtRef.current = Date.now();
+    setSendDraft(nftDraft);
+    setAuthPasswordInput('');
+    setAuthErrorMessage('');
+    setSendIsDone(false);
+    setSendIsProcessing(false);
+    navigate('sendConfirm');
   };
 
   const toggleFavoriteAsset = (tokenId: string) => {
@@ -10783,11 +10775,15 @@ function AppInner() {
   ) => (
     <View style={styles.subHeader}>
       {renderHeaderBackdrop()}
-      <Pressable style={styles.backBtn} onPress={goBack}>
-        <ThemedIonicons name="chevron-back" size={20} color={palette.text} />
-      </Pressable>
-      <Text style={styles.subHeaderTitle}>{title}</Text>
-      <View style={styles.subHeaderRight}>
+      <View style={styles.topHeaderSide}>
+        <Pressable style={styles.backBtn} onPress={goBack}>
+          <ThemedIonicons name="chevron-back" size={20} color={palette.text} />
+        </Pressable>
+      </View>
+      <Text pointerEvents="none" numberOfLines={1} style={[styles.subHeaderTitle, styles.topHeaderTitleAbsolute]}>
+        {title}
+      </Text>
+      <View style={[styles.topHeaderSide, styles.topHeaderSideRight]}>
         {(rightItems ?? []).map((item, index) => (
           <Pressable
             key={`${title}-sub-r-${index}`}
@@ -11047,20 +11043,22 @@ function AppInner() {
       <Pressable style={styles.backBtn} onPress={() => navigate('settings')}>
         <ThemedIonicons name="settings-outline" size={18} color={palette.text} />
       </Pressable>
-      <Pressable
-        style={[styles.homeWalletPillCenter, showWalletMenu ? styles.homeWalletPillCenterActive : undefined]}
-        onPress={() => setShowWalletMenu((prev) => !prev)}
-      >
-        <Text style={styles.homeWalletPillText} numberOfLines={1}>
-          {activeWallet.name}
-        </Text>
-        <ThemedIonicons
-          name={showWalletMenu ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={palette.text}
-          style={styles.homeWalletPillChevron}
-        />
-      </Pressable>
+      <View pointerEvents="box-none" style={styles.homeWalletPillCenterWrap}>
+        <Pressable
+          style={[styles.homeWalletPillCenter, showWalletMenu ? styles.homeWalletPillCenterActive : undefined]}
+          onPress={() => setShowWalletMenu((prev) => !prev)}
+        >
+          <Text style={styles.homeWalletPillText} numberOfLines={1}>
+            {activeWallet.name}
+          </Text>
+          <ThemedIonicons
+            name={showWalletMenu ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={palette.text}
+            style={styles.homeWalletPillChevron}
+          />
+        </Pressable>
+      </View>
       <Pressable style={styles.backBtn} onPress={() => openScanMethodPicker('home')}>
         <ThemedIonicons name="scan-outline" size={18} color={palette.text} />
       </Pressable>
@@ -12319,7 +12317,8 @@ function AppInner() {
           {recentAssetTxs.length ? (
             assetRecentPagedTxs.map((tx) => {
               const isIncomingTx = tx.type === 'receive';
-              const amountPrefix = isIncomingTx ? '+' : '-';
+              const isNftTx = tx.tokenSymbol.toUpperCase() === 'NFT';
+              const amountPrefix = isNftTx ? '' : isIncomingTx ? '+' : '-';
               const txChain = inferChainFromTx(tx);
               const txAddressLabel = findAddressBookLabel(txChain, tx.counterparty);
               const txMemoValue = tx.memo?.trim() || '-';
@@ -14412,68 +14411,73 @@ function AppInner() {
     </View>
   );
 
-  const renderSupportChat = () => (
-    <View style={styles.screen}>
-      {renderSubHeader(text.support)}
-      <View style={styles.supportChatWrap}>
-        <ScrollView
-          ref={(ref) => {
-            supportChatScrollRef.current = ref;
-          }}
-          style={styles.scroll}
-          contentContainerStyle={styles.supportChatListPad}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => supportChatScrollRef.current?.scrollToEnd({ animated: true })}
+  const renderSupportChat = () => {
+    const supportCanSend = Boolean(supportComposerText.trim() || supportComposerImageUri);
+    return (
+      <View style={styles.screen}>
+        {renderSubHeader(text.support)}
+        <KeyboardAvoidingView
+          style={styles.supportChatWrap}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
         >
-          {supportMessages.map((message) => {
-            const isUser = message.role === 'user';
-            return (
-              <View key={message.id} style={[styles.supportBubbleRow, isUser ? styles.supportBubbleRowUser : undefined]}>
-                <View style={[styles.supportBubble, isUser ? styles.supportBubbleUser : styles.supportBubbleAgent]}>
-                  {message.imageUri ? <Image source={{ uri: message.imageUri }} style={styles.supportBubbleImage} resizeMode="cover" /> : null}
-                  {message.text ? (
-                    <Text style={isUser ? styles.supportBubbleTextUser : styles.supportBubbleTextAgent}>{message.text}</Text>
-                  ) : null}
+          <ScrollView
+            ref={(ref) => {
+              supportChatScrollRef.current = ref;
+            }}
+            style={styles.scroll}
+            contentContainerStyle={styles.supportChatListPad}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => supportChatScrollRef.current?.scrollToEnd({ animated: true })}
+          >
+            {supportMessages.map((message) => {
+              const isUser = message.role === 'user';
+              return (
+                <View key={message.id} style={[styles.supportBubbleRow, isUser ? styles.supportBubbleRowUser : undefined]}>
+                  <View style={[styles.supportBubble, isUser ? styles.supportBubbleUser : styles.supportBubbleAgent]}>
+                    {message.imageUri ? <Image source={{ uri: message.imageUri }} style={styles.supportBubbleImage} resizeMode="cover" /> : null}
+                    {message.text ? (
+                      <Text style={isUser ? styles.supportBubbleTextUser : styles.supportBubbleTextAgent}>{message.text}</Text>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-        {supportComposerImageUri ? (
-          <View style={styles.supportComposerPreviewRow}>
-            <Image source={{ uri: supportComposerImageUri }} style={styles.supportComposerPreviewImage} resizeMode="cover" />
-            <Pressable style={styles.supportComposerPreviewRemove} onPress={() => setSupportComposerImageUri(null)}>
-              <ThemedIonicons name="close" size={12} color={palette.text} />
+              );
+            })}
+          </ScrollView>
+          {supportComposerImageUri ? (
+            <View style={styles.supportComposerPreviewRow}>
+              <Image source={{ uri: supportComposerImageUri }} style={styles.supportComposerPreviewImage} resizeMode="cover" />
+              <Pressable style={styles.supportComposerPreviewRemove} onPress={() => setSupportComposerImageUri(null)}>
+                <ThemedIonicons name="close" size={12} color={palette.text} />
+              </Pressable>
+            </View>
+          ) : null}
+          <View style={styles.supportComposerRow}>
+            <Pressable style={styles.supportComposerIconBtn} onPress={() => void pickSupportChatImage()}>
+              <ThemedIonicons name="add" size={20} color={palette.text} />
+            </Pressable>
+            <TextInput
+              value={supportComposerText}
+              onChangeText={setSupportComposerText}
+              placeholder={text.supportChatInputPlaceholder}
+              placeholderTextColor={palette.muted}
+              style={styles.supportComposerInput}
+              maxLength={500}
+            />
+            <Pressable
+              style={[styles.supportComposerSendBtn, !supportCanSend ? styles.supportComposerSendBtnDisabled : undefined]}
+              onPress={sendSupportChatMessage}
+              disabled={!supportCanSend}
+            >
+              <Text style={[styles.supportComposerSendText, !supportCanSend ? styles.supportComposerSendTextDisabled : undefined]}>
+                {text.supportChatSend}
+              </Text>
             </Pressable>
           </View>
-        ) : null}
-        <View style={styles.supportComposerRow}>
-          <Pressable style={styles.supportComposerIconBtn} onPress={() => void pickSupportChatImage()}>
-            <ThemedIonicons name="image-outline" size={18} color={palette.text} />
-            <Text style={styles.supportComposerIconBtnText}>{text.supportChatAttachImage}</Text>
-          </Pressable>
-          <TextInput
-            value={supportComposerText}
-            onChangeText={setSupportComposerText}
-            placeholder={text.supportChatInputPlaceholder}
-            placeholderTextColor={palette.muted}
-            style={styles.supportComposerInput}
-            maxLength={500}
-          />
-          <Pressable
-            style={[
-              styles.supportComposerSendBtn,
-              !supportComposerText.trim() && !supportComposerImageUri ? styles.supportComposerSendBtnDisabled : undefined
-            ]}
-            onPress={sendSupportChatMessage}
-            disabled={!supportComposerText.trim() && !supportComposerImageUri}
-          >
-            <Text style={styles.supportComposerSendText}>{text.supportChatSend}</Text>
-          </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderManageAssets = () => (
     <View style={styles.screen}>
@@ -14968,7 +14972,7 @@ function AppInner() {
 
     return (
       <View style={styles.screen}>
-        {renderSubHeader(text.send)}
+        {renderSubHeader(nftUi.sendTitle)}
         {showNftRecentSendDropdown ? <Pressable style={styles.sendHeaderScrim} onPress={() => setShowNftRecentSendDropdown(false)} /> : null}
         <View style={styles.sendScreenBody}>
           <ScrollView
@@ -15067,7 +15071,7 @@ function AppInner() {
                     <TextInput
                       value={nftSendRecipientInput}
                       onChangeText={setNftSendRecipientInput}
-                      placeholder=""
+                      placeholder={nftUi.recipientPlaceholder}
                       placeholderTextColor={palette.muted}
                       style={styles.recipientInputField}
                       autoCapitalize="none"
@@ -15279,30 +15283,53 @@ function AppInner() {
       );
     }
 
-    const token = tokens.find((item) => item.id === sendDraft.tokenId) ?? tokenCatalog.find((item) => item.id === sendDraft.tokenId) ?? sendToken;
+    const isNftDraft = sendDraft.assetType === 'nft';
+    const token = !isNftDraft
+      ? tokens.find((item) => item.id === sendDraft.tokenId) ?? tokenCatalog.find((item) => item.id === sendDraft.tokenId) ?? sendToken
+      : null;
+    const nftItem = isNftDraft ? collectibles.find((item) => item.id === sendDraft.nftId) ?? null : null;
+    const confirmTitle = isNftDraft ? nftUi.sendConfirmTitle : flow.sendConfirmTitle;
     const totalCost = sendDraft.usdValue + sendDraft.feeUsd;
 
     return (
       <View style={styles.screen}>
-        {renderTopHeader(flow.sendConfirmTitle, 'close-outline', goBack, [{ icon: 'settings-outline', action: () => navigate('sendAdvanced') }])}
+        {renderTopHeader(confirmTitle, 'close-outline', goBack, [{ icon: 'settings-outline', action: () => navigate('sendAdvanced') }])}
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
           <View style={styles.sendConfirmAmountCard}>
-            <View style={styles.sendConfirmTokenRow}>
-              {renderTokenCircle(token)}
-              <View style={styles.sendConfirmTokenMeta}>
-                <Text style={styles.sendConfirmUsd}>{formatCurrency(sendDraft.usdValue, text.locale)}</Text>
-                <Text style={styles.sendConfirmAmount}>
-                  {formatAmount(sendDraft.amount, text.locale)} {sendDraft.tokenSymbol}
-                </Text>
+            {isNftDraft ? (
+              <View style={styles.sendConfirmTokenRow}>
+                {nftItem ? (
+                  <Image source={{ uri: nftItem.imageUrl }} style={styles.sendConfirmNftImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.sendConfirmNftPlaceholder}>
+                    <ThemedIonicons name="image-outline" size={18} color={palette.muted} />
+                  </View>
+                )}
+                <View style={styles.sendConfirmTokenMeta}>
+                  <Text style={styles.sendConfirmUsd}>{formatCurrency(sendDraft.usdValue, text.locale)}</Text>
+                  <Text style={styles.sendConfirmAmount} numberOfLines={1}>
+                    {nftItem ? `${nftItem.name} #${nftItem.tokenId}` : 'NFT'}
+                  </Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              <View style={styles.sendConfirmTokenRow}>
+                {token ? renderTokenCircle(token) : null}
+                <View style={styles.sendConfirmTokenMeta}>
+                  <Text style={styles.sendConfirmUsd}>{formatCurrency(sendDraft.usdValue, text.locale)}</Text>
+                  <Text style={styles.sendConfirmAmount}>
+                    {formatAmount(sendDraft.amount, text.locale)} {sendDraft.tokenSymbol}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.sendConfirmDetailCard}>
             <View style={styles.sendConfirmDetailRow}>
               <Text style={styles.sendConfirmLabel}>{flow.amountToSend}</Text>
               <Text style={styles.sendConfirmValue}>
-                {sendDraft.tokenSymbol} · {sendDraft.network}
+                {isNftDraft ? `${nftItem?.name ?? 'NFT'} · ${sendDraft.network}` : `${sendDraft.tokenSymbol} · ${sendDraft.network}`}
               </Text>
             </View>
             <View style={styles.sendConfirmDetailRow}>
@@ -15405,10 +15432,11 @@ function AppInner() {
   const renderSendAuth = () => {
     const authTitle = sendAuthMethod === 'password' ? flow.passwordLabel : sendAuthMethod === 'fingerprint' ? flow.fingerprintTitle : flow.faceTitle;
     const authIcon: keyof typeof Ionicons.glyphMap = sendAuthMethod === 'fingerprint' ? 'shield-checkmark-outline' : 'scan-outline';
+    const authHeaderTitle = sendDraft?.assetType === 'nft' ? nftUi.sendTitle : text.send;
 
     return (
       <View style={styles.screen}>
-        {renderSubHeader(text.send)}
+        {renderSubHeader(authHeaderTitle)}
         <View style={styles.formWrap}>
           {sendAuthMethod !== 'password' ? (
             <>
@@ -15483,6 +15511,7 @@ function AppInner() {
   };
 
   const renderSendTxDetail = () => {
+    const txDetailTitle = txDetailData ? getTxDetailTitle(txDetailData.txType) : flow.txDetailTitle;
     const txDetailHeader =
       txDetailHeaderMode === 'postSend' ? (
         <View style={styles.subHeader}>
@@ -15491,7 +15520,7 @@ function AppInner() {
             <View style={styles.subHeaderSpacer} />
           </View>
           <Text pointerEvents="none" numberOfLines={1} style={[styles.subHeaderTitle, styles.topHeaderTitleAbsolute]}>
-            {flow.txDetailTitle}
+            {txDetailTitle}
           </Text>
           <View style={[styles.topHeaderSide, styles.topHeaderSideRight]}>
             <Pressable style={styles.backBtn} onPress={() => openRoot('home')}>
@@ -15500,7 +15529,7 @@ function AppInner() {
           </View>
         </View>
       ) : (
-        renderSubHeader(flow.txDetailTitle)
+        renderSubHeader(txDetailTitle)
       );
 
     if (!txDetailData) {
@@ -15518,16 +15547,16 @@ function AppInner() {
 
     const statusText = getTxStatusText(txDetailData.status);
     const isIncomingTx = txDetailData.txType === 'receive';
-    const amountPrefix = isIncomingTx ? '+' : '-';
+    const isNftTx = txDetailData.tokenSymbol.toUpperCase() === 'NFT';
+    const amountPrefix = isNftTx ? '' : isIncomingTx ? '+' : '-';
+    const amountText = `${amountPrefix}${formatAmount(txDetailData.amount, text.locale)} ${txDetailData.tokenSymbol}`;
+    const counterpartyLabel = isIncomingTx ? text.from : flow.recipientWallet;
 
     return (
       <View style={styles.screen}>
         {txDetailHeader}
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-          <Text style={styles.txDetailAmount}>
-            {amountPrefix}
-            {formatAmount(txDetailData.amount, text.locale)} {txDetailData.tokenSymbol}
-          </Text>
+          <Text style={styles.txDetailAmount}>{amountText}</Text>
           <Text style={styles.txDetailUsd}>≈ {formatCurrency(txDetailData.usdValue, text.locale)}</Text>
 
           <View style={styles.txDetailCard}>
@@ -15540,7 +15569,7 @@ function AppInner() {
               <Text style={styles.sendConfirmValue}>{statusText}</Text>
             </View>
             <View style={styles.sendConfirmDetailRow}>
-              <Text style={styles.sendConfirmLabel}>{flow.recipientWallet}</Text>
+              <Text style={styles.sendConfirmLabel}>{counterpartyLabel}</Text>
               <Text style={styles.sendConfirmValue}>{shortAddressCenter(txDetailData.recipient, 10, 8)}</Text>
             </View>
             {txDetailData.recipientLabel ? (
@@ -16086,7 +16115,8 @@ function AppInner() {
         {filteredHistoryTxs.length ? (
           historyPagedTxs.map((tx) => {
             const isIncomingTx = tx.type === 'receive';
-            const amountPrefix = isIncomingTx ? '+' : '-';
+            const isNftTx = tx.tokenSymbol.toUpperCase() === 'NFT';
+            const amountPrefix = isNftTx ? '' : isIncomingTx ? '+' : '-';
             const txChain = inferChainFromTx(tx);
             const txAddressLabel = findAddressBookLabel(txChain, tx.counterparty);
             const txMemoValue = tx.memo?.trim() || '-';
@@ -17477,13 +17507,16 @@ function AppInner() {
 const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeInsets) => {
   const iconContrastShadow = themeMode === 'dark' ? 'rgba(255,255,255,0.34)' : 'rgba(12,18,28,0.28)';
   const topSafeInset = Platform.OS === 'android' ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0) : insets.top;
-  const bottomSafeInset = Platform.OS === 'android' ? Math.max(insets.bottom, 20) : insets.bottom;
+  const bottomSafeInset = Platform.OS === 'android' ? Math.max(insets.bottom, 24) : insets.bottom;
   const headerOverlayHeight = HEADER_OVERLAY_HEIGHT + topSafeInset;
+  const headerTitleTop = topSafeInset + 17;
   const headerContentTopPad = headerOverlayHeight + 4;
   const formContentTopPad = headerOverlayHeight + 10;
   const bottomSafePad = bottomSafeInset + 12;
-  const scrollBottomPad = 116 + bottomSafeInset;
-  const modalBottomPad = bottomSafeInset + 8;
+  const bottomDockHeight = 56;
+  const bottomDockBottomOffset = Math.max(10, bottomSafeInset + 10);
+  const scrollBottomPad = bottomDockHeight + bottomDockBottomOffset + 12;
+  const modalBottomPad = bottomSafeInset + 12;
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -17503,7 +17536,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     banner: {
       position: 'absolute',
-      top: 62,
+      top: headerOverlayHeight + 8,
       left: 20,
       right: 20,
       zIndex: 50,
@@ -17534,8 +17567,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center'
     },
     launchIntroLogo: {
-      width: '64%',
-      maxWidth: 320,
+      width: '22%',
+      maxWidth: 108,
       aspectRatio: 1
     },
     appLockBackdrop: {
@@ -17678,10 +17711,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.text,
       fontSize: 19,
       fontWeight: '700',
-      textAlign: 'center'
+      textAlign: 'center',
+      lineHeight: 22,
+      includeFontPadding: false
     },
     topHeaderTitleAbsolute: {
       position: 'absolute',
+      top: headerTitleTop,
       left: 0,
       right: 0
     },
@@ -17711,12 +17747,6 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     subHeaderSpacer: {
       width: 34,
       height: 34
-    },
-    subHeaderRight: {
-      minWidth: 34,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end'
     },
     headerBtnGap: {
       marginLeft: 6
@@ -17790,10 +17820,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       outlineWidth: 0,
       outlineColor: 'transparent'
     },
+    homeWalletPillCenterWrap: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: topSafeInset
+    },
     homeWalletPillCenter: {
-      position: 'absolute',
-      left: '50%',
-      transform: [{ translateX: -84 }],
       height: 36,
       borderRadius: 18,
       borderWidth: 1,
@@ -17804,6 +17837,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center',
       paddingHorizontal: 14,
       minWidth: 168,
+      maxWidth: 220,
       overflow: 'hidden'
     },
     homeWalletPillCenterActive: {
@@ -20931,12 +20965,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     supportComposerRow: {
       flexDirection: 'row',
-      alignItems: 'center'
+      alignItems: 'center',
+      minHeight: 48
     },
     supportComposerIconBtn: {
-      width: 68,
+      width: 46,
       height: 48,
-      borderRadius: 12,
+      borderRadius: 23,
       borderWidth: 1,
       borderColor: palette.line,
       backgroundColor: palette.chip,
@@ -20959,7 +20994,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       backgroundColor: palette.chip,
       color: palette.text,
       fontSize: 14,
-      paddingHorizontal: 12
+      paddingHorizontal: 12,
+      paddingVertical: 0
     },
     supportComposerSendBtn: {
       width: 64,
@@ -20979,6 +21015,9 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: '#111111',
       fontSize: 13,
       fontWeight: '800'
+    },
+    supportComposerSendTextDisabled: {
+      color: palette.muted
     },
     formWrap: {
       flex: 1,
@@ -21583,6 +21622,24 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     sendConfirmTokenRow: {
       flexDirection: 'row',
       alignItems: 'center'
+    },
+    sendConfirmNftImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.line,
+      backgroundColor: palette.chip
+    },
+    sendConfirmNftPlaceholder: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.line,
+      backgroundColor: palette.chip,
+      alignItems: 'center',
+      justifyContent: 'center'
     },
     sendConfirmTokenMeta: {
       marginLeft: 12
