@@ -10,13 +10,15 @@
     />
     <style>
       :root {
-        --bg: #071226;
-        --card: #0f1f3d;
-        --line: #284573;
-        --text: #f5f8ff;
-        --muted: #a8b4cf;
-        --primary: #3dd5ff;
-        --primary-strong: #11b9e9;
+        --bg-0: #000000;
+        --bg-1: #070f1f;
+        --bg-2: #0c1a32;
+        --line: rgba(255, 255, 255, 0.14);
+        --text: #f7f9ff;
+        --muted: #9ea9bf;
+        --brand: #ff6d3a;
+        --brand-strong: #ff5a1f;
+        --panel: rgba(10, 22, 44, 0.72);
       }
 
       * {
@@ -25,146 +27,258 @@
 
       body {
         margin: 0;
-        font-family: "Sora", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
         color: var(--text);
-        background: radial-gradient(circle at 15% 15%, #15325f 0%, #071226 45%, #040a17 100%);
+        font-family: "Sora", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
         min-height: 100vh;
+        background:
+          radial-gradient(1200px 500px at 10% -20%, rgba(255, 109, 58, 0.28), transparent 60%),
+          radial-gradient(900px 480px at 100% 15%, rgba(77, 158, 255, 0.26), transparent 58%),
+          linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 48%, var(--bg-0) 100%);
         display: flex;
         flex-direction: column;
       }
 
       .container {
-        width: min(980px, 92vw);
+        width: min(1120px, 92vw);
         margin: 0 auto;
       }
 
       .site-header {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        position: sticky;
+        top: 0;
+        z-index: 50;
         backdrop-filter: blur(10px);
-        background: rgba(7, 18, 38, 0.75);
+        background: rgba(0, 0, 0, 0.34);
+        border-bottom: 1px solid var(--line);
       }
 
       .header-inner {
-        min-height: 72px;
+        min-height: 76px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 14px;
       }
 
-      .brand {
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.03em;
+      .brand-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
-      .header-note {
+      .brand-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+      }
+
+      .brand-text {
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-note {
         color: var(--muted);
         font-size: 0.9rem;
       }
 
       main {
         flex: 1;
-        display: grid;
-        place-items: center;
-        padding: 40px 0;
+        padding: 48px 0 54px;
       }
 
-      .hero-card {
-        width: 100%;
+      .hero {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 24px;
         border: 1px solid var(--line);
-        background: linear-gradient(160deg, rgba(26, 52, 98, 0.85), rgba(12, 28, 56, 0.9));
-        border-radius: 24px;
-        padding: clamp(24px, 4vw, 44px);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+        border-radius: 28px;
+        background: linear-gradient(145deg, rgba(18, 33, 64, 0.84), rgba(8, 17, 34, 0.88));
+        box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+        overflow: hidden;
+      }
+
+      .hero-copy {
+        padding: clamp(24px, 4vw, 48px);
       }
 
       .kicker {
-        margin: 0 0 14px;
-        color: var(--primary);
-        font-size: 0.86rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        color: #ffd9c9;
+        letter-spacing: 0.14em;
+        font-size: 0.78rem;
+        font-weight: 800;
         text-transform: uppercase;
       }
 
+      .kicker::before {
+        content: "";
+        width: 22px;
+        height: 2px;
+        border-radius: 1px;
+        background: var(--brand);
+      }
+
       h1 {
-        margin: 0;
-        font-size: clamp(1.7rem, 4vw, 2.4rem);
-        line-height: 1.25;
+        margin: 14px 0 0;
+        font-size: clamp(1.8rem, 4.1vw, 2.9rem);
+        line-height: 1.16;
+        letter-spacing: -0.02em;
       }
 
       .intro {
         margin: 16px 0 0;
-        max-width: 760px;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.72;
+        max-width: 560px;
+      }
+
+      .features {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+
+      .features li {
+        min-height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        color: #dde6f9;
+        font-size: 0.92rem;
+      }
+
+      .features li::before {
+        content: "•";
+        color: var(--brand);
+        margin-right: 10px;
       }
 
       .actions {
-        margin-top: 28px;
+        margin-top: 24px;
         display: grid;
-        gap: 12px;
+        gap: 10px;
       }
 
       .btn {
+        min-height: 54px;
+        border-radius: 14px;
+        border: 1px solid transparent;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 52px;
-        border-radius: 12px;
         text-decoration: none;
-        font-weight: 700;
-        transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
-        padding: 0 16px;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
       }
 
       .btn-primary {
-        background: var(--primary);
-        color: #03263a;
+        background: linear-gradient(180deg, #ff8358 0%, #ff6d3a 52%, #f2501b 100%);
+        color: #120902;
       }
 
       .btn-primary:hover {
-        background: var(--primary-strong);
         transform: translateY(-1px);
+        filter: brightness(1.03);
       }
 
       .btn-ghost {
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.16);
         color: var(--text);
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.05);
       }
 
       .btn-disabled {
         opacity: 0.45;
-        cursor: not-allowed;
         pointer-events: none;
+        cursor: not-allowed;
       }
 
       .help {
-        margin-top: 14px;
+        margin-top: 12px;
         color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .hero-visual {
+        position: relative;
+        min-height: 380px;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(260px 200px at 66% 34%, rgba(255, 109, 58, 0.42), transparent 70%),
+          radial-gradient(320px 260px at 30% 75%, rgba(128, 174, 255, 0.32), transparent 72%),
+          linear-gradient(180deg, rgba(6, 12, 24, 0.45) 0%, rgba(6, 12, 24, 0.88) 100%);
+      }
+
+      .hero-device {
+        width: min(92%, 460px);
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(160deg, rgba(0, 0, 0, 0.55), rgba(6, 18, 36, 0.62));
+        box-shadow: 0 26px 64px rgba(0, 0, 0, 0.5);
+        padding: 28px 20px;
+      }
+
+      .hero-logo {
+        width: min(86%, 330px);
+        display: block;
+        margin: 0 auto;
+      }
+
+      .hero-caption {
+        margin-top: 18px;
+        text-align: center;
+        color: #d6e3ff;
         font-size: 0.9rem;
+        line-height: 1.65;
       }
 
       .site-footer {
-        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-top: 1px solid var(--line);
         padding: 18px 0;
+        background: rgba(0, 0, 0, 0.28);
       }
 
       .footer-inner {
         display: flex;
         justify-content: space-between;
-        gap: 16px;
+        gap: 12px;
         color: var(--muted);
-        font-size: 0.86rem;
+        font-size: 0.84rem;
       }
 
-      @media (max-width: 720px) {
+      @media (max-width: 920px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-visual {
+          min-height: 300px;
+          padding: 16px;
+        }
+      }
+
+      @media (max-width: 620px) {
         .header-inner,
         .footer-inner {
           flex-direction: column;
           align-items: flex-start;
           justify-content: center;
+        }
+
+        .hero-copy {
+          padding: 22px;
         }
       }
     </style>
@@ -172,26 +286,47 @@
   <body>
     <header class="site-header">
       <div class="container header-inner">
-        <div class="brand">IMWallet</div>
-        <div class="header-note">Official Download</div>
+        <div class="brand-wrap">
+          <img class="brand-icon" src="./assets/imwallet-app-icon.png" alt="IMWallet App Icon" />
+          <div class="brand-text">IMWallet</div>
+        </div>
+        <div class="brand-note">Official Download</div>
       </div>
     </header>
 
     <main>
-      <section class="container hero-card">
-        <p class="kicker">Download</p>
-        <h1>IMWallet 모바일 앱 다운로드</h1>
-        <p class="intro">
-          IMWallet 앱 설치 파일을 안전하게 받을 수 있는 공식 페이지입니다.
-          아래에서 Android APK를 바로 다운로드할 수 있고, Google Play / App Store 링크는 추후 업데이트됩니다.
-        </p>
+      <section class="container hero">
+        <div class="hero-copy">
+          <p class="kicker">Download</p>
+          <h1>IMWallet 모바일 앱을<br />안전하게 다운로드하세요</h1>
+          <p class="intro">
+            IMWallet은 다중 체인 자산과 NFT를 하나의 경험으로 연결하는 Web3 지갑입니다.
+            아래 버튼으로 최신 Android APK를 바로 설치할 수 있으며,
+            스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.
+          </p>
 
-        <div class="actions">
-          <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download>Android APK 다운로드</a>
-          <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">Google Play (준비 중)</a>
-          <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">App Store (준비 중)</a>
+          <ul class="features">
+            <li>멀티 지갑 · 자산 · NFT 통합 관리</li>
+            <li>시드 구문/보안 잠금/생체인증 플로우 지원</li>
+            <li>전송 · 수신 · 기록 중심의 빠른 실행 UX</li>
+          </ul>
+
+          <div class="actions">
+            <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download>Android APK 다운로드</a>
+            <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">Google Play (준비 중)</a>
+            <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">App Store (준비 중)</a>
+          </div>
+          <p class="help">APK 파일 경로: <code>/downloads/imwallet-latest.apk</code></p>
         </div>
-        <p class="help">APK 파일 배포 경로: <code>/downloads/imwallet-latest.apk</code></p>
+
+        <div class="hero-visual">
+          <div class="hero-device">
+            <img class="hero-logo" src="./assets/imwallet-hero-logo.png" alt="IMWallet Intro" />
+            <p class="hero-caption">
+              Fast, secure, and focused wallet experience<br />for your daily on-chain actions.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
 
