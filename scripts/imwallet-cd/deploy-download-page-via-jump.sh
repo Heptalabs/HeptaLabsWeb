@@ -94,9 +94,17 @@ sudo apt-get update -y >/dev/null
 sudo apt-get install -y nginx >/dev/null
 
 sudo mkdir -p "${DOWNLOAD_ROOT}"
-sudo rm -rf "${DOWNLOAD_ROOT}/download" "${DOWNLOAD_ROOT}/downloads"
+sudo rm -rf "${DOWNLOAD_ROOT}/download"
 sudo cp -a "${TMP_DIR}/download" "${DOWNLOAD_ROOT}/"
-sudo cp -a "${TMP_DIR}/downloads" "${DOWNLOAD_ROOT}/"
+
+# Keep existing APK artifacts and only sync static metadata files under downloads/.
+sudo mkdir -p "${DOWNLOAD_ROOT}/downloads"
+if command -v rsync >/dev/null 2>&1; then
+  sudo rsync -a --exclude='*.apk' "${TMP_DIR}/downloads/" "${DOWNLOAD_ROOT}/downloads/"
+else
+  sudo find "${TMP_DIR}/downloads" -maxdepth 1 -type f ! -name '*.apk' -exec sudo cp -a {} "${DOWNLOAD_ROOT}/downloads/" \;
+fi
+
 sudo chown -R www-data:www-data "${DOWNLOAD_ROOT}"
 
 cat <<NGINX_CONF | sudo tee "/etc/nginx/sites-available/${DOWNLOAD_DOMAIN}" >/dev/null
@@ -114,6 +122,17 @@ server {
 
     location / {
         try_files \$uri \$uri/ =404;
+    }
+
+    # Keep latest APK uncached so the landing button always serves the newest build.
+    location = /downloads/imwallet-latest.apk {
+        default_type application/vnd.android.package-archive;
+        add_header Content-Disposition "attachment";
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        expires -1;
+        etag off;
+        try_files \$uri =404;
     }
 
     location ~* \\.apk$ {

@@ -370,7 +370,9 @@
             </div>
 
             <div class="actions">
-              <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download data-i18n="apkButton">Android APK 다운로드</a>
+              <a id="apk-download-btn" class="btn btn-primary" href="/downloads/imwallet-latest.apk" download data-i18n="apkButton"
+                >Android APK 다운로드</a
+              >
               <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true" data-i18n="playButton"
                 >Google Play (준비 중)</a
               >
@@ -450,6 +452,7 @@
 
       const langButtons = document.querySelectorAll(".lang-btn");
       const themeButtons = document.querySelectorAll(".theme-btn");
+      const apkDownloadBtn = document.getElementById("apk-download-btn");
 
       function applyLanguage(lang) {
         const dict = translations[lang] || translations.ko;
@@ -475,6 +478,12 @@
       themeButtons.forEach((btn) => {
         btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
       });
+
+      if (apkDownloadBtn) {
+        apkDownloadBtn.addEventListener("click", () => {
+          apkDownloadBtn.setAttribute("href", `/downloads/imwallet-latest.apk?t=${Date.now()}`);
+        });
+      }
 
       const browserLang = (navigator.language || "ko").toLowerCase();
       const initialLang = browserLang.startsWith("zh") ? "zh" : browserLang.startsWith("en") ? "en" : "ko";
