@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IMWallet 다운로드</title>
+    <meta
+      name="description"
+      content="IMWallet 공식 다운로드 페이지입니다. Android APK, Google Play, App Store 링크를 제공합니다."
+    />
+    <style>
+      :root {
+        --bg: #071226;
+        --card: #0f1f3d;
+        --line: #284573;
+        --text: #f5f8ff;
+        --muted: #a8b4cf;
+        --primary: #3dd5ff;
+        --primary-strong: #11b9e9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Sora", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 15% 15%, #15325f 0%, #071226 45%, #040a17 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .container {
+        width: min(980px, 92vw);
+        margin: 0 auto;
+      }
+
+      .site-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        background: rgba(7, 18, 38, 0.75);
+      }
+
+      .header-inner {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .brand {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      .header-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 40px 0;
+      }
+
+      .hero-card {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: linear-gradient(160deg, rgba(26, 52, 98, 0.85), rgba(12, 28, 56, 0.9));
+        border-radius: 24px;
+        padding: clamp(24px, 4vw, 44px);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      .kicker {
+        margin: 0 0 14px;
+        color: var(--primary);
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+        line-height: 1.25;
+      }
+
+      .intro {
+        margin: 16px 0 0;
+        max-width: 760px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .actions {
+        margin-top: 28px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+        padding: 0 16px;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: #03263a;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-strong);
+        transform: translateY(-1px);
+      }
+
+      .btn-ghost {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .btn-disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+
+      .help {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .site-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 18px 0;
+      }
+
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      @media (max-width: 720px) {
+        .header-inner,
+        .footer-inner {
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="brand">IMWallet</div>
+        <div class="header-note">Official Download</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="container hero-card">
+        <p class="kicker">Download</p>
+        <h1>IMWallet 모바일 앱 다운로드</h1>
+        <p class="intro">
+          IMWallet 앱 설치 파일을 안전하게 받을 수 있는 공식 페이지입니다.
+          아래에서 Android APK를 바로 다운로드할 수 있고, Google Play / App Store 링크는 추후 업데이트됩니다.
+        </p>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/downloads/imwallet-latest.apk" download>Android APK 다운로드</a>
+          <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">Google Play (준비 중)</a>
+          <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true">App Store (준비 중)</a>
+        </div>
+        <p class="help">APK 파일 배포 경로: <code>/downloads/imwallet-latest.apk</code></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>© 2026 IMWallet. All rights reserved.</div>
+        <div>download.imwallet.app</div>
+      </div>
+    </footer>
+  </body>
+</html>
