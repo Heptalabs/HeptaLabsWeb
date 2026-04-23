@@ -1,10 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 REMOTE_HOST="${IMWALLET_APP_HOST:-imwallet-app}"
 REMOTE_ROOT="${IMWALLET_REMOTE_ROOT:-/opt/imwallet/build/imwallet-app}"
 REMOTE_WEB_ROOT="${IMWALLET_DOWNLOAD_ROOT:-/var/www/download.imwallet.app}"
 BUILD_DATE="${IMWALLET_BUILD_DATE:-$(date +%Y%m%d)}"
+LOCAL_APP_DIR="${IMWALLET_LOCAL_APP_DIR:-$REPO_ROOT/imwallet-app}"
+SYNC_LOCAL_APP="${IMWALLET_SYNC_LOCAL_APP:-1}"
+
+if [[ "$SYNC_LOCAL_APP" != "0" ]]; then
+  if [[ ! -d "$LOCAL_APP_DIR" ]]; then
+    echo "[ERROR] Local app directory not found: $LOCAL_APP_DIR" >&2
+    exit 1
+  fi
+
+  echo "[INFO] Syncing local app source to ${REMOTE_HOST}:${REMOTE_ROOT} ..."
+  rsync -az \
+    --exclude='.git' \
+    --exclude='node_modules' \
+    --exclude='.expo' \
+    --exclude='dist-web' \
+    --exclude='android/build' \
+    --exclude='android/.gradle' \
+    --exclude='test-results' \
+    --exclude='.DS_Store' \
+    "${LOCAL_APP_DIR}/" "${REMOTE_HOST}:${REMOTE_ROOT}/"
+fi
 
 ssh "$REMOTE_HOST" REMOTE_ROOT="$REMOTE_ROOT" REMOTE_WEB_ROOT="$REMOTE_WEB_ROOT" BUILD_DATE="$BUILD_DATE" 'bash -s' <<'EOS'
 set -euo pipefail
