@@ -82,9 +82,10 @@
       }
 
       .brand img {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
+        width: 30px;
+        height: 30px;
+        display: block;
+        object-fit: contain;
       }
 
       .brand-title {
@@ -272,9 +273,11 @@
       }
 
       .hero-logo {
-        width: min(88%, 320px);
+        width: min(86%, 300px);
+        max-width: 300px;
         display: block;
         margin: 0 auto;
+        object-fit: contain;
       }
 
       .visual-caption {
@@ -335,7 +338,7 @@
     <header class="site-header">
       <div class="container header-inner">
         <div class="brand">
-          <img src="./assets/imwallet-app-icon.png" alt="IMWallet" />
+          <img src="./assets/imwallet-symbol.svg" alt="IMWallet Symbol" />
           <div class="brand-title">IMWallet</div>
         </div>
         <div class="header-right">
@@ -386,7 +389,7 @@
 
           <div class="hero-visual">
             <div class="visual-card">
-              <img class="hero-logo" src="./assets/imwallet-hero-logo.png" alt="IMWallet Symbol and Logo" />
+              <img class="hero-logo" src="./assets/imwallet-logo.svg" alt="IMWallet Symbol and Logo" />
               <p class="visual-caption" data-i18n="caption">
                 Dark/Light 테마를 모두 지원하는 IMWallet으로,
                 일상적인 온체인 액션을 빠르고 안전하게 실행하세요.
