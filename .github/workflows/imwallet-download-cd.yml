@@ -1,0 +1,46 @@
+name: IMWallet Download Landing CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "download/**"
+      - "downloads/**"
+      - "scripts/imwallet-cd/deploy-download-page-via-jump.sh"
+      - ".github/workflows/imwallet-download-cd.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Download Landing via Jump
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          if [ -z "${IMWALLET_JUMP_SSH_PRIVATE_KEY:-}" ]; then
+            echo "Missing required secret: IMWALLET_JUMP_SSH_PRIVATE_KEY"
+            exit 1
+          fi
+          printf '%s\n' "$IMWALLET_JUMP_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/imwallet_jump_key"
+          chmod 600 "$RUNNER_TEMP/imwallet_jump_key"
+        env:
+          IMWALLET_JUMP_SSH_PRIVATE_KEY: ${{ secrets.IMWALLET_JUMP_SSH_PRIVATE_KEY }}
+
+      - name: Deploy landing
+        run: bash scripts/imwallet-cd/deploy-download-page-via-jump.sh
+        env:
+          SSH_KEY_PATH: ${{ runner.temp }}/imwallet_jump_key
+          IMWALLET_JUMP_HOST: ${{ vars.IMWALLET_JUMP_HOST }}
+          IMWALLET_JUMP_PORT: ${{ vars.IMWALLET_JUMP_PORT || '2222' }}
+          IMWALLET_JUMP_USER: ${{ vars.IMWALLET_JUMP_USER || 'vm' }}
+          IMWALLET_APP_HOST: ${{ vars.IMWALLET_APP_HOST || '192.168.1.167' }}
+          IMWALLET_APP_USER: ${{ vars.IMWALLET_APP_USER || 'vm' }}
+          IMWALLET_APP_PORT: ${{ vars.IMWALLET_APP_PORT || '22' }}
+          IMWALLET_DOWNLOAD_DOMAIN: ${{ vars.IMWALLET_DOWNLOAD_DOMAIN || 'download.imwallet.app' }}
+          IMWALLET_DOWNLOAD_ROOT: ${{ vars.IMWALLET_DOWNLOAD_ROOT || '/var/www/download.imwallet.app' }}
