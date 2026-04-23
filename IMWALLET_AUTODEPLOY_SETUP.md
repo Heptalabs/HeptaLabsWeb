@@ -12,6 +12,7 @@
 - App OTA: `.github/workflows/imwallet-app-ota.yml`
 - App Native Build(수동): `.github/workflows/imwallet-app-native-build.yml`
 - Deploy scripts:
+  - `scripts/imwallet-cd/deploy-apk-via-jump.sh`
   - `scripts/imwallet-cd/deploy-backend-via-jump.sh`
   - `scripts/imwallet-cd/deploy-console-via-jump.sh`
   - `scripts/imwallet-cd/deploy-download-page-via-jump.sh`
@@ -70,6 +71,15 @@ bash scripts/imwallet-cd/imwallet-publish.sh "fix: backend only" backend .github
   - `imwallet` remote가 있으면 자동으로 `imwallet`에 push
   - 없으면 `origin`에 push
   - 수동 지정: `IMWALLET_GIT_REMOTE=origin bash scripts/imwallet-cd/imwallet-publish.sh "..."`
+
+## APK 배포(패키징 후)
+- 패키징 완료 후 최신 APK를 버튼 경로(`/downloads/imwallet-latest.apk`)로 반영:
+```bash
+IMWALLET_JUMP_HOST=121.140.83.207 \
+IMWALLET_APP_HOST=192.168.1.167 \
+SSH_KEY_PATH="$HOME/.ssh/imwallet_jump_20260423" \
+bash scripts/imwallet-cd/deploy-apk-via-jump.sh /path/to/app-release.apk
+```
 
 ## 중요 주의사항
 - 현재 저장소의 `origin`이 IMWallet 전용 리포가 아니면(예: 다른 리포),
