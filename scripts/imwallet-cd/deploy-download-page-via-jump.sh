@@ -51,7 +51,7 @@ if [[ ! -d "$REPO_ROOT/download" ]] || [[ ! -d "$REPO_ROOT/downloads" ]]; then
 fi
 
 echo "[INFO] Creating download landing bundle..."
-tar -czf "$TMP_BUNDLE" -C "$REPO_ROOT" download downloads
+COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 tar -czf "$TMP_BUNDLE" -C "$REPO_ROOT" download downloads
 
 chmod 600 "$SSH_KEY_PATH"
 
