@@ -25,6 +25,17 @@ current_code="$(tr -dc '0-9' < "$VERSION_FILE")"
 if [[ -z "$current_code" ]]; then
   current_code=1
 fi
+
+# Guard against accidental versionCode regression when older higher-numbered
+# APKs already exist in the download directory.
+max_existing_from_apk="$(ls -1 "$REMOTE_WEB_ROOT"/downloads/imwallet-release-"$BUILD_DATE"-*.apk 2>/dev/null \
+  | sed -E "s#.*imwallet-release-${BUILD_DATE}-([0-9]+)\\.apk#\\1#" \
+  | sort -n \
+  | tail -1 || true)"
+if [[ -n "$max_existing_from_apk" ]] && [[ "$max_existing_from_apk" -gt "$current_code" ]]; then
+  current_code="$max_existing_from_apk"
+fi
+
 next_code=$((current_code + 1))
 version_name="0.1.${next_code}"
 printf '%s\n' "$next_code" | sudo tee "$VERSION_FILE" >/dev/null
