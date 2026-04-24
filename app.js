@@ -1897,7 +1897,7 @@
     if (SUPPORTED_THEMES.includes(stored)) {
       return stored;
     }
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day";
+    return "night";
   };
 
   const getPreferredLang = () => {
@@ -2005,7 +2005,7 @@
     });
 
   const setTheme = (theme) => {
-    state.theme = SUPPORTED_THEMES.includes(theme) ? theme : "day";
+    state.theme = SUPPORTED_THEMES.includes(theme) ? theme : "night";
     document.documentElement.setAttribute("data-theme", state.theme);
     localStorage.setItem(STORAGE_KEYS.theme, state.theme);
 

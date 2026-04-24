@@ -6,22 +6,22 @@ window.HeptaContentDefaults = {
         kicker: "Future Infrastructure, Built with Trust",
         title: "HEPTA LABS",
         lines: [
-          "Hepta Labs는 검증된 인프라와 소프트웨어 실행력을 결합해,",
-          "Web2.0과 Web3.0을 연결하는 실전형 디지털 비즈니스를 설계합니다.",
-          "복잡한 기술을 명확한 운영 성과로 전환하는 것이 우리의 기준입니다."
+          "Hepta Labs는 검증된 인프라와 소프트웨어 실행력을 결합해",
+          "Web2.0과 Web3.0을 연결하는 실전형 디지털 비즈니스를 설계하고 운영합니다.",
+          "상담부터 구축, 운영 고도화까지 한 팀으로 끝까지 책임집니다."
         ],
-        ctaPrimary: "비즈니스 포트폴리오",
-        ctaSecondary: "회사 소개 보기"
+        ctaPrimary: "포트폴리오 바로보기",
+        ctaSecondary: "Hepta Labs 소개"
       },
       en: {
         kicker: "Future Infrastructure, Built with Trust",
         title: "HEPTA LABS",
         lines: [
           "Hepta Labs combines proven infrastructure with software execution capability",
-          "to design practical digital businesses across Web2.0 and Web3.0.",
-          "Our standard is turning complex technology into clear operating outcomes."
+          "to design and operate practical digital businesses across Web2.0 and Web3.0.",
+          "From planning to launch and optimization, one team stays accountable."
         ],
-        ctaPrimary: "Business Portfolio",
+        ctaPrimary: "View Portfolio",
         ctaSecondary: "About Hepta Labs"
       },
       zh: {
@@ -29,10 +29,10 @@ window.HeptaContentDefaults = {
         title: "HEPTA LABS",
         lines: [
           "Hepta Labs 以成熟的基础设施与软件执行能力为基础，",
-          "设计连接 Web2.0 与 Web3.0 的实战型数字业务。",
-          "我们的标准是将复杂技术转化为清晰的运营成果。"
+          "设计并运营连接 Web2.0 与 Web3.0 的实战型数字业务。",
+          "从方案规划、上线到运营优化，我们由同一团队全程负责。"
         ],
-        ctaPrimary: "业务版图",
+        ctaPrimary: "查看业务版图",
         ctaSecondary: "了解 Hepta Labs"
       }
     },
@@ -40,12 +40,12 @@ window.HeptaContentDefaults = {
       ko: [
         {
           title: "핵심 비즈니스",
-          description: "Mining · White Label · Crypto Exchange",
+          description: "Mining · White Label · Exchange Operations",
           link: "/business/mining"
         },
         {
           title: "솔루션 스택",
-          description: "AI Trading Bot · Development · Infra Ops",
+          description: "AI Trading Bot · Custom Development · Infra Ops",
           link: "/business/ai-trading-bot"
         },
         {
@@ -57,12 +57,12 @@ window.HeptaContentDefaults = {
       en: [
         {
           title: "Core Business",
-          description: "Mining · White Label · Crypto Exchange",
+          description: "Mining · White Label · Exchange Operations",
           link: "/business/mining"
         },
         {
           title: "Solution Stack",
-          description: "AI Trading Bot · Development · Infra Ops",
+          description: "AI Trading Bot · Custom Development · Infra Ops",
           link: "/business/ai-trading-bot"
         },
         {
@@ -74,12 +74,12 @@ window.HeptaContentDefaults = {
       zh: [
         {
           title: "核心业务",
-          description: "Mining · White Label · Crypto Exchange",
+          description: "Mining · White Label · Exchange Operations",
           link: "/business/mining"
         },
         {
           title: "方案栈",
-          description: "AI Trading Bot · Development · Infra Ops",
+          description: "AI Trading Bot · Custom Development · Infra Ops",
           link: "/business/ai-trading-bot"
         },
         {
