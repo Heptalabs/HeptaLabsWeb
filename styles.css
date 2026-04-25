@@ -12,6 +12,7 @@
   --glow: 0 20px 80px rgba(0, 0, 0, 0.2);
   --header-surface: rgba(247, 249, 252, 0.96);
   --header-line: rgba(12, 12, 12, 0.16);
+  --shell-frame-line: #c7cdd4;
   --header-chip-bg: rgba(10, 16, 26, 0.04);
   --ring-opacity: 0.94;
   --surface-radius: 34px;
@@ -32,6 +33,7 @@
   --glow: 0 24px 80px rgba(0, 0, 0, 0.55);
   --header-surface: rgba(3, 4, 6, 0.95);
   --header-line: rgba(255, 255, 255, 0.15);
+  --shell-frame-line: #4f5762;
   --header-chip-bg: rgba(255, 255, 255, 0.08);
   --ring-opacity: 0.88;
 }
@@ -227,7 +229,7 @@ body {
   gap: 18px;
   backdrop-filter: blur(14px);
   background: var(--header-surface);
-  border: 1px solid var(--header-line);
+  border: 1px solid var(--shell-frame-line);
   border-top: 0;
   border-radius: 0 0 var(--surface-radius) var(--surface-radius);
 }
@@ -669,7 +671,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   margin-left: auto;
   margin-right: auto;
   margin-top: clamp(104px, 12.5vw, 188px);
-  border: 1px solid var(--header-line);
+  border: 1px solid var(--shell-frame-line);
   border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   padding: clamp(30px, 4.8vw, 52px);
   background: var(--panel);
