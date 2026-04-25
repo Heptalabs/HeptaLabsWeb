@@ -229,7 +229,7 @@ body {
   gap: 18px;
   backdrop-filter: blur(14px);
   background: var(--header-surface);
-  border: 10px solid var(--shell-frame-line);
+  border: 1px solid var(--shell-frame-line);
   border-top: 0;
   border-radius: 0 0 var(--surface-radius) var(--surface-radius);
 }
@@ -671,7 +671,7 @@ body:not([data-page="admin"]) .site-header [data-admin-link] {
   margin-left: auto;
   margin-right: auto;
   margin-top: clamp(104px, 12.5vw, 188px);
-  border: 10px solid var(--shell-frame-line);
+  border: 1px solid var(--shell-frame-line);
   border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   padding: clamp(30px, 4.8vw, 52px);
   background: var(--panel);
