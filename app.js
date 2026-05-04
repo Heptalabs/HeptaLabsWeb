@@ -814,7 +814,7 @@
     },
     business: {
       imwallet: {
-        url: "/download/assets/hero-phone-main.png",
+        url: "/assets/topic-media/business-imwallet-phone-main.png",
         alt: {
           ko: "IMWallet 메인 핸드폰 앱 화면",
           en: "IMWallet main phone app screen",
