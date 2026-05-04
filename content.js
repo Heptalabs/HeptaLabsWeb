@@ -382,6 +382,158 @@ window.HeptaContentDefaults = {
       },
       items: [
         {
+          id: "imwallet",
+          labels: {
+            ko: "IMWallet",
+            en: "IMWallet",
+            zh: "IMWallet"
+          },
+          translations: {
+            ko: {
+              title: "IMWallet",
+              subtitle:
+                "IMWallet은 멀티지갑 운용, 자산/NFT 분리 관리, 전송/수신/기록 중심 UX를 기반으로 설계된 모바일 Web3 지갑 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "서비스 포지셔닝",
+                  body:
+                    "download.imwallet.app 기준으로 IMWallet은 소개, 기능, 보안, 둘러보기, 사용 흐름, FAQ, 다운로드를 분리해 운영하는 구조를 사용합니다.\n사용자는 필요한 정보를 단계별로 빠르게 탐색하고 설치까지 이어갈 수 있습니다."
+                },
+                {
+                  heading: "핵심 사용자 경험",
+                  body:
+                    "멀티 체인 자산 조회, Crypto/NFT 분리 노출, 전송/수신/기록 플로우를 중심으로 지갑 사용 빈도가 높은 기능을 우선 배치합니다.\n앱 사용 과정에서 복잡한 설정 단계를 줄이고 반복 동작을 일관되게 유지하도록 설계되었습니다."
+                },
+                {
+                  heading: "보안 및 운영",
+                  body:
+                    "PIN과 생체 인증을 조합한 확인 절차를 통해 오입력 및 무단 전송 리스크를 줄이고, 다국어(KO/EN/中文)와 테마 전환을 함께 제공합니다.\n릴리즈 상태와 설치 경로는 다운로드 페이지에서 통합 관리합니다."
+                }
+              ]
+            },
+            en: {
+              title: "IMWallet",
+              subtitle:
+                "IMWallet is a mobile Web3 wallet platform built around multi-wallet operations, separated Crypto/NFT asset views, and transfer/receive/history-first UX.",
+              sections: [
+                {
+                  heading: "Service Positioning",
+                  body:
+                    "Based on download.imwallet.app, IMWallet separates its information architecture into Intro, Features, Security, Discover, Flow, FAQ, and Download pages.\nThis structure helps users move from product understanding to installation without friction."
+                },
+                {
+                  heading: "Core User Experience",
+                  body:
+                    "The product prioritizes high-frequency wallet actions including multi-chain asset lookup, separated Crypto/NFT visibility, and transfer/receive/history flows.\nIt is designed to reduce setup complexity while keeping repeat actions consistent."
+                },
+                {
+                  heading: "Security and Operations",
+                  body:
+                    "A PIN + biometric confirmation model is used to reduce input errors and unauthorized transfer risk, while supporting multilingual UX (KO/EN/ZH) and theme switching.\nRelease status and installation paths are centrally managed through the download page."
+                }
+              ]
+            },
+            zh: {
+              title: "IMWallet",
+              subtitle:
+                "IMWallet 是一款面向移动端的 Web3 钱包平台，重点覆盖多钱包运营、Crypto/NFT 分离管理，以及转账/收款/记录优先的使用体验。",
+              sections: [
+                {
+                  heading: "服务定位",
+                  body:
+                    "根据 download.imwallet.app，IMWallet 采用介绍、功能、安全、探索、使用流程、FAQ、下载分离式页面结构。\n用户可按步骤快速完成信息浏览并进入安装流程。"
+                },
+                {
+                  heading: "核心体验",
+                  body:
+                    "产品优先覆盖高频钱包场景，包括多链资产查询、Crypto/NFT 分离展示，以及转账/收款/记录流程。\n整体设计目标是降低设置复杂度，并保持重复操作的一致性。"
+                },
+                {
+                  heading: "安全与运营",
+                  body:
+                    "通过 PIN + 生物识别确认流程降低误操作与未授权转账风险，同时提供 KO/EN/中文多语言与主题切换。\n版本状态与安装入口在下载页面统一管理。"
+                }
+              ]
+            }
+          }
+        },
+        {
+          id: "imsaas",
+          labels: {
+            ko: "IMSaaS",
+            en: "IMSaaS",
+            zh: "IMSaaS"
+          },
+          translations: {
+            ko: {
+              title: "IMSaaS",
+              subtitle:
+                "IMSaaS는 고객 콘솔, 회원 웹, Android APK를 하나의 워크플로로 연결해 빠르게 런칭하고 확장할 수 있도록 설계된 구독형 운영 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "서비스 구조",
+                  body:
+                    "imsaas.app 기준으로 IMSaaS는 내부 개발팀 없이도 콘솔 기반 운영 체계를 시작할 수 있도록 구성되어 있습니다.\n고객 콘솔을 중심으로 정책/권한/회원/트리 데이터를 통합 관리하는 운영 모델을 제공합니다."
+                },
+                {
+                  heading: "운영 자동화 포인트",
+                  body:
+                    "수당 정책 엔진, 레벨 정책, 트리 운영, 리포트/백업/로그 관리 기능을 통해 수작업 비중을 줄이고 운영 표준화를 지원합니다.\n운영 규모가 커져도 상위 플랜 전환을 통해 기능 확장이 가능한 구조를 지향합니다."
+                },
+                {
+                  heading: "도입 및 확장",
+                  body:
+                    "공개된 플랜 안내 기준으로 Start/Growth/Scale 구독 모델과 월 과금 체계를 제공하며, 운영 단계에 맞춰 웹과 앱 채널을 병행 운영할 수 있습니다.\n초기 구축 리드타임을 줄이면서도 장기 확장을 고려한 SaaS 운영 환경이 핵심입니다."
+                }
+              ]
+            },
+            en: {
+              title: "IMSaaS",
+              subtitle:
+                "IMSaaS is a subscription-based operations platform that connects customer console, member web, and Android APK into a single workflow for fast launch and scalable growth.",
+              sections: [
+                {
+                  heading: "Service Architecture",
+                  body:
+                    "Based on imsaas.app, IMSaaS is structured so teams can start console-centered operations without building an internal development team first.\nIts model centralizes policy, permission, member, and tree data in one operational layer."
+                },
+                {
+                  heading: "Automation Focus",
+                  body:
+                    "Compensation policy engine, level rules, tree operations, reporting, backup, and audit log features are designed to reduce manual workload and enforce operational standards.\nAs operations grow, higher plan transitions support feature expansion."
+                },
+                {
+                  heading: "Adoption and Scale",
+                  body:
+                    "According to the publicly presented plan structure, Start/Growth/Scale subscriptions and monthly billing are available, with both web and app channels operated in parallel.\nThe core value is shortening initial rollout lead time while preserving long-term scalability."
+                }
+              ]
+            },
+            zh: {
+              title: "IMSaaS",
+              subtitle:
+                "IMSaaS 是面向运营场景的订阅式平台，可将客户控制台、会员网页与 Android APK 连接为统一工作流，实现快速上线与可扩展增长。",
+              sections: [
+                {
+                  heading: "服务架构",
+                  body:
+                    "根据 imsaas.app，IMSaaS 支持在无需先组建内部开发团队的前提下启动控制台运营。\n平台围绕政策、权限、会员与树结构数据提供统一管理层。"
+                },
+                {
+                  heading: "自动化重点",
+                  body:
+                    "通过奖金政策引擎、等级规则、树结构运营、报表、备份与日志能力，减少人工流程并提升运营标准化程度。\n随着规模增长，可通过升级方案扩展功能范围。"
+                },
+                {
+                  heading: "导入与扩展",
+                  body:
+                    "依据公开方案信息，平台提供 Start/Growth/Scale 订阅结构与月度计费，并支持网页与应用双通道并行运营。\n核心价值在于缩短初期上线周期，同时兼顾长期扩展能力。"
+                }
+              ]
+            }
+          }
+        },
+        {
           id: "mining",
           labels: {
             ko: "채굴",
