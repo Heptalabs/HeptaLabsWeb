@@ -474,19 +474,24 @@ window.HeptaContentDefaults = {
                   heading: "수당정책 설정",
                   image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "추천/후원/데일리/글로벌 풀 수당을 정책 탭에서 직접 설정하고 즉시 반영하는 운영 흐름을 제공합니다.\n단계·규칙·적용 방식까지 한 화면에서 조정해 초기 운영 표준을 빠르게 맞출 수 있습니다."
+                    "정책설정 화면에서 추천 수당/후원 수당/데일리 수당/글로벌 풀 수당을 분리 구성하고, 활성 상태·최대 단계·규칙 수·지급 방식(퍼센트/고정값)을 즉시 반영할 수 있습니다.\n정산 주기, 적용 기준, 행 단위 룰까지 함께 관리할 수 있어 캠페인별 운영 조건을 빠르게 전환할 수 있으며, 저장 이후에는 실행 이력 기준으로 변경 추적이 가능합니다."
                 },
                 {
                   heading: "레벨정책 설정",
                   image: "/assets/topic-media/business-imsaas-level-63505.png",
                   body:
-                    "회원 개별 수정 없이 레벨 기준(최소 가입금/산하 누적금 등)을 일괄 정책으로 저장해 전체 회원에 자동 반영합니다.\n운영팀은 정책 저장 이력 기반으로 변경 내용을 추적하고 안정적으로 업데이트할 수 있습니다."
+                    "레벨 정책 관리 화면에서 레벨 표시명, 최소 가입금, 최소 산하 누적금 조건을 표 형태로 일괄 관리하며 정책 저장 즉시 전체 회원에 자동 반영됩니다.\n회원 단건 수정 없이 정책 중심으로 운영하기 때문에 레벨 기준 변경 시 오류를 줄일 수 있고, 조건 행 추가/삭제와 새로고침/정책 저장 흐름으로 운영 표준을 유지할 수 있습니다."
                 },
                 {
                   heading: "트리관리",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "다단계 트리 시각화, 필터, 회원 상세 패널을 통해 운영 관계를 빠르게 점검하고 조정할 수 있습니다.\n요금제는 imsaas.app 기준으로 베이직(Basic) / 스탠다드(Standard) / 프리미엄(Premium) 3단계로 구성되며 월 1000 / 1500 / 2000 USDT 체계를 제공합니다."
+                    "다단계 트리 시각화 화면에서 전체 트리/기준 회원 필터, 깊이·상태·검색 조건, 줌/맞춤/초기화 도구를 활용해 네트워크 구조를 실시간 점검할 수 있습니다.\n우측 상세 패널에서 선택 회원의 UID·로그인ID·레벨 정보를 바로 확인하고 산하 이동/목록 이동 작업을 이어서 수행할 수 있어 운영 대응 속도를 높입니다."
+                },
+                {
+                  heading: "요금제",
+                  body:
+                    "imsaas.app 요금제 기준으로 현재 플랜은 베이직(Basic) / 스탠다드(Standard) / 프리미엄(Premium) 3단계이며 월 과금은 각각 1000 / 1500 / 2000 USDT입니다.\n베이직은 기본 수당정책/회원관리·테마/APK 기본 운영·공지/뉴스 CMS 중심, 스탠다드는 서브관리자/권한 운영·트리 관리+레벨정책 자동화·고급 분석/리포트 중심, 프리미엄은 백업/롤백 운영 포함 전체 기능과 대규모 운영 확장 대응을 제공합니다."
                 }
               ]
             },
@@ -499,19 +504,24 @@ window.HeptaContentDefaults = {
                   heading: "Compensation Policy Setup",
                   image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "Configure referral, sponsor, daily, and global-pool compensation policies directly from the policy tab and apply changes immediately.\nKey parameters such as levels, rule counts, and payout methods are managed in one place for faster operational setup."
+                    "Configure referral, sponsor, daily, and global-pool compensation policies from a single policy workspace, with immediate activation control.\nTeams can manage max depth, rule count, payout type (percent/fixed), settlement cadence, and rule rows in one flow, then track updates through execution history."
                 },
                 {
                   heading: "Level Policy Setup",
                   image: "/assets/topic-media/business-imsaas-level-63505.png",
                   body:
-                    "Apply level rules globally without editing users one by one by saving policy conditions such as minimum deposit and downline accumulation.\nTeams can track changes through saved policy states and roll out updates with consistent governance."
+                    "Define level labels, minimum deposit thresholds, and minimum downline accumulation rules in a table-based policy editor and apply them globally on save.\nBecause operations are policy-first instead of member-by-member edits, teams reduce update errors while keeping consistent governance through add/remove row and save workflows."
                 },
                 {
                   heading: "Tree Management",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "Use multi-level tree visualization, filtering, and member detail panels to monitor and control network structure efficiently.\nPer imsaas.app pricing, plans are Basic / Standard / Premium with monthly tiers at 1000 / 1500 / 2000 USDT."
+                    "Use multi-level tree visualization with member scope filters, depth/status/search conditions, and zoom/fit/reset controls to inspect network structure in real time.\nThe side detail panel lets operators immediately review UID, login ID, and level, then continue with downline navigation or member-list actions for faster incident response."
+                },
+                {
+                  heading: "Pricing",
+                  body:
+                    "Based on imsaas.app pricing, the current plans are Basic / Standard / Premium with monthly tiers at 1000 / 1500 / 2000 USDT.\nBasic focuses on core compensation/member management, base Theme/APK operations, and Notice/News CMS; Standard adds sub-admin permissions, tree + level-policy automation, and advanced analytics/reports; Premium includes backup/rollback operations with full-feature scalability for high-volume environments."
                 }
               ]
             },
@@ -524,19 +534,24 @@ window.HeptaContentDefaults = {
                   heading: "分润政策设置",
                   image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "可在政策页面直接配置推荐/赞助/日结/全球池分润规则，并即时应用到运营流程。\n阶段、规则数量、发放方式可在同一页面统一调整，便于快速建立标准。"
+                    "可在同一策略页面集中配置推荐/赞助/日结/全球池分润规则，并按启用状态即时生效。\n最大层级、规则数量、发放方式（百分比/固定值）、结算节奏与行级规则可统一管理，保存后可结合执行记录追踪每次变更。"
                 },
                 {
                   heading: "等级政策设置",
                   image: "/assets/topic-media/business-imsaas-level-63505.png",
                   body:
-                    "通过保存等级条件（如最低入金额、下线累计金额），可在不逐个编辑会员的情况下自动全量生效。\n运营团队可基于策略保存状态追踪变更并稳定发布。"
+                    "在等级策略管理页可表格化维护等级名称、最低入金额、最低下线累计金额等条件，保存后自动全量应用。\n通过“策略优先”而非逐会员修改的方式，可降低规则调整错误，并通过新增/删除条件行与保存流程保持运营一致性。"
                 },
                 {
                   heading: "关系树管理",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "通过多层级关系树可视化、筛选器与会员详情面板，快速检查并管理网络结构。\n根据 imsaas.app 价格页，现行方案为 Basic / Standard / Premium，对应月费 1000 / 1500 / 2000 USDT。"
+                    "可通过多层级关系树可视化，配合会员范围筛选、深度/状态/搜索条件及缩放/适配/重置工具，实时检查网络结构。\n右侧详情面板可直接查看 UID、登录ID、等级并继续执行下线查看或会员列表跳转，提升运营响应效率。"
+                },
+                {
+                  heading: "价格方案",
+                  body:
+                    "根据 imsaas.app 价格页，当前方案为 Basic / Standard / Premium，月费分别为 1000 / 1500 / 2000 USDT。\nBasic 侧重基础分润策略与会员管理、主题/APK基础运营、公告/资讯 CMS；Standard 强化子管理员权限、关系树+等级策略自动化与高级分析报表；Premium 提供含备份/回滚在内的全功能扩展能力，适配大规模运营场景。"
                 }
               ]
             }
