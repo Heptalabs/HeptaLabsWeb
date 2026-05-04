@@ -808,6 +808,7 @@
     day: "rgba(248, 250, 255, 0.98)",
     night: "rgba(0, 0, 0, 0.35)"
   };
+  const BUSINESS_PRIMARY_ITEM_IDS = ["imwallet", "imsaas", "imgtest", "hedge-x"];
 
   const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
   const TOPIC_MEDIA_DEFAULTS = {
@@ -852,6 +853,22 @@
           ko: "IMSaaS 메인 페이지 화면",
           en: "IMSaaS main page screenshot",
           zh: "IMSaaS 首页截图"
+        }
+      },
+      imgtest: {
+        url: "/assets/topic-media/business-imgtest-main.png",
+        alt: {
+          ko: "IMGTest 메인 페이지 화면",
+          en: "IMGTest main page screenshot",
+          zh: "IMGTest 首页截图"
+        }
+      },
+      "hedge-x": {
+        url: "/assets/topic-media/business-ai-trading-bot.svg",
+        alt: {
+          ko: "Hedge X 서비스 대표 비주얼",
+          en: "Hedge X service visual",
+          zh: "Hedge X 服务主视觉"
         }
       },
       mining: {
@@ -3771,7 +3788,11 @@
     const itemLabel = item.labels[state.lang] || item.labels.en;
 
     const menuLabelElement = document.querySelector("[data-detail-menu-label]");
-    const listElement = document.querySelector("[data-detail-item-list]");
+    const legacyListElement = document.querySelector("[data-detail-item-list]");
+    const primaryListElement = document.querySelector("[data-detail-item-list-primary]");
+    const secondaryListElement = document.querySelector("[data-detail-item-list-secondary]");
+    const primaryGroupElement = document.querySelector("[data-detail-item-group-primary]");
+    const secondaryGroupElement = document.querySelector("[data-detail-item-group-secondary]");
     const pathElement = document.querySelector("[data-detail-path]");
     const titleElement = document.querySelector("[data-detail-title]");
     const subtitleElement = document.querySelector("[data-detail-subtitle]");
@@ -3781,9 +3802,12 @@
       menuLabelElement.textContent = `${pathText.menuCaption}: ${menuLabel}`;
     }
 
-    if (listElement) {
-      listElement.innerHTML = "";
-      menu.items.forEach((menuItem) => {
+    const renderMenuList = (listNode, entries) => {
+      if (!listNode) {
+        return;
+      }
+      listNode.innerHTML = "";
+      entries.forEach((menuItem) => {
         const li = document.createElement("li");
         const link = document.createElement("a");
         link.href = buildDetailUrl(menu.id, menuItem.id);
@@ -3792,8 +3816,30 @@
           link.classList.add("is-active");
         }
         li.append(link);
-        listElement.append(li);
+        listNode.append(li);
       });
+    };
+
+    if (legacyListElement) {
+      renderMenuList(legacyListElement, menu.items);
+    } else if (primaryListElement) {
+      const isBusinessMenu = menuId === "business";
+      const primaryItems = isBusinessMenu
+        ? BUSINESS_PRIMARY_ITEM_IDS.map((id) => menu.items.find((entry) => entry.id === id)).filter(Boolean)
+        : [...menu.items];
+      const secondaryItems = isBusinessMenu
+        ? menu.items.filter((entry) => !BUSINESS_PRIMARY_ITEM_IDS.includes(entry.id))
+        : [];
+
+      renderMenuList(primaryListElement, primaryItems);
+      renderMenuList(secondaryListElement, secondaryItems);
+
+      if (primaryGroupElement) {
+        primaryGroupElement.hidden = primaryItems.length === 0;
+      }
+      if (secondaryGroupElement) {
+        secondaryGroupElement.hidden = secondaryItems.length === 0;
+      }
     }
 
     if (pathElement) {

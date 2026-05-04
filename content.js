@@ -558,6 +558,188 @@ window.HeptaContentDefaults = {
           }
         },
         {
+          id: "imgtest",
+          labels: {
+            ko: "IMGTest",
+            en: "IMGTest",
+            zh: "IMGTest"
+          },
+          translations: {
+            ko: {
+              title: "IMGTest",
+              subtitle:
+                "IMGTest는 회전 퍼즐 기반 CAPTCHA 검증과 고객 콘솔 운영을 결합해 자동화 트래픽을 차단하고, 실서비스 보안 운영을 표준화하도록 설계된 SaaS 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "서비스 포지셔닝",
+                  body:
+                    "imgtest.app 기준으로 IMGTest는 메인, CAPTCHA Demo, SDK, Pricing, Customer Console, API Test를 분리해 운영합니다.\n도입 전 검증부터 연동 코드 테스트, 운영 정책 적용까지 한 흐름으로 이어져 초기 적용 속도를 높일 수 있습니다."
+                },
+                {
+                  heading: "핵심 기능",
+                  body:
+                    "회전 퍼즐 중심 Adaptive Challenge로 자동화 트래픽을 정밀 검증하고, Verify + Siteverify 이중 검증 구조로 토큰 신뢰도를 강화합니다.\nCustomer Console에서 사이트/키/이벤트를 통합 관리하고, SDK & API Playground에서 실제 연동 스니펫과 API 동작을 즉시 확인할 수 있습니다."
+                },
+                {
+                  heading: "활용 시나리오",
+                  body:
+                    "로그인/회원가입 보호, 결제·쿠폰 남용 방어, 문의/폼 스팸 차단, 중요 API 액션 보호 등 고위험 구간에 단계별로 CAPTCHA 검증을 삽입할 수 있습니다.\n운영팀은 이벤트 탐색기와 정책 임계치 설정을 통해 어뷰징 패턴을 빠르게 탐지하고 대응 기준을 고도화할 수 있습니다."
+                },
+                {
+                  heading: "요금제",
+                  body:
+                    "imgtest.app 요금 기준으로 Starter(월 49,000원), Business(월 129,000원), Enterprise(맞춤 견적) 3단계로 운영됩니다.\nStarter는 기본 검증/대시보드 중심, Business는 정책 자동화와 고급 이벤트 분석 강화, Enterprise는 전용 SLA·맞춤 리스크 정책·우선 지원 중심으로 설계됩니다."
+                }
+              ]
+            },
+            en: {
+              title: "IMGTest",
+              subtitle:
+                "IMGTest is a SaaS security platform that combines puzzle-based CAPTCHA verification with console-first operations to block automated traffic and standardize production security workflows.",
+              sections: [
+                {
+                  heading: "Service Positioning",
+                  body:
+                    "Based on imgtest.app, IMGTest is structured around Main, CAPTCHA Demo, SDK, Pricing, Customer Console, and API Test experiences.\nThe flow is designed to connect pre-adoption validation, integration testing, and operational policy rollout without friction."
+                },
+                {
+                  heading: "Core Capabilities",
+                  body:
+                    "Adaptive puzzle challenges improve bot traffic detection, while Verify + Siteverify adds a dual-layer trust model for token validation.\nTeams can run site/key/event management in Customer Console and test real snippets and API behaviors immediately in SDK & API Playground."
+                },
+                {
+                  heading: "Use Cases",
+                  body:
+                    "IMGTest can be applied to high-risk points including login/sign-up protection, payment or coupon abuse defense, form spam filtering, and sensitive API action protection.\nOperators can tune policy thresholds and investigate abuse signals through event views to improve response speed."
+                },
+                {
+                  heading: "Pricing",
+                  body:
+                    "Based on imgtest.app pricing, plans are Starter (KRW 49,000/month), Business (KRW 129,000/month), and Enterprise (custom quote).\nStarter focuses on baseline verification/dashboard, Business expands policy automation and advanced analytics, and Enterprise adds dedicated SLA, custom risk policy, and priority support."
+                }
+              ]
+            },
+            zh: {
+              title: "IMGTest",
+              subtitle:
+                "IMGTest 是一款 SaaS 安全平台，结合拼图式 CAPTCHA 验证与控制台运营能力，用于拦截自动化流量并标准化生产级安全流程。",
+              sections: [
+                {
+                  heading: "服务定位",
+                  body:
+                    "参考 imgtest.app，IMGTest 将主站、CAPTCHA 演示、SDK、价格页、客户控制台、API 测试分层运营。\n从上线前验证到集成测试再到策略落地，可在同一流程中连续推进，缩短导入周期。"
+                },
+                {
+                  heading: "核心能力",
+                  body:
+                    "基于拼图的自适应挑战用于精细识别自动化流量，Verify + Siteverify 双重验证机制用于提升令牌可信度。\n团队可在 Customer Console 统一管理站点/密钥/事件，并在 SDK & API Playground 即时验证集成代码与 API 行为。"
+                },
+                {
+                  heading: "应用场景",
+                  body:
+                    "可用于登录/注册保护、支付与优惠滥用防护、表单垃圾提交拦截、关键 API 动作防护等高风险环节。\n运营团队可通过事件视图与策略阈值配置快速识别异常模式并优化响应策略。"
+                },
+                {
+                  heading: "价格方案",
+                  body:
+                    "根据 imgtest.app 价格信息，当前方案为 Starter（每月 KRW 49,000）、Business（每月 KRW 129,000）、Enterprise（定制报价）。\nStarter 侧重基础验证与看板，Business 强化策略自动化与高级分析，Enterprise 提供专属 SLA、定制风险策略与优先支持。"
+                }
+              ]
+            }
+          }
+        },
+        {
+          id: "hedge-x",
+          labels: {
+            ko: "Hedge X",
+            en: "Hedge X",
+            zh: "Hedge X"
+          },
+          translations: {
+            ko: {
+              title: "Hedge X",
+              subtitle:
+                "Hedge X는 AI 헷지 트레이닝 엔진을 기반으로 시장 변동 리스크를 관리하고, 데일리 수익을 플랫폼과 사용자가 공유하는 전략형 투자 운영 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "플랫폼 개요",
+                  body:
+                    "Hedge X는 단일 방향 베팅이 아닌 헷지 중심 전략을 기본으로 설계해 급격한 변동 구간에서도 손실 완화와 수익 기회의 균형을 목표로 합니다.\n플랫폼은 사용자 참여형 수익 구조를 제공해 운용 성과를 장기적으로 공유할 수 있도록 설계됩니다."
+                },
+                {
+                  heading: "AI 헷지 트레이닝 엔진",
+                  body:
+                    "엔진은 과거 체결 데이터, 변동성 패턴, 유동성 흐름을 학습해 시장 국면별 포지션 조합을 제안하며, 시나리오 백테스트와 파라미터 재학습을 반복합니다.\n단기 과최적화 방지를 위해 학습 주기와 검증 구간을 분리해 전략의 재현성과 안정성을 함께 관리합니다."
+                },
+                {
+                  heading: "데일리 수익 공유 모델",
+                  body:
+                    "운영 결과는 일 단위로 정산해 플랫폼과 사용자 간 사전 정의된 분배 규칙에 따라 수익을 공유합니다.\n수익률뿐 아니라 유지율, 변동성 기여도, 리스크 기여도를 함께 추적해 단기 고수익 편향을 줄이고 지속 가능한 운용 지표를 강화합니다."
+                },
+                {
+                  heading: "리스크 및 운영 거버넌스",
+                  body:
+                    "포지션 한도, 손실 제한, 비정상 신호 감지, 긴급 보호 모드 등 다중 보호 장치를 기본 탑재해 시장 급변 시 자동 방어 레이어를 활성화할 수 있습니다.\n관리 콘솔에서는 전략 버전, 일별 정산 로그, 사용자 참여 현황을 함께 확인해 운영 투명성과 감사 가능성을 높입니다."
+                }
+              ]
+            },
+            en: {
+              title: "Hedge X",
+              subtitle:
+                "Hedge X is an AI hedge training platform designed to control market-volatility risk and share daily returns between the platform and users through a strategy-driven operating model.",
+              sections: [
+                {
+                  heading: "Platform Overview",
+                  body:
+                    "Hedge X is built on hedge-first logic rather than one-directional exposure, targeting a balance between downside protection and return opportunity in volatile markets.\nIts participation model is designed to let users share operating outcomes over sustained periods."
+                },
+                {
+                  heading: "AI Hedge Training Engine",
+                  body:
+                    "The engine learns from execution history, volatility signatures, and liquidity behavior to suggest regime-based position mixes, then iterates through scenario backtests and parameter retraining.\nTo reduce short-term overfitting, training cadence and validation windows are separated for stronger reproducibility."
+                },
+                {
+                  heading: "Daily Return Sharing Model",
+                  body:
+                    "Performance is settled daily and distributed between the platform and users based on predefined sharing rules.\nBeyond raw return, retention, volatility contribution, and risk contribution are tracked together to reduce short-term yield bias."
+                },
+                {
+                  heading: "Risk and Operating Governance",
+                  body:
+                    "Core controls include position caps, loss limits, anomaly signals, and emergency protection mode to activate defensive layers under stressed conditions.\nThe console provides strategy versioning, daily settlement logs, and participation metrics to improve transparency and auditability."
+                }
+              ]
+            },
+            zh: {
+              title: "Hedge X",
+              subtitle:
+                "Hedge X 是一套 AI 对冲训练平台，面向高波动市场进行风险管理，并通过平台与用户之间的日收益共享机制实现策略化运营。",
+              sections: [
+                {
+                  heading: "平台概览",
+                  body:
+                    "Hedge X 采用“对冲优先”而非单向暴露逻辑，在剧烈波动市场中追求回撤控制与收益机会的平衡。\n平台提供用户参与式收益结构，用于长期共享运营结果。"
+                },
+                {
+                  heading: "AI 对冲训练引擎",
+                  body:
+                    "引擎基于成交历史、波动特征与流动性行为学习不同市场阶段的仓位组合，并通过情景回测与参数再训练持续迭代。\n为降低短期过拟合风险，训练节奏与验证窗口分离设计，以提升策略复现性。"
+                },
+                {
+                  heading: "日收益共享机制",
+                  body:
+                    "平台按日结算，并依据预设分配规则在平台与用户之间共享收益。\n除收益率外，还同步跟踪留存贡献、波动贡献与风险贡献，减少短期高收益偏置。"
+                },
+                {
+                  heading: "风控与运营治理",
+                  body:
+                    "系统内置仓位上限、止损阈值、异常信号检测与紧急保护模式，可在极端行情下自动启用防御层。\n管理控制台可统一查看策略版本、日结日志与用户参与数据，提升透明度与审计可追溯性。"
+                }
+              ]
+            }
+          }
+        },
+        {
           id: "mining",
           labels: {
             ko: "채굴",
