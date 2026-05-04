@@ -813,6 +813,22 @@
       }
     },
     business: {
+      imwallet: {
+        url: "/download/assets/hero-phone-main.png",
+        alt: {
+          ko: "IMWallet 메인 핸드폰 앱 화면",
+          en: "IMWallet main phone app screen",
+          zh: "IMWallet 主页面手机应用画面"
+        }
+      },
+      imsaas: {
+        url: "/assets/topic-media/business-imsaas-main.png",
+        alt: {
+          ko: "IMSaaS 메인 페이지 화면",
+          en: "IMSaaS main page screenshot",
+          zh: "IMSaaS 首页截图"
+        }
+      },
       mining: {
         url: "/assets/topic-media/business-mining.svg",
         alt: {
