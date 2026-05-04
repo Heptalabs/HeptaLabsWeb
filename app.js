@@ -804,6 +804,10 @@
       logo: "/assets/brand/imwallet-logo-dark.png"
     }
   };
+  const DETAIL_MEDIA_BG_BY_THEME = {
+    day: "rgba(248, 250, 255, 0.98)",
+    night: "rgba(0, 0, 0, 0.35)"
+  };
 
   const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
   const TOPIC_MEDIA_DEFAULTS = {
@@ -2176,6 +2180,17 @@
     });
   };
 
+  const syncDetailMediaSurface = () => {
+    const tone = state.theme === "night" ? DETAIL_MEDIA_BG_BY_THEME.night : DETAIL_MEDIA_BG_BY_THEME.day;
+    document
+      .querySelectorAll(
+        ".detail-feature-image, .detail-feature-video, .detail-section-image, .detail-section-video"
+      )
+      .forEach((node) => {
+        node.style.background = tone;
+      });
+  };
+
   const setTheme = (theme) => {
     state.theme = SUPPORTED_THEMES.includes(theme) ? theme : "night";
     document.documentElement.setAttribute("data-theme", state.theme);
@@ -2191,6 +2206,7 @@
     });
 
     syncImsaasTitleBrand();
+    syncDetailMediaSurface();
   };
 
   const setLang = (lang) => {
@@ -2980,6 +2996,7 @@
 
     const resolvedType = normalizeMediaType(mediaType, inferMediaTypeFromUrl(sourceUrl, fallbackType));
     const applyNoCropStyles = (element, className) => {
+      const tone = state.theme === "night" ? DETAIL_MEDIA_BG_BY_THEME.night : DETAIL_MEDIA_BG_BY_THEME.day;
       if (className === "detail-feature-image" || className === "detail-feature-video") {
         element.style.objectFit = "contain";
         element.style.maxHeight = "560px";
@@ -2987,6 +3004,7 @@
         element.style.objectFit = "contain";
         element.style.maxHeight = "460px";
       }
+      element.style.background = tone;
     };
 
     if (resolvedType === "video") {
