@@ -2948,6 +2948,16 @@
     }
 
     const resolvedType = normalizeMediaType(mediaType, inferMediaTypeFromUrl(sourceUrl, fallbackType));
+    const applyNoCropStyles = (element, className) => {
+      if (className === "detail-feature-image" || className === "detail-feature-video") {
+        element.style.objectFit = "contain";
+        element.style.maxHeight = "560px";
+      } else if (className === "detail-section-image" || className === "detail-section-video") {
+        element.style.objectFit = "contain";
+        element.style.maxHeight = "460px";
+      }
+    };
+
     if (resolvedType === "video") {
       const video = document.createElement("video");
       video.className = videoClassName;
@@ -2955,6 +2965,7 @@
       video.controls = true;
       video.preload = "metadata";
       video.playsInline = true;
+      applyNoCropStyles(video, videoClassName);
       const label = asString(alt).trim();
       if (label) {
         video.setAttribute("title", label);
@@ -2968,6 +2979,7 @@
     image.src = sourceUrl;
     image.alt = asString(alt);
     image.loading = "lazy";
+    applyNoCropStyles(image, imageClassName);
     return image;
   };
 

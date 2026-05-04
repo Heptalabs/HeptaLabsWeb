@@ -471,20 +471,22 @@ window.HeptaContentDefaults = {
                 "IMSaaS는 고객 콘솔, 회원 웹, Android APK를 하나의 워크플로로 연결해 빠르게 런칭하고 확장할 수 있도록 설계된 구독형 운영 플랫폼입니다.",
               sections: [
                 {
-                  heading: "서비스 구조",
+                  heading: "수당정책 설정",
+                  image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "imsaas.app 기준으로 IMSaaS는 내부 개발팀 없이도 콘솔 기반 운영 체계를 시작할 수 있도록 구성되어 있습니다.\n고객 콘솔을 중심으로 정책/권한/회원/트리 데이터를 통합 관리하는 운영 모델을 제공합니다."
+                    "추천/후원/데일리/글로벌 풀 수당을 정책 탭에서 직접 설정하고 즉시 반영하는 운영 흐름을 제공합니다.\n단계·규칙·적용 방식까지 한 화면에서 조정해 초기 운영 표준을 빠르게 맞출 수 있습니다."
                 },
                 {
-                  heading: "운영 자동화 포인트",
+                  heading: "레벨정책 설정",
+                  image: "/assets/topic-media/business-imsaas-level-63505.png",
+                  body:
+                    "회원 개별 수정 없이 레벨 기준(최소 가입금/산하 누적금 등)을 일괄 정책으로 저장해 전체 회원에 자동 반영합니다.\n운영팀은 정책 저장 이력 기반으로 변경 내용을 추적하고 안정적으로 업데이트할 수 있습니다."
+                },
+                {
+                  heading: "트리관리",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "수당 정책 엔진, 레벨 정책, 트리 운영, 리포트/백업/로그 관리 기능을 통해 수작업 비중을 줄이고 운영 표준화를 지원합니다.\n운영 규모가 커져도 상위 플랜 전환을 통해 기능 확장이 가능한 구조를 지향합니다."
-                },
-                {
-                  heading: "도입 및 확장",
-                  body:
-                    "공개된 플랜 안내 기준으로 Start/Growth/Scale 구독 모델과 월 과금 체계를 제공하며, 운영 단계에 맞춰 웹과 앱 채널을 병행 운영할 수 있습니다.\n초기 구축 리드타임을 줄이면서도 장기 확장을 고려한 SaaS 운영 환경이 핵심입니다."
+                    "다단계 트리 시각화, 필터, 회원 상세 패널을 통해 운영 관계를 빠르게 점검하고 조정할 수 있습니다.\n요금제는 imsaas.app 기준으로 베이직(Basic) / 스탠다드(Standard) / 프리미엄(Premium) 3단계로 구성되며 월 1000 / 1500 / 2000 USDT 체계를 제공합니다."
                 }
               ]
             },
@@ -494,20 +496,22 @@ window.HeptaContentDefaults = {
                 "IMSaaS is a subscription-based operations platform that connects customer console, member web, and Android APK into a single workflow for fast launch and scalable growth.",
               sections: [
                 {
-                  heading: "Service Architecture",
+                  heading: "Compensation Policy Setup",
+                  image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "Based on imsaas.app, IMSaaS is structured so teams can start console-centered operations without building an internal development team first.\nIts model centralizes policy, permission, member, and tree data in one operational layer."
+                    "Configure referral, sponsor, daily, and global-pool compensation policies directly from the policy tab and apply changes immediately.\nKey parameters such as levels, rule counts, and payout methods are managed in one place for faster operational setup."
                 },
                 {
-                  heading: "Automation Focus",
+                  heading: "Level Policy Setup",
+                  image: "/assets/topic-media/business-imsaas-level-63505.png",
+                  body:
+                    "Apply level rules globally without editing users one by one by saving policy conditions such as minimum deposit and downline accumulation.\nTeams can track changes through saved policy states and roll out updates with consistent governance."
+                },
+                {
+                  heading: "Tree Management",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "Compensation policy engine, level rules, tree operations, reporting, backup, and audit log features are designed to reduce manual workload and enforce operational standards.\nAs operations grow, higher plan transitions support feature expansion."
-                },
-                {
-                  heading: "Adoption and Scale",
-                  body:
-                    "According to the publicly presented plan structure, Start/Growth/Scale subscriptions and monthly billing are available, with both web and app channels operated in parallel.\nThe core value is shortening initial rollout lead time while preserving long-term scalability."
+                    "Use multi-level tree visualization, filtering, and member detail panels to monitor and control network structure efficiently.\nPer imsaas.app pricing, plans are Basic / Standard / Premium with monthly tiers at 1000 / 1500 / 2000 USDT."
                 }
               ]
             },
@@ -517,20 +521,22 @@ window.HeptaContentDefaults = {
                 "IMSaaS 是面向运营场景的订阅式平台，可将客户控制台、会员网页与 Android APK 连接为统一工作流，实现快速上线与可扩展增长。",
               sections: [
                 {
-                  heading: "服务架构",
+                  heading: "分润政策设置",
+                  image: "/assets/topic-media/business-imsaas-policy-63535.png",
                   body:
-                    "根据 imsaas.app，IMSaaS 支持在无需先组建内部开发团队的前提下启动控制台运营。\n平台围绕政策、权限、会员与树结构数据提供统一管理层。"
+                    "可在政策页面直接配置推荐/赞助/日结/全球池分润规则，并即时应用到运营流程。\n阶段、规则数量、发放方式可在同一页面统一调整，便于快速建立标准。"
                 },
                 {
-                  heading: "自动化重点",
+                  heading: "等级政策设置",
+                  image: "/assets/topic-media/business-imsaas-level-63505.png",
+                  body:
+                    "通过保存等级条件（如最低入金额、下线累计金额），可在不逐个编辑会员的情况下自动全量生效。\n运营团队可基于策略保存状态追踪变更并稳定发布。"
+                },
+                {
+                  heading: "关系树管理",
                   image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
-                    "通过奖金政策引擎、等级规则、树结构运营、报表、备份与日志能力，减少人工流程并提升运营标准化程度。\n随着规模增长，可通过升级方案扩展功能范围。"
-                },
-                {
-                  heading: "导入与扩展",
-                  body:
-                    "依据公开方案信息，平台提供 Start/Growth/Scale 订阅结构与月度计费，并支持网页与应用双通道并行运营。\n核心价值在于缩短初期上线周期，同时兼顾长期扩展能力。"
+                    "通过多层级关系树可视化、筛选器与会员详情面板，快速检查并管理网络结构。\n根据 imsaas.app 价格页，现行方案为 Basic / Standard / Premium，对应月费 1000 / 1500 / 2000 USDT。"
                 }
               ]
             }
