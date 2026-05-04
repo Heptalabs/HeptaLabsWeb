@@ -61,6 +61,121 @@
       en: "Explore",
       zh: "查看详情"
     },
+    homePricing: {
+      ko: {
+        title: "요금 안내",
+        link: "도입 상담",
+        lead:
+          "운영 규모와 요구사항에 맞게 Starter, Growth, Enterprise 중에서 선택할 수 있습니다. 트래픽·자동화·지원 범위 기준으로 빠르게 비교해 보세요.",
+        starterTitle: "Starter",
+        starterPrice: "월 ₩490,000",
+        starterDesc: "초기 팀 운영용 · 기본 인프라 세팅/운영 리포트",
+        growthTitle: "Growth",
+        growthPrice: "월 ₩1,290,000",
+        growthDesc: "권장 플랜 · 자동화 운영/실시간 모니터링/우선 지원",
+        enterpriseTitle: "Enterprise",
+        enterprisePrice: "맞춤 견적",
+        enterpriseDesc: "전용 아키텍처, 보안/컴플라이언스 대응, 전담 엔지니어"
+      },
+      en: {
+        title: "Pricing",
+        link: "Contact Sales",
+        lead:
+          "Choose Starter, Growth, or Enterprise based on your operational scale and requirements. Compare traffic capacity, automation scope, and support level at a glance.",
+        starterTitle: "Starter",
+        starterPrice: "KRW 490,000 / mo",
+        starterDesc: "For initial teams · baseline infrastructure setup and ops reporting",
+        growthTitle: "Growth",
+        growthPrice: "KRW 1,290,000 / mo",
+        growthDesc: "Recommended · automated operations, realtime monitoring, priority support",
+        enterpriseTitle: "Enterprise",
+        enterprisePrice: "Custom Quote",
+        enterpriseDesc: "Dedicated architecture, security/compliance support, assigned engineers"
+      },
+      zh: {
+        title: "价格方案",
+        link: "联系销售",
+        lead:
+          "可根据运营规模与需求选择 Starter、Growth、Enterprise。按流量承载、自动化能力与支持等级快速比较。",
+        starterTitle: "Starter",
+        starterPrice: "韩元 490,000 / 月",
+        starterDesc: "初创团队适用 · 基础架构部署与运营报告",
+        growthTitle: "Growth",
+        growthPrice: "韩元 1,290,000 / 月",
+        growthDesc: "推荐方案 · 自动化运维、实时监控、优先支持",
+        enterpriseTitle: "Enterprise",
+        enterprisePrice: "定制报价",
+        enterpriseDesc: "专属架构、安全/合规支持、专属工程团队"
+      }
+    },
+    homeFooter: {
+      ko: {
+        brandName: "Hepta Labs",
+        brandDesc: "실서비스 중심의 인프라·솔루션 운영 파트너",
+        productTitle: "Product",
+        developersTitle: "Developers",
+        companyTitle: "Company",
+        productLink1: "Mining",
+        productLink2: "White Label",
+        productLink3: "AI Trading Bot",
+        devLink1: "News",
+        devLink2: "Notice",
+        devLink3: "Downloads",
+        companyLink1: "About Hepta Labs",
+        companyLink2: "Q&A",
+        companyLink3: "Contact",
+        newsTitle: "운영 업데이트 받기",
+        newsDesc: "신규 릴리즈, 운영 공지, 인프라 업데이트를 이메일로 받아보세요.",
+        newsPlaceholder: "email@company.com",
+        newsButton: "구독",
+        bottomFaq: "FAQ",
+        bottomStatus: "상담 문의"
+      },
+      en: {
+        brandName: "Hepta Labs",
+        brandDesc: "Infrastructure and solution partner focused on production operations",
+        productTitle: "Product",
+        developersTitle: "Developers",
+        companyTitle: "Company",
+        productLink1: "Mining",
+        productLink2: "White Label",
+        productLink3: "AI Trading Bot",
+        devLink1: "News",
+        devLink2: "Notice",
+        devLink3: "Downloads",
+        companyLink1: "About Hepta Labs",
+        companyLink2: "Q&A",
+        companyLink3: "Contact",
+        newsTitle: "Get Operational Updates",
+        newsDesc: "Receive releases, operational notices, and infrastructure updates by email.",
+        newsPlaceholder: "email@company.com",
+        newsButton: "Subscribe",
+        bottomFaq: "FAQ",
+        bottomStatus: "Contact"
+      },
+      zh: {
+        brandName: "Hepta Labs",
+        brandDesc: "聚焦实战运营的基础设施与解决方案合作伙伴",
+        productTitle: "Product",
+        developersTitle: "Developers",
+        companyTitle: "Company",
+        productLink1: "Mining",
+        productLink2: "White Label",
+        productLink3: "AI Trading Bot",
+        devLink1: "News",
+        devLink2: "Notice",
+        devLink3: "Downloads",
+        companyLink1: "About Hepta Labs",
+        companyLink2: "Q&A",
+        companyLink3: "Contact",
+        newsTitle: "获取运营更新",
+        newsDesc: "通过邮件接收版本发布、运营公告与基础设施更新。",
+        newsPlaceholder: "email@company.com",
+        newsButton: "订阅",
+        bottomFaq: "FAQ",
+        bottomStatus: "联系咨询"
+      }
+    },
     detail: {
       ko: {
         menuCaption: "Menu",
@@ -795,6 +910,18 @@
       en: asString(source.en || fallbackMap.en || ""),
       zh: asString(source.zh || fallbackMap.zh || "")
     };
+  };
+
+  const resolveLocalizedLabels = (sourceLabels, fallbackLabels) => {
+    const resolved = ensureLangMap(sourceLabels, fallbackLabels);
+    const fallback = ensureLangMap(fallbackLabels);
+
+    const isUniformLegacyLabel =
+      resolved.en && resolved.ko === resolved.en && resolved.zh === resolved.en;
+    const hasLocalizedFallback =
+      (fallback.ko && fallback.ko !== fallback.en) || (fallback.zh && fallback.zh !== fallback.en);
+
+    return isUniformLegacyLabel && hasLocalizedFallback ? fallback : resolved;
   };
 
   const normalizeDateIso = (value, fallback = null) => {
@@ -1711,14 +1838,14 @@
 
         return {
           id: fallbackItem.id,
-          labels: ensureLangMap(sourceItem.labels, fallbackItem.labels),
+          labels: resolveLocalizedLabels(sourceItem.labels, fallbackItem.labels),
           translations
         };
       });
 
       return {
         id: fallbackMenu.id,
-        labels: ensureLangMap(sourceMenu.labels, fallbackMenu.labels),
+        labels: resolveLocalizedLabels(sourceMenu.labels, fallbackMenu.labels),
         items
       };
     });
@@ -2666,6 +2793,48 @@
       });
       cards.append(article);
     });
+
+    const pricing = getLangText(UI_TEXT.homePricing);
+    setText("[data-home-pricing-title]", pricing.title || "");
+    setText("[data-home-pricing-link]", pricing.link || "");
+    setText("[data-home-pricing-lead]", pricing.lead || "");
+    setText("[data-home-pricing-starter-title]", pricing.starterTitle || "");
+    setText("[data-home-pricing-starter-price]", pricing.starterPrice || "");
+    setText("[data-home-pricing-starter-desc]", pricing.starterDesc || "");
+    setText("[data-home-pricing-growth-title]", pricing.growthTitle || "");
+    setText("[data-home-pricing-growth-price]", pricing.growthPrice || "");
+    setText("[data-home-pricing-growth-desc]", pricing.growthDesc || "");
+    setText("[data-home-pricing-enterprise-title]", pricing.enterpriseTitle || "");
+    setText("[data-home-pricing-enterprise-price]", pricing.enterprisePrice || "");
+    setText("[data-home-pricing-enterprise-desc]", pricing.enterpriseDesc || "");
+
+    const homeFooter = getLangText(UI_TEXT.homeFooter);
+    setText("[data-home-footer-brand-name]", homeFooter.brandName || "");
+    setText("[data-home-footer-brand-desc]", homeFooter.brandDesc || "");
+    setText("[data-home-footer-col-product]", homeFooter.productTitle || "");
+    setText("[data-home-footer-col-developers]", homeFooter.developersTitle || "");
+    setText("[data-home-footer-col-company]", homeFooter.companyTitle || "");
+    setText("[data-home-footer-link-product-1]", homeFooter.productLink1 || "");
+    setText("[data-home-footer-link-product-2]", homeFooter.productLink2 || "");
+    setText("[data-home-footer-link-product-3]", homeFooter.productLink3 || "");
+    setText("[data-home-footer-link-dev-1]", homeFooter.devLink1 || "");
+    setText("[data-home-footer-link-dev-2]", homeFooter.devLink2 || "");
+    setText("[data-home-footer-link-dev-3]", homeFooter.devLink3 || "");
+    setText("[data-home-footer-link-company-1]", homeFooter.companyLink1 || "");
+    setText("[data-home-footer-link-company-2]", homeFooter.companyLink2 || "");
+    setText("[data-home-footer-link-company-3]", homeFooter.companyLink3 || "");
+    setText("[data-home-footer-news-title]", homeFooter.newsTitle || "");
+    setText("[data-home-footer-news-desc]", homeFooter.newsDesc || "");
+    setText("[data-home-footer-news-cta]", homeFooter.newsButton || "");
+    setText("[data-home-footer-bottom-faq]", homeFooter.bottomFaq || "");
+    setText("[data-home-footer-bottom-status]", homeFooter.bottomStatus || "");
+
+    const newsletterInput = document.querySelector("[data-home-footer-news-placeholder]");
+    if (newsletterInput instanceof HTMLInputElement) {
+      const placeholder = homeFooter.newsPlaceholder || "email@company.com";
+      newsletterInput.placeholder = placeholder;
+      newsletterInput.setAttribute("aria-label", placeholder);
+    }
   };
 
   const resolveDetailParams = () => {

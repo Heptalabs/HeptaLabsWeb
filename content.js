@@ -192,9 +192,9 @@ window.HeptaContentDefaults = {
         {
           id: "vision",
           labels: {
-            ko: "Vision",
+            ko: "비전",
             en: "Vision",
-            zh: "Vision"
+            zh: "愿景"
           },
           translations: {
             ko: {
@@ -283,9 +283,9 @@ window.HeptaContentDefaults = {
         {
           id: "greeting",
           labels: {
-            ko: "Greeting",
+            ko: "인사말",
             en: "Greeting",
-            zh: "Greeting"
+            zh: "致辞"
           },
           translations: {
             ko: {
@@ -384,9 +384,9 @@ window.HeptaContentDefaults = {
         {
           id: "mining",
           labels: {
-            ko: "Mining",
+            ko: "채굴",
             en: "Mining",
-            zh: "Mining"
+            zh: "矿业"
           },
           translations: {
             ko: {
@@ -490,9 +490,9 @@ window.HeptaContentDefaults = {
         {
           id: "white-label",
           labels: {
-            ko: "White Label",
+            ko: "화이트 라벨",
             en: "White Label",
-            zh: "White Label"
+            zh: "白标服务"
           },
           translations: {
             ko: {
@@ -566,9 +566,9 @@ window.HeptaContentDefaults = {
         {
           id: "crypto-exchange",
           labels: {
-            ko: "Crypto Exchange",
+            ko: "가상자산 거래소",
             en: "Crypto Exchange",
-            zh: "Crypto Exchange"
+            zh: "加密交易所"
           },
           translations: {
             ko: {
@@ -612,9 +612,9 @@ window.HeptaContentDefaults = {
         {
           id: "ai-trading-bot",
           labels: {
-            ko: "AI Trading Bot",
+            ko: "AI 트레이딩 봇",
             en: "AI Trading Bot",
-            zh: "AI Trading Bot"
+            zh: "AI 交易机器人"
           },
           translations: {
             ko: {
@@ -703,9 +703,9 @@ window.HeptaContentDefaults = {
         {
           id: "development",
           labels: {
-            ko: "Development",
+            ko: "개발",
             en: "Development",
-            zh: "Development"
+            zh: "开发"
           },
           translations: {
             ko: {
@@ -819,9 +819,9 @@ window.HeptaContentDefaults = {
         {
           id: "news",
           labels: {
-            ko: "News",
+            ko: "뉴스",
             en: "News",
-            zh: "News"
+            zh: "新闻"
           },
           translations: {
             ko: {
@@ -894,9 +894,9 @@ window.HeptaContentDefaults = {
         {
           id: "notice",
           labels: {
-            ko: "Notice",
+            ko: "공지사항",
             en: "Notice",
-            zh: "Notice"
+            zh: "公告"
           },
           translations: {
             ko: {
@@ -975,9 +975,9 @@ window.HeptaContentDefaults = {
         {
           id: "qna",
           labels: {
-            ko: "QnA",
+            ko: "문의/답변",
             en: "QnA",
-            zh: "QnA"
+            zh: "问答"
           },
           translations: {
             ko: {
@@ -1047,9 +1047,9 @@ window.HeptaContentDefaults = {
         {
           id: "contact",
           labels: {
-            ko: "Contact",
+            ko: "문의하기",
             en: "Contact",
-            zh: "Contact"
+            zh: "联系"
           },
           translations: {
             ko: {
