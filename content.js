@@ -477,6 +477,7 @@ window.HeptaContentDefaults = {
                 },
                 {
                   heading: "운영 자동화 포인트",
+                  image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
                     "수당 정책 엔진, 레벨 정책, 트리 운영, 리포트/백업/로그 관리 기능을 통해 수작업 비중을 줄이고 운영 표준화를 지원합니다.\n운영 규모가 커져도 상위 플랜 전환을 통해 기능 확장이 가능한 구조를 지향합니다."
                 },
@@ -499,6 +500,7 @@ window.HeptaContentDefaults = {
                 },
                 {
                   heading: "Automation Focus",
+                  image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
                     "Compensation policy engine, level rules, tree operations, reporting, backup, and audit log features are designed to reduce manual workload and enforce operational standards.\nAs operations grow, higher plan transitions support feature expansion."
                 },
@@ -521,6 +523,7 @@ window.HeptaContentDefaults = {
                 },
                 {
                   heading: "自动化重点",
+                  image: "/assets/topic-media/business-imsaas-tree-61728.png",
                   body:
                     "通过奖金政策引擎、等级规则、树结构运营、报表、备份与日志能力，减少人工流程并提升运营标准化程度。\n随着规模增长，可通过升级方案扩展功能范围。"
                 },

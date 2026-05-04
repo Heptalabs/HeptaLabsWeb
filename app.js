@@ -814,7 +814,7 @@
     },
     business: {
       imwallet: {
-        url: "/assets/topic-media/business-imwallet-phone-main.png",
+        url: "/assets/topic-media/business-imwallet-45708.png",
         alt: {
           ko: "IMWallet 메인 핸드폰 앱 화면",
           en: "IMWallet main phone app screen",
@@ -822,7 +822,7 @@
         }
       },
       imsaas: {
-        url: "/assets/topic-media/business-imsaas-main.png",
+        url: "/assets/topic-media/business-imsaas-main-61554.png",
         alt: {
           ko: "IMSaaS 메인 페이지 화면",
           en: "IMSaaS main page screenshot",
