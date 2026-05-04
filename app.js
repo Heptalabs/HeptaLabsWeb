@@ -784,6 +784,17 @@
   const createEntryId = (prefix) =>
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+  const IMSAAS_TITLE_BRAND_ASSETS = {
+    day: {
+      symbol: "/assets/brand/imsaas-symbol-light.png",
+      logo: "/assets/brand/imsaas-logo-light.png"
+    },
+    night: {
+      symbol: "/assets/brand/imsaas-symbol-dark.png",
+      logo: "/assets/brand/imsaas-logo-dark.png"
+    }
+  };
+
   const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
   const TOPIC_MEDIA_DEFAULTS = {
     about: {
@@ -2147,6 +2158,13 @@
       reader.readAsDataURL(file);
     });
 
+  const syncImsaasTitleBrand = () => {
+    const activeVariant = state.theme === "night" ? "night" : "day";
+    document.querySelectorAll("[data-imsaas-brand]").forEach((node) => {
+      node.style.display = node.dataset.imsaasBrand === activeVariant ? "block" : "none";
+    });
+  };
+
   const setTheme = (theme) => {
     state.theme = SUPPORTED_THEMES.includes(theme) ? theme : "night";
     document.documentElement.setAttribute("data-theme", state.theme);
@@ -2160,6 +2178,8 @@
         state.theme === "night" ? "Switch to day mode" : "Switch to night mode"
       );
     });
+
+    syncImsaasTitleBrand();
   };
 
   const setLang = (lang) => {
@@ -3584,6 +3604,67 @@
     target.append(form);
   };
 
+  const renderImsaasTitleBrand = (titleElement, titleText) => {
+    titleElement.textContent = "";
+    titleElement.setAttribute("aria-label", titleText);
+
+    const lockup = document.createElement("span");
+    lockup.style.display = "inline-flex";
+    lockup.style.alignItems = "center";
+    lockup.style.gap = "12px";
+    lockup.style.lineHeight = "1";
+    lockup.style.maxWidth = "100%";
+
+    const createBrandImage = (variant, src, alt, height, maxWidth) => {
+      const image = document.createElement("img");
+      image.dataset.imsaasBrand = variant;
+      image.src = src;
+      image.alt = alt;
+      image.loading = "lazy";
+      image.style.display = "none";
+      image.style.height = height;
+      image.style.width = "auto";
+      image.style.maxWidth = maxWidth;
+      image.style.borderRadius = "0";
+      image.style.flexShrink = "0";
+      return image;
+    };
+
+    lockup.append(
+      createBrandImage(
+        "day",
+        IMSAAS_TITLE_BRAND_ASSETS.day.symbol,
+        "IMSaaS symbol",
+        "clamp(38px, 4.8vw, 64px)",
+        "clamp(38px, 4.8vw, 64px)"
+      ),
+      createBrandImage(
+        "night",
+        IMSAAS_TITLE_BRAND_ASSETS.night.symbol,
+        "IMSaaS symbol",
+        "clamp(38px, 4.8vw, 64px)",
+        "clamp(38px, 4.8vw, 64px)"
+      ),
+      createBrandImage(
+        "day",
+        IMSAAS_TITLE_BRAND_ASSETS.day.logo,
+        "IMSaaS",
+        "clamp(34px, 4.5vw, 60px)",
+        "min(78vw, 460px)"
+      ),
+      createBrandImage(
+        "night",
+        IMSAAS_TITLE_BRAND_ASSETS.night.logo,
+        "IMSaaS",
+        "clamp(34px, 4.5vw, 60px)",
+        "min(78vw, 460px)"
+      )
+    );
+
+    titleElement.append(lockup);
+    syncImsaasTitleBrand();
+  };
+
   const renderDetail = () => {
     const pathText = getLangText(UI_TEXT.detail);
     const { menuId, itemId, postId, page } = resolveDetailParams();
@@ -3630,7 +3711,12 @@
     }
 
     if (titleElement) {
-      titleElement.textContent = translation.title;
+      if (menuId === "business" && itemId === "imsaas") {
+        renderImsaasTitleBrand(titleElement, translation.title);
+      } else {
+        titleElement.removeAttribute("aria-label");
+        titleElement.textContent = translation.title;
+      }
     }
 
     if (subtitleElement) {
