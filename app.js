@@ -2874,46 +2874,27 @@
       cards.append(article);
     });
 
-    const pricing = getLangText(UI_TEXT.homePricing);
-    setText("[data-home-pricing-title]", pricing.title || "");
-    setText("[data-home-pricing-link]", pricing.link || "");
-    setText("[data-home-pricing-lead]", pricing.lead || "");
-    setText("[data-home-pricing-starter-title]", pricing.starterTitle || "");
-    setText("[data-home-pricing-starter-price]", pricing.starterPrice || "");
-    setText("[data-home-pricing-starter-desc]", pricing.starterDesc || "");
-    setText("[data-home-pricing-growth-title]", pricing.growthTitle || "");
-    setText("[data-home-pricing-growth-price]", pricing.growthPrice || "");
-    setText("[data-home-pricing-growth-desc]", pricing.growthDesc || "");
-    setText("[data-home-pricing-enterprise-title]", pricing.enterpriseTitle || "");
-    setText("[data-home-pricing-enterprise-price]", pricing.enterprisePrice || "");
-    setText("[data-home-pricing-enterprise-desc]", pricing.enterpriseDesc || "");
+    // Backward compatibility: sanitize previously shipped home-only pricing/footer markup.
+    document.querySelectorAll(".home-pricing").forEach((section) => section.remove());
 
-    const homeFooter = getLangText(UI_TEXT.homeFooter);
-    setText("[data-home-footer-brand-name]", homeFooter.brandName || "");
-    setText("[data-home-footer-brand-desc]", homeFooter.brandDesc || "");
-    setText("[data-home-footer-col-product]", homeFooter.productTitle || "");
-    setText("[data-home-footer-col-developers]", homeFooter.developersTitle || "");
-    setText("[data-home-footer-col-company]", homeFooter.companyTitle || "");
-    setText("[data-home-footer-link-product-1]", homeFooter.productLink1 || "");
-    setText("[data-home-footer-link-product-2]", homeFooter.productLink2 || "");
-    setText("[data-home-footer-link-product-3]", homeFooter.productLink3 || "");
-    setText("[data-home-footer-link-dev-1]", homeFooter.devLink1 || "");
-    setText("[data-home-footer-link-dev-2]", homeFooter.devLink2 || "");
-    setText("[data-home-footer-link-dev-3]", homeFooter.devLink3 || "");
-    setText("[data-home-footer-link-company-1]", homeFooter.companyLink1 || "");
-    setText("[data-home-footer-link-company-2]", homeFooter.companyLink2 || "");
-    setText("[data-home-footer-link-company-3]", homeFooter.companyLink3 || "");
-    setText("[data-home-footer-news-title]", homeFooter.newsTitle || "");
-    setText("[data-home-footer-news-desc]", homeFooter.newsDesc || "");
-    setText("[data-home-footer-news-cta]", homeFooter.newsButton || "");
-    setText("[data-home-footer-bottom-faq]", homeFooter.bottomFaq || "");
-    setText("[data-home-footer-bottom-status]", homeFooter.bottomStatus || "");
+    const legacyHomeFooter = document.querySelector(".footer-panel-home");
+    if (legacyHomeFooter) {
+      legacyHomeFooter.classList.remove("footer-panel-home");
 
-    const newsletterInput = document.querySelector("[data-home-footer-news-placeholder]");
-    if (newsletterInput instanceof HTMLInputElement) {
-      const placeholder = homeFooter.newsPlaceholder || "email@company.com";
-      newsletterInput.placeholder = placeholder;
-      newsletterInput.setAttribute("aria-label", placeholder);
+      if (!legacyHomeFooter.querySelector("[data-footer-columns]")) {
+        legacyHomeFooter.innerHTML = `
+          <div class="footer-brand-block">
+            <div class="footer-brand-lockup">
+              <img class="footer-brand-logo footer-brand-logo-day" src="/assets/brand/logo-ud-white.svg" alt="Hepta Labs" />
+              <img class="footer-brand-logo footer-brand-logo-night" src="/assets/brand/logo-ud-black.svg" alt="Hepta Labs" />
+            </div>
+            <p data-footer-copyright></p>
+            <p data-footer-community></p>
+          </div>
+          <div class="footer-columns" data-footer-columns></div>
+        `;
+        renderFooter();
+      }
     }
   };
 
