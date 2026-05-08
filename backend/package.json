@@ -1,0 +1,50 @@
+{
+  "name": "heptalabs-webapp-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Starter backend for HeptaLabs web app",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "worker": "node src/workers/worker.js",
+    "apk:builder": "node src/workers/apk-builder.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:seed": "node src/db/seed.js",
+    "db:bootstrap": "npm run db:migrate && npm run db:seed",
+    "smoke:content": "bash ./scripts/smoke-content.sh",
+    "smoke:holders": "bash ./scripts/smoke-holders.sh",
+    "smoke:authz": "bash ./scripts/smoke-authz-rbac.sh",
+    "smoke:post-cutover": "bash ./scripts/post-cutover-smoke.sh",
+    "check:prod-env": "bash ./scripts/check-prod-env.sh",
+    "check:prod-env:strict": "REQUIRE_RECOMMENDED=1 bash ./scripts/check-prod-env.sh",
+    "check:providers": "bash ./scripts/check-provider-connectivity.sh",
+    "check:providers:strict": "REQUIRE_RECOMMENDED=1 bash ./scripts/check-provider-connectivity.sh",
+    "check:dapps:categories": "node ./scripts/verify-popular-dapps-by-category.mjs",
+    "preflight:prod": "bash ./scripts/preflight-prod.sh",
+    "preflight:prod:strict": "bash ./scripts/preflight-prod-strict.sh",
+    "set:prod-keys": "bash ./scripts/set-prod-keys.sh",
+    "set:prod-keys:env": "bash ./scripts/set-prod-keys-from-env.sh",
+    "set:keychain-keys:env": "bash ./scripts/set-keychain-prod-keys-from-env.sh",
+    "set:prod-keys:keychain": "bash ./scripts/set-prod-keys-from-keychain.sh",
+    "set:cmc-key": "bash ./scripts/set-cmc-key.sh",
+    "db:backup": "bash ./scripts/db-backup.sh",
+    "db:restore:rehearsal": "bash ./scripts/db-restore-rehearsal.sh",
+    "db:rehearsal:embedded": "node ./scripts/db-rehearsal-embedded.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "embedded-postgres": "^18.3.0-beta.17",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

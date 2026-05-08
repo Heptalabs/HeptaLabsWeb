@@ -1,0 +1,8 @@
+node_modules
+.env
+.env.production
+.env.production.keys
+.env.local
+.env.*.local
+npm-debug.log*
+src/data/uploads/

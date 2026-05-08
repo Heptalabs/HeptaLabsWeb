@@ -1,0 +1,64 @@
+name: IMWallet App Native Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Build platform"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+      profile:
+        description: "EAS profile"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build:
+    name: EAS Native Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: imwallet-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: imwallet-app/package-lock.json
+
+      - name: Validate Expo token
+        run: |
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "Missing required secret: EXPO_TOKEN"
+            exit 1
+          fi
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Run EAS build
+        run: |
+          eas build \
+            --non-interactive \
+            --profile "${{ github.event.inputs.profile }}" \
+            --platform "${{ github.event.inputs.platform }}"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

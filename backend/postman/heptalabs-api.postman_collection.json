@@ -1,0 +1,372 @@
+{
+  "info": {
+    "_postman_id": "5b850d93-6e2d-4326-bb8f-6896842288d4",
+    "name": "HeptaLabs API v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection aligned with backend/openapi/openapi.v1.yaml"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
+    { "key": "memberToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "memberLoginId", "value": "member_demo_001" },
+    { "key": "memberPassword", "value": "Aa!12345" },
+    { "key": "memberName", "value": "Member Demo" },
+    { "key": "memberPhone", "value": "01011112222" },
+    { "key": "memberEmail", "value": "member_demo_001@example.com" },
+    { "key": "adminLoginId", "value": "admin" },
+    { "key": "adminPassword", "value": "" },
+    { "key": "firstProductId", "value": "1" },
+    { "key": "depositId", "value": "1" },
+    { "key": "withdrawalId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginId\": \"{{memberLoginId}}\",\n  \"password\": \"{{memberPassword}}\",\n  \"name\": \"{{memberName}}\",\n  \"phone\": \"{{memberPhone}}\",\n  \"email\": \"{{memberEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            }
+          }
+        },
+        {
+          "name": "POST /auth/login (member)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "var data = pm.response.json();",
+                  "if (data && data.token) { pm.collectionVariables.set('memberToken', data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginId\": \"{{memberLoginId}}\",\n  \"password\": \"{{memberPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "POST /auth/login (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var data = pm.response.json();",
+                  "  if (data && data.token) { pm.collectionVariables.set('adminToken', data.token); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginId\": \"{{adminLoginId}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /me/profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"01099998888\",\n  \"usdtAddress\": \"TTESTADDRESS1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/me/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deposit",
+      "item": [
+        {
+          "name": "POST /deposits",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "dep-{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"network\": \"TRC20\",\n  \"amount\": \"100.000000\",\n  \"txid\": \"TXTEST1234567890\",\n  \"proofNote\": \"manual-test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/deposits",
+              "host": ["{{baseUrl}}"],
+              "path": ["deposits"]
+            }
+          }
+        },
+        {
+          "name": "GET /deposits",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deposits",
+              "host": ["{{baseUrl}}"],
+              "path": ["deposits"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "GET /products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var data = pm.response.json();",
+                  "  if (data.items && data.items.length > 0) { pm.collectionVariables.set('firstProductId', String(data.items[0].id)); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "POST /products/{productId}/subscriptions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"50.000000\",\n  \"idempotencyKey\": \"sub-{{$guid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/{{firstProductId}}/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{firstProductId}}", "subscriptions"]
+            }
+          }
+        },
+        {
+          "name": "GET /subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscriptions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Withdrawal",
+      "item": [
+        {
+          "name": "POST /withdrawals",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-idempotency-key", "value": "wd-{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"network\": \"TRC20\",\n  \"amount\": \"10.000000\",\n  \"destinationAddress\": \"TDESTADDRESS1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/withdrawals",
+              "host": ["{{baseUrl}}"],
+              "path": ["withdrawals"]
+            }
+          }
+        },
+        {
+          "name": "GET /withdrawals",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/withdrawals",
+              "host": ["{{baseUrl}}"],
+              "path": ["withdrawals"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "POST /admin/deposits/{depositId}/decision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVED\",\n  \"adminMemo\": \"approved in manual test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/deposits/{{depositId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "deposits", "{{depositId}}", "decision"]
+            }
+          }
+        },
+        {
+          "name": "POST /admin/withdrawals/{withdrawalId}/decision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"COMPLETED\",\n  \"chainTxid\": \"CHAINTEST12345\",\n  \"adminMemo\": \"completed in manual test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/withdrawals/{{withdrawalId}}/decision",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "withdrawals", "{{withdrawalId}}", "decision"]
+            }
+          }
+        },
+        {
+          "name": "POST /admin/batch/run",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessDate\": \"2026-03-24\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/batch/run",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "batch", "run"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+name: IMWallet CI
+
+on:
+  pull_request:
+    paths:
+      - 'imwallet-app/**'
+      - 'imwallet-console/**'
+      - '.github/workflows/imwallet-ci.yml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'imwallet-app/**'
+      - 'imwallet-console/**'
+      - '.github/workflows/imwallet-ci.yml'
+
+jobs:
+  app:
+    name: App (Expo)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: imwallet-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: imwallet-app/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Dropdown policy regression check
+        run: npm run check:dropdown-policy
+
+      - name: Unit tests
+        run: npm run test:run
+
+      - name: Web build export
+        run: npm run build:web
+
+  console:
+    name: Console (Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: imwallet-console
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: imwallet-console/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:run
+
+      - name: Build
+        run: npm run build

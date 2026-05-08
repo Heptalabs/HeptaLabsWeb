@@ -24,6 +24,8 @@ if [[ "$SYNC_LOCAL_APP" != "0" ]]; then
     --exclude='.expo' \
     --exclude='dist-web' \
     --exclude='android/build' \
+    --exclude='android/app/build' \
+    --exclude='android/app/.cxx' \
     --exclude='android/.gradle' \
     --exclude='test-results' \
     --exclude='.DS_Store' \
@@ -33,40 +35,49 @@ fi
 ssh "$REMOTE_HOST" REMOTE_ROOT="$REMOTE_ROOT" REMOTE_WEB_ROOT="$REMOTE_WEB_ROOT" BUILD_DATE="$BUILD_DATE" 'bash -s' <<'EOS'
 set -euo pipefail
 
-VERSION_FILE="$REMOTE_ROOT/android/version-code.txt"
-GRADLE_FILE="$REMOTE_ROOT/android/app/build.gradle"
 APK_SOURCE="$REMOTE_ROOT/android/app/build/outputs/apk/release/app-release.apk"
+APP_JSON="$REMOTE_ROOT/app.json"
+GRADLE_FILE="$REMOTE_ROOT/android/app/build.gradle"
+version_name=""
+version_code=""
 
-if [[ ! -f "$VERSION_FILE" ]]; then
-  base_code="$(grep -Eo 'versionCode \(envVersionCode != null \? envVersionCode.toInteger\(\) : [0-9]+\)' "$GRADLE_FILE" | grep -Eo '[0-9]+' | tail -1 || true)"
-  if [[ -z "$base_code" ]]; then
-    base_code="$(grep -Eo 'versionCode [0-9]+' "$GRADLE_FILE" | awk '{print $2}' | tail -1 || echo 1)"
+if [[ -f "$APP_JSON" ]]; then
+  parsed="$(node -e '
+const fs = require("fs");
+const path = process.argv[1];
+try {
+  const raw = JSON.parse(fs.readFileSync(path, "utf8"));
+  const version = String(raw?.expo?.version ?? "").trim();
+  const code = String(raw?.expo?.android?.versionCode ?? "").trim();
+  process.stdout.write(`${version}\t${code}`);
+} catch {
+  process.stdout.write("\t");
+}
+' "$APP_JSON" 2>/dev/null || true)"
+  if [[ -n "$parsed" ]]; then
+    IFS=$'\t' read -r version_name version_code <<<"$parsed"
   fi
-  printf '%s\n' "$base_code" | sudo tee "$VERSION_FILE" >/dev/null
 fi
 
-current_code="$(tr -dc '0-9' < "$VERSION_FILE")"
-if [[ -z "$current_code" ]]; then
-  current_code=1
+if [[ -z "$version_name" ]]; then
+  version_name="$(grep -Eo 'versionName "[^"]+"' "$GRADLE_FILE" | sed -E 's/versionName "([^"]+)"/\1/' | tail -1 || true)"
 fi
 
-# Guard against accidental versionCode regression when older higher-numbered
-# APKs already exist in the download directory.
-max_existing_from_apk="$(ls -1 "$REMOTE_WEB_ROOT"/downloads/imwallet-release-"$BUILD_DATE"-*.apk 2>/dev/null \
-  | sed -E "s#.*imwallet-release-${BUILD_DATE}-([0-9]+)\\.apk#\\1#" \
-  | sort -n \
-  | tail -1 || true)"
-if [[ -n "$max_existing_from_apk" ]] && [[ "$max_existing_from_apk" -gt "$current_code" ]]; then
-  current_code="$max_existing_from_apk"
+if [[ -z "$version_code" ]]; then
+  version_code="$(grep -Eo 'versionCode [0-9]+' "$GRADLE_FILE" | awk '{print $2}' | tail -1 || true)"
 fi
 
-next_code=$((current_code + 1))
-version_name="0.1.${next_code}"
-printf '%s\n' "$next_code" | sudo tee "$VERSION_FILE" >/dev/null
+if [[ -z "$version_name" ]]; then
+  echo "[ERROR] Unable to resolve versionName from app.json/build.gradle" >&2
+  exit 1
+fi
+
+if [[ -z "$version_code" ]]; then
+  echo "[ERROR] Unable to resolve versionCode from app.json/build.gradle" >&2
+  exit 1
+fi
 
 sudo docker run --rm \
-  -e IMWALLET_VERSION_CODE="$next_code" \
-  -e IMWALLET_VERSION_NAME="$version_name" \
   -v "$REMOTE_ROOT:/workspace" \
   -w /workspace \
   reactnativecommunity/react-native-android:latest \
@@ -77,7 +88,7 @@ if [[ ! -f "$APK_SOURCE" ]]; then
   exit 1
 fi
 
-VERSIONED_APK="$REMOTE_WEB_ROOT/downloads/imwallet-release-${BUILD_DATE}-${next_code}.apk"
+VERSIONED_APK="$REMOTE_WEB_ROOT/downloads/imwallet-release-${BUILD_DATE}-${version_code}.apk"
 LATEST_APK="$REMOTE_WEB_ROOT/downloads/imwallet-latest.apk"
 STABLE_APK="$REMOTE_WEB_ROOT/downloads/imwallet-release.apk"
 
@@ -87,7 +98,7 @@ sudo cp "$APK_SOURCE" "$STABLE_APK"
 sudo chown www-data:www-data "$VERSIONED_APK" "$LATEST_APK" "$STABLE_APK"
 sudo chmod 644 "$VERSIONED_APK" "$LATEST_APK" "$STABLE_APK"
 
-echo "[OK] versionCode=$next_code versionName=$version_name"
+echo "[OK] versionCode=$version_code versionName=$version_name"
 echo "[OK] versioned_apk=$VERSIONED_APK"
 echo "[OK] latest_apk=$LATEST_APK"
 EOS

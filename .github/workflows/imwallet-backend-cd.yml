@@ -1,0 +1,45 @@
+name: IMWallet Backend CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "backend/**"
+      - "database/**"
+      - "scripts/imwallet-cd/deploy-backend-via-jump.sh"
+      - ".github/workflows/imwallet-backend-cd.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Backend via Jump
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          if [ -z "${IMWALLET_JUMP_SSH_PRIVATE_KEY:-}" ]; then
+            echo "Missing required secret: IMWALLET_JUMP_SSH_PRIVATE_KEY"
+            exit 1
+          fi
+          printf '%s\n' "$IMWALLET_JUMP_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/imwallet_jump_key"
+          chmod 600 "$RUNNER_TEMP/imwallet_jump_key"
+        env:
+          IMWALLET_JUMP_SSH_PRIVATE_KEY: ${{ secrets.IMWALLET_JUMP_SSH_PRIVATE_KEY }}
+
+      - name: Deploy backend
+        run: bash scripts/imwallet-cd/deploy-backend-via-jump.sh
+        env:
+          SSH_KEY_PATH: ${{ runner.temp }}/imwallet_jump_key
+          IMWALLET_JUMP_HOST: ${{ vars.IMWALLET_JUMP_HOST }}
+          IMWALLET_JUMP_PORT: ${{ vars.IMWALLET_JUMP_PORT || '2222' }}
+          IMWALLET_JUMP_USER: ${{ vars.IMWALLET_JUMP_USER || 'vm' }}
+          IMWALLET_APP_HOST: ${{ vars.IMWALLET_APP_HOST || '192.168.1.167' }}
+          IMWALLET_APP_USER: ${{ vars.IMWALLET_APP_USER || 'vm' }}
+          IMWALLET_BACKEND_SERVICE: ${{ vars.IMWALLET_BACKEND_SERVICE || 'imwallet-backend' }}
+          IMWALLET_BACKEND_HEALTH_URL: ${{ vars.IMWALLET_BACKEND_HEALTH_URL || 'http://127.0.0.1:4000/api/v1/health' }}

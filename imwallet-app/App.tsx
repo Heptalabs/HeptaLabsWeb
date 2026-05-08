@@ -1,14 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import React, { Component, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './src/polyfills/runtime';
 import {
   AppState,
   Animated,
   BackHandler,
+  useWindowDimensions,
   Easing,
   Image,
   InteractionManager,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,7 +24,7 @@ import {
   TextInput,
   View
 } from 'react-native';
-import type { AppStateStatus, ImageSourcePropType } from 'react-native';
+import type { AppStateStatus, ImageSourcePropType, KeyboardEvent } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import { Camera, CameraView, type BarcodeScanningResult, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,17 +40,32 @@ import {
   initialCollectibles,
   TokenItem,
   TxItem,
-  WalletAccount,
-  wallets
+  WalletAccount
 } from './src/data/mockWallet';
 import { validateAddressForChain as validateAddressWithEngine } from './src/services/addressEngine';
 import { buildSendDraftFromInput, parseAmountInput, validateSendAmount } from './src/services/sendFlowEngine';
 import { DEFAULT_MARKET_SYMBOLS, fetchMarketPriceMap, type MarketPriceMap } from './src/services/marketPrice';
 import { fetchPopularTokensByVolume, type PopularTokenItem } from './src/services/marketPopular';
+import {
+  fetchPopularDappsByCategory,
+  fetchPopularDappsRanking,
+  popularDappFilterKeys,
+  type PopularDappCategoryBuckets,
+  type PopularDappItem
+} from './src/services/marketPopularDapps';
 import { fetchTokenIconsBySymbols } from './src/services/marketTokenIcons';
 import { fetchFxRates } from './src/services/fxRates';
 import { fetchMarketAssetInfoMap, type MarketAssetInfoMap } from './src/services/marketAssetInfo';
 import { fetchMarketHolderCount } from './src/services/marketHolders';
+import { fetchLiveNetworkFee, type LiveNetworkFeeRequest, type LiveNetworkFeeSnapshot } from './src/services/networkFee';
+import { resolveActualNetworkFee, type TxFeeChainCode } from './src/services/txActualFee';
+import { fetchOnchainBalances } from './src/services/walletOnchain';
+import {
+  OnchainSendError,
+  fetchOnchainNftOwnership,
+  sendOnchainNftTransaction,
+  sendOnchainTransaction
+} from './src/services/onchainSend';
 import {
   DEFAULT_COMPAT_SEEDS,
   deriveTrustCompatibleChainAddresses,
@@ -67,6 +84,10 @@ import {
   type DiscoverFeedPayload,
   type DiscoverSectionId
 } from './src/services/discoverContent';
+import {
+  syncDiscoverIconCache as syncDiscoverIconCacheRemote,
+  type DiscoverIconCacheSyncPayload
+} from './src/services/discoverIconCache';
 import { useWalletStore } from './src/state/useWalletStore';
 import { useAssetToggleStore } from './src/state/useAssetToggleStore';
 import { createQrImageUrl, createReceiveShareText } from './src/services/qrShare';
@@ -84,6 +105,16 @@ try {
 }
 
 const launchIntroLogoSource = require('./assets/launch-logo.png');
+const onboardingSymbolSource = require('./assets/icon.png');
+const appConfig = require('./app.json') as {
+  expo?: {
+    name?: string;
+    version?: string;
+    android?: { versionCode?: number };
+  };
+};
+const appVersionName = appConfig?.expo?.version?.trim() || '0.0.0';
+const appInfoVersionLabel = `IMWallet ${appVersionName}`;
 
 type Language = 'ko' | 'en' | 'zh';
 type ThemeMode = 'light' | 'dark';
@@ -138,6 +169,8 @@ type AppErrorBoundaryState = {
   error: Error | null;
 };
 
+const USER_SAFE_FATAL_ERROR_MESSAGE = '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+
 class AppErrorBoundary extends Component<{ children: React.ReactNode }, AppErrorBoundaryState> {
   state: AppErrorBoundaryState = { error: null };
 
@@ -162,8 +195,8 @@ class AppErrorBoundary extends Component<{ children: React.ReactNode }, AppError
           }}
         >
           <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: '800', textAlign: 'center' }}>IMWallet Error</Text>
-          <Text style={{ color: '#f4b84a', fontSize: 13, fontWeight: '700', marginTop: 10, textAlign: 'center' }}>
-            {this.state.error.message || 'Unknown crash'}
+          <Text style={{ color: '#ff7842', fontSize: 13, fontWeight: '700', marginTop: 10, textAlign: 'center' }}>
+            {USER_SAFE_FATAL_ERROR_MESSAGE}
           </Text>
         </View>
       );
@@ -232,7 +265,17 @@ type SendDraft = {
   gas: SendGasSettings;
 };
 
+type TxFeeStatus = 'estimated' | 'confirmed';
+type WalletTxItem = TxItem & {
+  hash?: string;
+  feeNative?: number;
+  feeUsd?: number;
+  feeStatus?: TxFeeStatus;
+  feeConfirmedAt?: string;
+};
+
 type TxDetailData = {
+  txId?: string;
   hash: string;
   txType: TxItem['type'];
   tokenSymbol: string;
@@ -246,6 +289,8 @@ type TxDetailData = {
   status: 'completed' | 'pending' | 'failed';
   feeNative: number;
   feeUsd: number;
+  feeStatus?: TxFeeStatus;
+  feeConfirmedAt?: string;
   gas: SendGasSettings;
   memo?: string;
 };
@@ -391,6 +436,7 @@ type Screen =
   | 'onboardingCreateDone'
   | 'onboardingSetPassword'
   | 'onboardingAddExisting'
+  | 'onboardingAddAdvanced'
   | 'onboardingAddNetwork'
   | 'onboardingAddDone'
   | 'walletDeleteCheck'
@@ -488,6 +534,8 @@ type Copy = {
   autoLock5h: string;
   biometricUnavailable: string;
   biometricNotEnrolled: string;
+  biometricFingerprintNotEnrolled: string;
+  biometricFaceNotEnrolled: string;
   biometricFingerprintUnavailable: string;
   biometricFaceUnavailable: string;
   appVersion: string;
@@ -543,6 +591,7 @@ type Copy = {
   amount: string;
   availableBalance: string;
   recipient: string;
+  recipientPlaceholder: string;
   memo: string;
   memoPlaceholder: string;
   selectAsset: string;
@@ -635,6 +684,32 @@ const resolveDiscoverDappFilter = (item: Pick<DiscoverFeedItem, 'category' | 'ti
   return 'defi';
 };
 
+const mapPopularDappCategoryToDiscoverFilter = (
+  categoryRaw: string,
+  nameRaw: string,
+  summaryRaw: string
+): Exclude<DiscoverDappFilterId, 'all'> => {
+  const haystack = [categoryRaw, nameRaw, summaryRaw].join(' ').toLowerCase();
+  if (/(game|gaming|metaverse|quest|arcade|play)/i.test(haystack)) return 'games';
+  if (/(social|community|chat|lens|farcaster|guild|mirror)/i.test(haystack)) return 'social';
+  if (/(nft|collectible|marketplace|opensea|magic eden|blur|rarible|x2y2|looksrare)/i.test(haystack)) return 'collectibles';
+  if (/(dex|swap|exchange|amm|orderbook|aggregator|bridge|trade|trading|uniswap|pancakeswap|1inch)/i.test(haystack)) return 'exchanges';
+  return 'defi';
+};
+
+const mapPopularDappCategoryToDiscoverCategory = (
+  categoryRaw: string,
+  nameRaw: string,
+  summaryRaw: string
+): DiscoverCategoryId => {
+  const filter = mapPopularDappCategoryToDiscoverFilter(categoryRaw, nameRaw, summaryRaw);
+  if (filter === 'games') return 'games';
+  if (filter === 'social') return 'social';
+  if (filter === 'collectibles') return 'market';
+  if (filter === 'exchanges') return 'dex';
+  return 'yield';
+};
+
 const resolveDiscoverTokenCategory = (symbolRaw: string, nameRaw: string): Exclude<DiscoverTokenCategoryId, 'all'> => {
   const symbol = symbolRaw.trim().toUpperCase();
   const name = nameRaw.trim().toLowerCase();
@@ -720,6 +795,10 @@ const discoverTokenTopupSeedMap: Record<Exclude<DiscoverTokenCategoryId, 'all'>,
     { symbol: 'TURBO', name: 'Turbo', marketCapUsd: 500_000_000 }
   ]
 };
+
+const discoverTokenTopupAllSeeds = Object.freeze(
+  Object.values(discoverTokenTopupSeedMap).flatMap((rows) => rows)
+);
 
 const discoverTokenTopupSeedSymbols = Object.freeze(
   Array.from(
@@ -1731,30 +1810,41 @@ const discoverDappIconOverrideMap: Record<string, ImageSourcePropType> = {
   'defillama': { uri: 'https://icons.duckduckgo.com/ip3/defillama.com.ico' }
 };
 
-const resolveDiscoverDappIconSource = (
-  item: Pick<DiscoverFeedItem, 'title' | 'imageUrl' | 'sourceUrl'>
-): ImageSourcePropType | undefined => {
+type DiscoverDappIconInput = {
+  title?: string;
+  imageUrl?: string;
+  sourceUrl?: string;
+  ctaUrl?: string;
+};
+
+const resolveDiscoverDappIconSource = (item: DiscoverDappIconInput): ImageSourcePropType | undefined => {
   const byTitle = discoverDappIconOverrideMap[String(item.title || '').trim().toLowerCase()];
   if (byTitle) return byTitle;
 
   const imageUrl = String(item.imageUrl || '').trim();
   if (/^https?:\/\//i.test(imageUrl)) return { uri: imageUrl };
 
-  const sourceUrl = String(item.sourceUrl || '').trim();
-  if (!sourceUrl) return undefined;
-  try {
-    const host = new URL(sourceUrl).hostname;
-    if (!host) return undefined;
-    // Clearbit is blocked in many environments; use stable favicon providers first.
-    return { uri: `https://icons.duckduckgo.com/ip3/${host}.ico` };
-  } catch {
-    return undefined;
+  const sourceCandidates = [String(item.ctaUrl || '').trim(), String(item.sourceUrl || '').trim()].filter(Boolean);
+  for (const sourceUrl of sourceCandidates) {
+    try {
+      const host = new URL(sourceUrl).hostname;
+      if (!host) continue;
+      // Clearbit is blocked in many environments; use stable favicon providers first.
+      return { uri: `https://icons.duckduckgo.com/ip3/${host}.ico` };
+    } catch {
+      // no-op
+    }
   }
+  return undefined;
 };
 
-const buildDiscoverDappIconCandidates = (item: Pick<DiscoverFeedItem, 'title' | 'imageUrl' | 'sourceUrl'>): string[] => {
+const buildDiscoverDappIconCandidates = (item: DiscoverDappIconInput, preferredIconUrl?: string): string[] => {
   const byTitle = discoverDappIconOverrideMap[String(item.title || '').trim().toLowerCase()];
   const candidates: string[] = [];
+  const preferredUrl = String(preferredIconUrl || '').trim();
+  if (isRasterRemoteIconUrl(preferredUrl)) {
+    candidates.push(preferredUrl);
+  }
   if (byTitle && typeof byTitle === 'object' && 'uri' in byTitle && typeof byTitle.uri === 'string') {
     candidates.push(byTitle.uri);
   }
@@ -1762,8 +1852,8 @@ const buildDiscoverDappIconCandidates = (item: Pick<DiscoverFeedItem, 'title' | 
   const imageUrl = String(item.imageUrl || '').trim();
   if (/^https?:\/\//i.test(imageUrl)) candidates.push(imageUrl);
 
-  const sourceUrl = String(item.sourceUrl || '').trim();
-  if (sourceUrl) {
+  const sourceCandidates = [String(item.ctaUrl || '').trim(), String(item.sourceUrl || '').trim()].filter(Boolean);
+  sourceCandidates.forEach((sourceUrl) => {
     try {
       const host = new URL(sourceUrl).hostname.trim().toLowerCase();
       if (host) {
@@ -1774,7 +1864,7 @@ const buildDiscoverDappIconCandidates = (item: Pick<DiscoverFeedItem, 'title' | 
     } catch {
       // no-op
     }
-  }
+  });
 
   return Array.from(new Set(candidates.filter((uri) => /^https?:\/\//i.test(String(uri).trim()))));
 };
@@ -1792,6 +1882,10 @@ type WeeklyBriefingSeedItem = {
   publishedAt: string;
   title: LocalizedLabel;
   summary: LocalizedLabel;
+  sources?: {
+    label: LocalizedLabel;
+    url: string;
+  }[];
   points: {
     ko: string[];
     en: string[];
@@ -1804,6 +1898,10 @@ type WeeklyBriefingPost = {
   publishedAt: string;
   title: string;
   summary: string;
+  sources: {
+    label: string;
+    url: string;
+  }[];
   points: string[];
 };
 
@@ -1816,33 +1914,156 @@ type WeeklyBriefingWeekGroup = {
 
 const weeklyBriefingSeed: WeeklyBriefingSeedItem[] = [
   {
+    id: 'briefing-2026-05-04-1',
+    publishedAt: '2026-05-04',
+    title: {
+      ko: '비트코인 ETF 순유입 9일 연속 종료, 연준 앞두고 관망 전환',
+      en: 'Bitcoin ETF Inflow Streak Ends Before the Fed, Shifting Markets Into Wait Mode',
+      zh: '比特币 ETF 九连增流入告终，市场在美联储前转入观望'
+    },
+    summary: {
+      ko: '2026년 4월 28일 미국 현물 비트코인 ETF는 9거래일 연속 순유입 뒤 2억6320만달러 순유출로 돌아섰고, 시장은 같은 주 FOMC를 앞두고 빠르게 관망 모드로 이동했습니다. 가격이 한 달 기준으로는 여전히 강했지만, 이번 주 초 흐름은 상승 추세의 방향성보다 매크로 이벤트 직전 포지션 조정이 더 큰 힘으로 작동한다는 점을 보여줬습니다.',
+      en: 'On April 28, 2026, U.S. spot bitcoin ETFs flipped to $263.2 million in net outflows after a nine-session inflow streak, and the market moved into a more tactical wait-and-see stance ahead of that week’s FOMC meeting. Bitcoin still held up well on a one-month view, but early-week price action showed that pre-macro positioning mattered more than broad risk appetite.',
+      zh: '2026 年 4 月 28 日，美国现货比特币 ETF 在连续 9 个交易日净流入后转为净流出 2.632 亿美元，市场也在同周 FOMC 会议前迅速进入观望模式。虽然比特币按月看仍然偏强，但周初走势说明，在宏观事件前，仓位调整的影响大于全面风险偏好回升。'
+    },
+    sources: [
+      {
+        label: {
+          ko: 'The Block 보도 (4월 28일)',
+          en: 'The Block coverage (Apr 28)',
+          zh: 'The Block 报道（4 月 28 日）'
+        },
+        url: 'https://www.theblock.co/post/399129/bitcoin-etf-outflows-snap-nine-day-streak-ahead-of-fomc-as-market-tests-resolve-near-77000'
+      }
+    ],
+    points: {
+      ko: [
+        '왜 중요한가: 최근 반등장이 이어져도 ETF 자금이 꺾이면 단기 심리는 빠르게 보수적으로 돌아설 수 있습니다.',
+        '시장 포인트: 이번 주 초 핵심 변수는 가격 자체보다 연준 전후의 자금 방향과 위험자산 포지셔닝이었습니다.',
+        '체크 포인트: 다음 주에도 ETF 일간 유입·유출과 비트코인 7만7000달러 안착 여부를 함께 봐야 합니다.'
+      ],
+      en: [
+        'Why it matters: even during a rebound, ETF flow reversals can quickly turn short-term sentiment defensive.',
+        'Market signal: early this week, the key variable was not price alone but flow direction and risk positioning around the Fed.',
+        'What to watch: daily ETF prints and whether bitcoin can stay established around the $77,000 zone.'
+      ],
+      zh: [
+        '为何重要：即使反弹仍在继续，只要 ETF 资金流转弱，短线情绪就可能迅速转向保守。',
+        '市场信号：本周初真正主导市场的不是价格本身，而是美联储前后的资金方向与风险仓位。',
+        '关注点：下周要继续观察 ETF 日度流向，以及比特币能否稳住 7.7 万美元区域。'
+      ]
+    }
+  },
+  {
+    id: 'briefing-2026-05-04-2',
+    publishedAt: '2026-05-04',
+    title: {
+      ko: '4월 해킹 건수 사상 최고, 강세장 속 보안 리스크 재부각',
+      en: 'April Sets a Record for Crypto Hacks, Repricing Security Risk During the Rally',
+      zh: '4 月加密黑客事件创纪录，反弹行情中安全风险重新定价'
+    },
+    summary: {
+      ko: '2026년 4월 30일 기준 DeFiLlama 집계에서 4월은 사고 건수 기준 역대 가장 많이 해킹이 발생한 달로 정리됐습니다. 총 피해액이 사상 최대는 아니더라도, 사건 수가 20건을 크게 넘기며 시장의 관심이 다시 수익률보다 보안 품질과 자산 보관 구조로 이동했고, 강세장 기대감과 별개로 체인 사용 리스크는 여전히 높다는 점이 확인됐습니다.',
+      en: 'As of April 30, 2026, DeFiLlama data showed April becoming the most-hacked month in crypto history by incident count. Even without a record dollar loss total, the number of exploits moved well past 20, shifting attention away from upside narratives and back toward custody quality, protocol hygiene, and the still-elevated operational risk of using onchain products.',
+      zh: '截至 2026 年 4 月 30 日，DeFiLlama 数据显示 4 月按事件数量计算已成为加密史上黑客攻击最多的月份。即使损失金额并非历史最高，事故数量仍明显超过 20 起，市场关注点也从上涨叙事重新回到托管质量、协议卫生以及链上产品仍然偏高的操作风险。'
+    },
+    sources: [
+      {
+        label: {
+          ko: 'The Block 보도 (4월 30일)',
+          en: 'The Block coverage (Apr 30)',
+          zh: 'The Block 报道（4 月 30 日）'
+        },
+        url: 'https://www.theblock.co/amp/post/399666/crypto-hacks-hit-record-high-in-april-as-exploits-kept-piling-up'
+      }
+    ],
+    points: {
+      ko: [
+        '왜 중요한가: 가격 반등 구간에서도 해킹이 늘어나면 위험자산 선호가 확산되기보다 사용자 보수성이 먼저 커질 수 있습니다.',
+        '시장 포인트: 이번 주 브리핑에서 보안은 주변 이슈가 아니라 참여 심리와 자금 회전에 직접 연결된 변수였습니다.',
+        '체크 포인트: 신규 자금이 DeFi로 확산되는지 보려면 TVL보다도 보안 사고 빈도와 사고 후 회복 속도를 같이 봐야 합니다.'
+      ],
+      en: [
+        'Why it matters: during a rally, rising hack frequency can make user behavior more defensive before capital broadens out.',
+        'Market signal: security was not a side story this week; it directly affected confidence and the willingness to rotate into higher-risk onchain activity.',
+        'What to watch: beyond TVL, track exploit frequency and recovery quality to judge whether fresh capital will keep moving into DeFi.'
+      ],
+      zh: [
+        '为何重要：即使价格回暖，黑客事件增多也会先提升用户的防御性，而不是扩大风险偏好。',
+        '市场信号：本周安全并非边缘议题，而是直接影响信心与资金是否愿意轮动至更高风险链上活动的核心变量。',
+        '关注点：判断新资金会否继续流向 DeFi，除了看 TVL，也要同时看事故频率与事后恢复质量。'
+      ]
+    }
+  },
+  {
+    id: 'briefing-2026-05-04-3',
+    publishedAt: '2026-05-04',
+    title: {
+      ko: '스테이블코인 보상 절충안 도출, 미국 시장구조 법안 5월 분수령',
+      en: 'Stablecoin Rewards Compromise Puts U.S. Crypto Legislation at a May Inflection Point',
+      zh: '稳定币奖励折中方案落地，美国加密立法进入 5 月关键窗口'
+    },
+    summary: {
+      ko: '2026년 5월 2일 보도에 따르면 미국 상원 논의에서 스테이블코인 보상 조항 절충안이 정리되며 CLARITY Act 마크업 재개 기대가 다시 살아났습니다. 이번 이슈는 단기 가격보다도 중기 시장 구조에 더 중요한데, 규제 해석이 명확해질수록 스테이블코인 유통, 거래소 유동성, 온체인 서비스 확장에 대한 할인율이 낮아질 수 있기 때문입니다.',
+      en: 'Reporting on May 2, 2026 showed lawmakers reaching a compromise on the stablecoin rewards language that had stalled the CLARITY Act, reviving expectations for Senate markup. The importance here is more structural than immediate price action: clearer rules can lower the market’s discount on stablecoin distribution, exchange liquidity, and broader onchain product expansion.',
+      zh: '根据 2026 年 5 月 2 日的报道，美国参议院围绕稳定币奖励条款达成折中方案，之前被其卡住的 CLARITY Act 因此重新获得推进预期。这个主题的重要性更多体现在中期市场结构上，而非短线价格，因为规则越清晰，市场对稳定币流通、交易所流动性与链上服务扩张的折价就越可能下降。'
+    },
+    sources: [
+      {
+        label: {
+          ko: 'The Block 보도 (5월 2일)',
+          en: 'The Block coverage (May 2)',
+          zh: 'The Block 报道（5 月 2 日）'
+        },
+        url: 'https://www.theblock.co/post/399780/coinbase-says-deal-reached-on-clarity-act-stablecoin-yield-clearing-path-to-long-stalled-senate-markup'
+      }
+    ],
+    points: {
+      ko: [
+        '왜 중요한가: 정책 명확성은 단기 펌프보다 오래가는 유동성 프리미엄을 만들 수 있는 변수입니다.',
+        '시장 포인트: 이번 주 규제 이슈의 핵심은 법안 통과 자체보다 스테이블코인 보상과 활동성 인센티브가 어디까지 허용되는지였습니다.',
+        '체크 포인트: 5월 상원 마크업 일정과 후속 문구가 거래소·스테이블코인 관련 섹터 심리에 직접 영향을 줄 가능성이 큽니다.'
+      ],
+      en: [
+        'Why it matters: policy clarity can create a more durable liquidity premium than a short-lived headline rally.',
+        'Market signal: the key question this week was not only whether a bill advances, but how far stablecoin rewards and usage-based incentives remain permitted.',
+        'What to watch: the Senate markup calendar and follow-on bill text could directly shape sentiment across exchange and stablecoin-related sectors.'
+      ],
+      zh: [
+        '为何重要：政策清晰度往往比短暂拉升更能带来持续性的流动性溢价。',
+        '市场信号：本周监管主题的关键不只是法案是否推进，而是稳定币奖励与基于活动的激励究竟能保留到什么程度。',
+        '关注点：5 月参议院审议时间表与后续文本，很可能直接影响交易所和稳定币相关板块的情绪。'
+      ]
+    }
+  },
+  {
     id: 'briefing-2026-04-20-1',
     publishedAt: '2026-04-20',
     title: {
-      ko: 'SEC, 일부 비수탁형 지갑 UI 규제 부담 완화 시사',
-      en: 'SEC Signals Lighter Pressure on Some Self-Custodial Wallet UIs',
-      zh: 'SEC 暗示部分非托管钱包界面监管压力或将减轻'
+      ko: '주소록 관리 입력 문구/딤 동작 정리',
+      en: 'Address Book Copy and Dim Behavior Aligned',
+      zh: '地址簿输入文案与暗层行为统一'
     },
     summary: {
-      ko: '미국 SEC 직원 성명은 일부 셀프커스터디 지갑과 프런트엔드 UI가 단순 연결·의사표현 보조 수준이라면 브로커 등록 대상이 아닐 수 있다는 해석을 제시했습니다. 지갑 앱의 스왑, 라우팅, DeFi 진입 기능을 어디까지 제품에 담을 수 있는지에 직접 영향을 주는 신호로 받아들여지고 있습니다.',
-      en: 'A new SEC staff statement suggested that some self-custodial wallet and frontend interfaces may fall outside broker registration if they mainly help users connect and express intent. That matters directly for how far wallets can go with swaps, routing, and DeFi entry points.',
-      zh: 'SEC 最新员工声明暗示，若非托管钱包与前端界面主要承担连接与意图表达功能，未必需要按经纪商注册。这会直接影响钱包产品在交换、路由与 DeFi 入口上的设计空间。'
+      ko: '주소록 관리 화면에서 받는 주소/라벨 입력 문구를 통일하고, 수정 모달의 딤 처리 방식을 단일 오버레이 규칙으로 재정렬했습니다. 사용자가 화면별로 다른 표현과 상호작용을 겪지 않도록 기준을 맞췄습니다.',
+      en: 'In Address Book Management, recipient/label placeholders were unified and edit-modal dim behavior was aligned to a single overlay rule. This removes copy and interaction inconsistencies across related screens.',
+      zh: '在地址簿管理中，我们统一了收款地址/标签占位文案，并将编辑弹层暗化方式调整为单一覆盖层规则，减少页面间文案和交互不一致。'
     },
     points: {
       ko: [
-        '비수탁형 지갑 UI와 중개 기능의 경계를 더 명확히 정의할 필요가 있습니다.',
-        '사용자는 지갑 안에서 스왑과 브리지까지 처리하는 흐름을 더 자연스럽게 기대하게 됩니다.',
-        'IMWallet은 약관, 라우팅 설명, 리스크 고지를 제품 기능과 함께 정리해야 합니다.'
+        '문구 통일: 받는 주소를 입력하세요 / 라벨을 입력하세요.',
+        '수정 모달 오버레이: 배경 단일 딤 + 비활성 영역 클릭 차단.',
+        '다국어 반영: 한국어/영어/중국어 모두 동일 의미로 동기화.'
       ],
       en: [
-        'The boundary between wallet UI and brokerage behavior needs clearer definition.',
-        'Users will increasingly expect swaps and bridge flows inside the wallet.',
-        'IMWallet should tighten terms, routing disclosures, and risk messaging around those features.'
+        'Copy unified: “Please enter recipient address” and “Please enter label.”',
+        'Edit modal overlay: single dim with blocked interaction on background.',
+        'Localization synced across Korean, English, and Chinese.'
       ],
       zh: [
-        '钱包界面与经纪行为之间的边界需要定义得更清楚。',
-        '用户会越来越期待在钱包内直接完成交换与跨链流程。',
-        'IMWallet 需要同步完善条款、路由说明与风险提示。'
+        '文案统一为“请输入收款地址”“请输入标签”。',
+        '编辑弹层采用单一暗层并阻断背景交互。',
+        '韩/英/中三语语义保持一致。'
       ]
     }
   },
@@ -1850,30 +2071,30 @@ const weeklyBriefingSeed: WeeklyBriefingSeedItem[] = [
     id: 'briefing-2026-04-20-2',
     publishedAt: '2026-04-20',
     title: {
-      ko: 'Tether, 자체 셀프커스터디 월렛으로 사용자 접점 확대',
-      en: 'Tether Expands User Ownership with Its Own Self-Custodial Wallet',
-      zh: 'Tether 推出自有非托管钱包，进一步掌握用户入口'
+      ko: '보내기 화면 하단 네비게이션 가시성 복구',
+      en: 'Bottom Navigation Restored on Send Screens',
+      zh: '发送页底部导航显示已恢复'
     },
     summary: {
-      ko: 'Tether는 USDT, BTC, XAUT를 지원하는 tether.wallet을 공개하며 스테이블코인 발행사에서 직접 월렛 진입점까지 확장했습니다. 이는 USDT 보관과 송금의 첫 경험을 누가 가져가느냐의 경쟁이 더 치열해졌다는 뜻이며, 지갑 앱의 송금 UX 완성도가 더 중요해졌음을 보여줍니다.',
-      en: 'Tether launched tether.wallet for USDT, BTC, and XAUT, moving from issuer infrastructure into the wallet entry point itself. The competition for first-time custody and transfer experience around USDT is getting sharper, raising the bar for wallet send UX.',
-      zh: 'Tether 发布支持 USDT、BTC 与 XAUT 的 tether.wallet，意味着其正从发行基础设施进一步延伸到钱包入口。围绕 USDT 保管与转账首触点的竞争会更激烈，钱包发送体验的重要性也随之上升。'
+      ko: '보내기 화면에서 하단 네비게이션이 숨겨져 흐름 전환이 불편하다는 피드백에 대응해, 자산/NFT 보내기 상태에서도 하단 도크가 일관되게 노출되도록 복구했습니다.',
+      en: 'Following feedback about hidden navigation on Send flows, we restored consistent bottom dock visibility for both Asset and NFT Send states to improve movement across tabs.',
+      zh: '针对发送流程中底部导航消失导致切换不便的问题，我们已恢复资产/NFT发送状态下的一致底部导航显示。'
     },
     points: {
       ko: [
-        'USDT 사용자는 보관과 송금을 한 브랜드 안에서 끝내길 원할 가능성이 커졌습니다.',
-        '네트워크 선택과 수수료 설명, 주소 검증 UX가 경쟁력으로 직결됩니다.',
-        'IMWallet은 멀티체인 중립성과 자산 다양성을 차별 메시지로 더 선명하게 가져가야 합니다.'
+        '적용 화면: 자산 보내기, NFT 보내기.',
+        '효과: 화면 전환 비용 감소 및 탭 이동 일관성 개선.',
+        '검증: 상태 전환 후에도 도크 노출 유지 여부 체크 완료.'
       ],
       en: [
-        'USDT users may increasingly prefer one-brand custody and transfer journeys.',
-        'Network selection, fee clarity, and address validation are now core differentiators.',
-        'IMWallet should sharpen its neutral multi-chain and multi-asset positioning.'
+        'Applied to: Asset Send and NFT Send screens.',
+        'Impact: lower navigation friction and better tab consistency.',
+        'Validation: confirmed dock remains visible across send-state transitions.'
       ],
       zh: [
-        'USDT 用户可能会更倾向在单一品牌内完成保管与转账。',
-        '网络选择、费用说明与地址校验已成为核心差异点。',
-        'IMWallet 应更明确强调其中立多链与多资产定位。'
+        '应用范围：资产发送与 NFT 发送页面。',
+        '效果：降低页面切换成本，提升标签切换一致性。',
+        '验证：已确认状态切换后底部导航持续可见。'
       ]
     }
   },
@@ -1881,495 +2102,30 @@ const weeklyBriefingSeed: WeeklyBriefingSeedItem[] = [
     id: 'briefing-2026-04-20-3',
     publishedAt: '2026-04-20',
     title: {
-      ko: 'Circle USDC Bridge, 스테이블코인 전송 UX 표준화 압박',
-      en: 'Circle USDC Bridge Raises the Bar for Stablecoin Transfer UX',
-      zh: 'Circle USDC Bridge 抬高稳定币转账体验标准'
+      ko: '기록 페이지 기간 필터 상호작용 기준화',
+      en: 'History Date-Range Interaction Standardized',
+      zh: '记录页日期筛选交互标准化'
     },
     summary: {
-      ko: 'Circle은 USDC Bridge를 전면에 내세우며 발행사가 직접 크로스체인 전송 경험을 표준화하려는 흐름을 강화했습니다. 사용자는 더 적은 단계와 더 명확한 도착 체인 안내를 기대하게 되고, 일반 월렛은 브리지 실패 리스크 안내와 체인 선택 UX를 더 정교하게 설계해야 하는 상황입니다.',
-      en: 'Circle is pushing USDC Bridge as a first-party cross-chain transfer interface, reinforcing the move toward issuer-controlled transfer UX. Users will expect fewer steps and clearer destination-chain guidance, putting pressure on wallets to improve bridge risk messaging and chain selection UX.',
-      zh: 'Circle 正将 USDC Bridge 推向前台，强化由发行方主导跨链转账体验的趋势。用户会期待更少步骤与更清晰的到达链提示，这也要求钱包进一步优化跨链风险提示与链选择体验。'
+      ko: '기록 화면의 기간 필터 모달에서 헤더·본문 딤, 트리거 예외 처리, 닫힘 동작을 공통 기준에 맞췄습니다. 사용자가 다른 화면과 동일한 규칙으로 기간을 선택할 수 있도록 정리했습니다.',
+      en: 'The History range-filter modal now follows shared rules for header/body dimming, trigger exceptions, and close behavior. Users can interact with date range controls using the same pattern as other dropdown surfaces.',
+      zh: '记录页日期区间筛选弹层现已对齐统一规则：头部/正文暗化、触发器例外与关闭行为一致，用户可按与其他下拉相同的模式操作。'
     },
     points: {
       ko: [
-        '사용자는 브리지보다 발행사 직접 경로를 더 신뢰할 가능성이 있습니다.',
-        '전송 전 네트워크 확인과 도착 체인 가시성이 리텐션에 더 중요해집니다.',
-        'IMWallet은 USDC 전송·브리지 흐름에서 경고 문구와 예상 결과를 더 선명하게 보여줘야 합니다.'
+        '기간 버튼 활성 상태와 모달 노출 상태를 일관된 시각 규칙으로 정리.',
+        '닫기 버튼/배경 탭 모두 동일한 종료 경로로 통합.',
+        '다른 드롭다운과 충돌하지 않도록 우선순위 및 스크롤 잠금 기준 정렬.'
       ],
       en: [
-        'Users may trust issuer-direct rails more than generic bridge brands.',
-        'Pre-send network confirmation and destination-chain clarity are becoming retention levers.',
-        'IMWallet should make warnings and expected outcomes much clearer in USDC transfer and bridge flows.'
+        'Period-trigger active style and modal visibility now share one visual rule.',
+        'Close button and backdrop tap converge on the same dismiss path.',
+        'Priority and scroll-lock behavior aligned to avoid collisions with other dropdowns.'
       ],
       zh: [
-        '用户可能会比起通用桥品牌，更信任发行方直接提供的路径。',
-        '发送前网络确认与目标链清晰度正成为新的留存杠杆。',
-        'IMWallet 需要在 USDC 转账与跨链流程中更明确展示风险提示和预期结果。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-14-1',
-    publishedAt: '2026-04-14',
-    title: {
-      ko: '스테이블코인 결제 확장 본격화',
-      en: 'Stablecoin Payment Expansion Accelerates',
-      zh: '稳定币支付扩张加速'
-    },
-    summary: {
-      ko: '주요 결제 사업자와 거래소가 스테이블코인 정산 경로를 동시에 넓히면서, 전송 속도·수수료·정산 확정 시간에 대한 사용자 기대치가 빠르게 올라가고 있습니다. 특히 지갑 앱에서는 체인 선택과 수수료 고지, 실패 시 재시도 UX가 리텐션에 직접 영향을 주는 구간으로 확인되고 있습니다.',
-      en: 'Major payment providers and exchanges are expanding stablecoin settlement rails at the same time. User expectations around speed, fees, and finality are rising quickly, and wallet UX for chain selection, fee clarity, and retry handling is now directly tied to retention.',
-      zh: '主要支付方与交易所正在同步扩展稳定币结算通道。用户对速度、手续费与到账确定性的预期快速提高，钱包中的链选择、费用提示与失败重试体验已直接影响留存。'
-    },
-    points: {
-      ko: [
-        'USDT/USDC 송금 시 체인별 도착 시간 예상치를 함께 노출해야 합니다.',
-        '수수료 표시는 네이티브 코인/달러 환산을 동시에 제공하는 편이 이탈이 적습니다.',
-        '가맹점 정산 플로우는 자동 환전 옵션을 명확히 분리하는 것이 유리합니다.'
-      ],
-      en: [
-        'Expose ETA by chain for USDT/USDC transfers.',
-        'Show both native-token fee and fiat-converted fee together.',
-        'Separate merchant payout and auto-conversion options clearly.'
-      ],
-      zh: [
-        'USDT/USDC 转账应展示按链预计到账时间。',
-        '手续费建议同时显示原生代币与法币换算值。',
-        '商户结算与自动换汇选项需明确分离。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-15-2',
-    publishedAt: '2026-04-15',
-    title: {
-      ko: 'L2 혼잡 시간대 라우팅 이슈 확대',
-      en: 'L2 Congestion-Time Routing Becomes Critical',
-      zh: 'L2 拥堵时段路由问题扩大'
-    },
-    summary: {
-      ko: '같은 자산이라도 시간대별 네트워크 혼잡 편차가 커져서, 단일 체인 고정 UX는 실패율과 반송 문의를 늘리고 있습니다. 사용자는 전송 직전 추천 체인·예상 수수료·최종 수령 네트워크를 한 번에 이해하길 원하고 있어, 보내기 단계의 정보 배치가 핵심 전환 포인트가 되었습니다.',
-      en: 'Congestion variance by time-of-day is increasing, and single-chain fixed UX is raising failures and support tickets. Users want recommended chain, estimated fee, and destination network clarity before confirming a transfer.',
-      zh: '同一资产在不同时段的拥堵差异扩大，固定单链体验导致失败率与工单上升。用户希望在发送前一次性看清推荐链、预估费用与目标网络。'
-    },
-    points: {
-      ko: [
-        '체인 변경 시 주소 호환성 재검증을 즉시 수행해야 합니다.',
-        '“체인 불일치/형식 오류/존재하지 않는 주소”를 분리해 경고해야 합니다.',
-        '최근 송금 기록은 선택한 체인+자산 기준으로만 보여주는 것이 정확합니다.'
-      ],
-      en: [
-        'Re-validate address compatibility when users switch chains.',
-        'Separate mismatch/format/non-existent address errors clearly.',
-        'Recent sends should be filtered by selected chain + asset.'
-      ],
-      zh: [
-        '切换链时应立即重新校验地址兼容性。',
-        '链不匹配/格式错误/地址不存在需分开提示。',
-        '最近转账记录应按已选链与资产过滤。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-16-3',
-    publishedAt: '2026-04-16',
-    title: {
-      ko: '사용자 보안 기대치 “앱 잠금 + 전송 서명”으로 수렴',
-      en: 'User Security Expectations Converge on App Lock + Transfer Sign',
-      zh: '用户安全预期收敛到“应用锁 + 转账签名”'
-    },
-    summary: {
-      ko: '최근 지갑 UX 피드백에서 가장 강하게 나타나는 요구는 자동 잠금과 전송 전 재인증의 일관성입니다. 특히 생체 인증 사용 환경에서도 고위험 전송에는 비밀번호 재확인을 선택적으로 요구할 수 있어야 신뢰도가 높아집니다.',
-      en: 'Recent wallet UX feedback strongly favors consistent auto-lock and pre-transfer re-authentication flows. Even with biometrics enabled, optional password reconfirmation for high-risk transfers improves trust.',
-      zh: '近期钱包体验反馈最明确的诉求是自动锁定与转账前二次认证的一致性。即使启用生物识别，高风险转账支持密码复核也能显著提升信任。'
-    },
-    points: {
-      ko: [
-        '보안 진입 시 비밀번호/생체 인증 게이트를 통일해야 합니다.',
-        '전송 서명 실패 시 에러 원인을 사용자 언어로 명확히 안내해야 합니다.',
-        '자동 잠금 시간 선택 UI는 드롭다운으로 단순화하는 것이 좋습니다.'
-      ],
-      en: [
-        'Use a unified password/biometric gate before security settings.',
-        'Explain transfer-sign failure reasons in user language clearly.',
-        'Keep auto-lock time selection simple with dropdown UX.'
-      ],
-      zh: [
-        '进入安全设置时应统一密码/生物识别校验。',
-        '转账签名失败原因需用用户语言清晰提示。',
-        '自动锁定时长建议使用简洁下拉选择。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-07-1',
-    publishedAt: '2026-04-07',
-    title: {
-      ko: '거래량 상위 자산 변동성 재확대',
-      en: 'Top-Volume Assets Show Renewed Volatility',
-      zh: '高成交量资产波动再度扩大'
-    },
-    summary: {
-      ko: '거래량 상위 자산에서 단기 급등락이 반복되며, 사용자들은 가격 자체보다 “지금 보내도 안전한지”에 대한 신뢰 정보를 더 요구하고 있습니다. 실시간 시세와 체인 수수료를 같은 맥락에서 보여주는 화면이 거래 전환율에 직접적인 영향을 주는 구간으로 집계되고 있습니다.',
-      en: 'Short-term swings returned among top-volume assets, and users now ask less about price alone and more about transfer safety context. Showing live price and chain fee together is increasingly tied to conversion.',
-      zh: '高成交量资产出现反复短线波动，用户相比价格更关注“现在转账是否安全”。在同一视图展示实时价格与链上费用，已与转化率直接相关。'
-    },
-    points: {
-      ko: [
-        '자산 상세 페이지에서 기간 필터 반응 속도가 중요합니다.',
-        '가격/수수료/총비용을 같은 흐름으로 정렬해야 합니다.',
-        '전송 확인 페이지는 예상 총비용을 크게 보여주는 것이 효과적입니다.'
-      ],
-      en: [
-        'Fast response for range filters in asset detail is critical.',
-        'Align price, fee, and total cost in one visual flow.',
-        'Highlight estimated total cost on confirmation screens.'
-      ],
-      zh: [
-        '资产详情页中时间区间筛选响应速度很关键。',
-        '价格、手续费与总成本应在同一信息流展示。',
-        '转账确认页应突出预计总成本。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-08-2',
-    publishedAt: '2026-04-08',
-    title: {
-      ko: '멀티지갑 운영 UX 기준 정리',
-      en: 'Multi-Wallet UX Patterns Become Standardized',
-      zh: '多钱包运营体验趋于标准化'
-    },
-    summary: {
-      ko: '멀티지갑 사용자들은 지갑 주소보다 지갑 이름 중심으로 관리하기를 선호하며, 헤더 드롭다운에서 빠르게 전환할 수 있는 구조를 요구하고 있습니다. 삭제·복구·추가 흐름은 각각 보안 강도가 달라야 하고, 고위험 동작에는 별도 인증 단계를 넣는 것이 업계 표준으로 자리잡고 있습니다.',
-      en: 'Multi-wallet users prefer name-based management over raw addresses and expect fast switching from header dropdowns. Add/delete/recover flows require different security levels, with extra auth for high-risk actions.',
-      zh: '多钱包用户更偏好“钱包名称”而非地址管理，并希望在头部下拉中快速切换。新增、删除、恢复流程应具备不同安全强度，高风险操作需额外认证。'
-    },
-    points: {
-      ko: [
-        '지갑 목록에서 불필요한 주소 노출은 최소화해야 합니다.',
-        '지갑 삭제는 시드 구문 재입력 + 인증 단계를 유지해야 합니다.',
-        '지갑 추가는 보안성을 유지하되 입력 피로를 줄여야 합니다.'
-      ],
-      en: [
-        'Minimize unnecessary address exposure in wallet lists.',
-        'Wallet delete should keep seed re-entry + auth gates.',
-        'Wallet add flows should balance security and input fatigue.'
-      ],
-      zh: [
-        '钱包列表应尽量减少不必要的地址暴露。',
-        '删除钱包需保留助记词复核与认证流程。',
-        '新增钱包流程要在安全与输入负担间平衡。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-09-3',
-    publishedAt: '2026-04-09',
-    title: {
-      ko: '둘러보기 콘텐츠 큐레이션 자동화 확대',
-      en: 'Discover Content Curation Automation Expands',
-      zh: '发现页内容编排自动化扩大'
-    },
-    summary: {
-      ko: '탐색 탭에서 사용자는 단순 링크 모음보다, 섹션별 맥락과 최신성 보장을 함께 기대하고 있습니다. 운영 관점에서는 콘솔 수동 편집과 자동 수집 워크플로를 병행해야 하고, 섹션 이동 버튼과 콘텐츠 동기화가 어긋나지 않도록 구조를 단순하게 유지하는 것이 중요합니다.',
-      en: 'Users expect more than link lists in Discover: they want context and freshness by section. Operationally, teams need both admin manual editing and automated ingestion, with tight synchronization to section navigation.',
-      zh: '用户在发现页期待的不只是链接列表，而是按板块提供语境与时效性。运营上需并行支持后台手动编辑与自动采集，并保证与分区导航严格同步。'
-    },
-    points: {
-      ko: [
-        '섹션 버튼 클릭 시 해당 섹션으로 즉시 스크롤되어야 합니다.',
-        '선택 상태와 실제 스크롤 위치가 항상 동기화되어야 합니다.',
-        '콘솔에서는 게시·비게시 상태를 즉시 반영할 수 있어야 합니다.'
-      ],
-      en: [
-        'Section chips should jump to their sections immediately.',
-        'Selected state must stay synced with real scroll position.',
-        'Console publish/unpublish should reflect instantly in app.'
-      ],
-      zh: [
-        '点击分区按钮应立即跳转到对应区块。',
-        '选中状态必须与实际滚动位置保持同步。',
-        '后台发布/下线应即时反映到客户端。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-01-1',
-    publishedAt: '2026-04-01',
-    title: {
-      ko: '주소 검증 실패 유형 표준화 필요',
-      en: 'Address Validation Error Typing Needs Standardization',
-      zh: '地址校验错误类型需标准化'
-    },
-    summary: {
-      ko: '송금 실패 문의의 상당수가 동일한 “잘못된 주소” 문구에 묶여 있어, 실제 원인을 사용자가 구분하기 어렵다는 문제가 반복되고 있습니다. 체인 불일치, 형식 오류, 존재하지 않는 주소를 분리해 안내하면 재시도 성공률이 높아지고 고객지원 티켓이 줄어드는 경향이 확인됩니다.',
-      en: 'Many transfer support tickets are grouped under one generic “invalid address” message. Splitting chain mismatch, format error, and non-existent address improves retry success and reduces support volume.',
-      zh: '大量转账失败工单被归于同一“地址错误”提示，用户难以判断真实原因。将链不匹配、格式错误、地址不存在分开提示，可提升重试成功率并降低工单量。'
-    },
-    points: {
-      ko: [
-        '오류 문구는 행동 지시(예: 체인 확인)를 포함해야 합니다.',
-        '입력 필드는 오류 발생 시 테두리 강조를 유지해야 합니다.',
-        '오류 문구 노출 시 레이아웃 점프가 발생하지 않도록 고정 영역이 필요합니다.'
-      ],
-      en: [
-        'Error copy should include actionable guidance.',
-        'Keep field border highlights visible on errors.',
-        'Reserve fixed error space to avoid layout jumps.'
-      ],
-      zh: [
-        '错误文案应包含可执行的操作指引。',
-        '出错时输入框高亮需保持可见。',
-        '应预留固定错误区域，避免布局跳动。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-02-2',
-    publishedAt: '2026-04-02',
-    title: {
-      ko: '받기 화면 공유 플로우 중요도 상승',
-      en: 'Receive Screen Sharing Flow Becomes More Important',
-      zh: '收款页分享流程重要性上升'
-    },
-    summary: {
-      ko: '수령 단계에서 주소 복사만으로 끝내지 않고, QR 이미지 공유·앱 공유 연동까지 자연스럽게 이어지는 흐름이 주요 요구로 나타났습니다. 특히 모바일에서는 “복사/공유/저장” 세 버튼의 위치 일관성이 사용성 차이를 크게 만들고 있습니다.',
-      en: 'Users increasingly expect receive flows to go beyond copy-only and include QR image sharing and app-level share actions. On mobile, consistent placement of copy/share/save actions is a major usability factor.',
-      zh: '收款流程不再满足于“仅复制地址”，用户更需要二维码图片分享与系统分享能力。移动端中“复制/分享/保存”按钮位置一致性对可用性影响明显。'
-    },
-    points: {
-      ko: [
-        '체인/자산 미선택 시 안내 문구와 버튼 비활성화를 함께 처리해야 합니다.',
-        'QR 프레임 여백과 라운드 값을 표준화해 잘림을 방지해야 합니다.',
-        '공유 결과 피드백은 토스트로 짧게 안내하는 것이 좋습니다.'
-      ],
-      en: [
-        'Disable actions with clear guidance before chain/asset selection.',
-        'Standardize QR frame padding/radius to avoid clipping.',
-        'Use short toast feedback after sharing actions.'
-      ],
-      zh: [
-        '未选链与资产时，应同时给出提示并禁用按钮。',
-        '统一二维码边距与圆角，避免内容裁切。',
-        '分享后建议使用简短 Toast 反馈。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-04-03-3',
-    publishedAt: '2026-04-03',
-    title: {
-      ko: '기록 필터는 “빠른 기간 + 직접 선택” 혼합형',
-      en: 'History Filters Need Quick Presets + Manual Range',
-      zh: '记录筛选应采用“快捷区间 + 自定义区间”'
-    },
-    summary: {
-      ko: '거래 기록 조회에서는 빠른 필터(오늘/7일/30일)만으로는 장기 조회 니즈를 충족하기 어려워, 기간 직접 선택을 함께 제공하는 혼합형 UI가 선호됩니다. 단, 팝업 구조는 단순해야 하며 초기화와 적용의 동작이 명확해야 사용자 혼란을 줄일 수 있습니다.',
-      en: 'Quick date chips alone are insufficient for long-range transaction review. Users prefer a hybrid model that combines quick presets with manual date ranges, as long as reset/apply behavior is explicit.',
-      zh: '仅靠快捷日期筛选难以满足长期查询需求。用户更偏好“快捷预设 + 自定义日期”的混合模型，但前提是重置与应用逻辑必须清晰。'
-    },
-    points: {
-      ko: [
-        '기간 필터는 칩 행 우측 끝에 배치하는 편이 인지성이 좋습니다.',
-        '초기화 버튼은 창을 닫지 않고 값만 리셋해야 합니다.',
-        '적용 전 선택 상태를 시각적으로 분명히 보여줘야 합니다.'
-      ],
-      en: [
-        'Place period filter at the right edge of date chips.',
-        'Reset should clear values without closing the modal.',
-        'Make selection states clearly visible before apply.'
-      ],
-      zh: [
-        '期间筛选入口放在日期芯片行右侧更易识别。',
-        '重置应只清空值，不应关闭弹层。',
-        '应用前需明确展示当前选择状态。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-24-1',
-    publishedAt: '2026-03-24',
-    title: {
-      ko: '멀티체인 USDT 표기 규칙 정교화',
-      en: 'Multi-Chain USDT Labeling Rules Need Refinement',
-      zh: '多链 USDT 标注规则需细化'
-    },
-    summary: {
-      ko: 'USDT는 동일 심볼이더라도 체인별 주소 체계와 수수료 구조가 크게 달라, 사용자 혼동을 줄이기 위한 시각적 구분이 필수입니다. 심볼 우측 상단 체인 배지와 체인 텍스트를 함께 노출하는 방식이 오류 전송을 줄이는 데 가장 효과적인 패턴으로 나타났습니다.',
-      en: 'USDT shares one symbol but differs heavily by chain in addressing and fee models. Visual differentiation with a top-right chain badge plus chain text is one of the most effective anti-error patterns.',
-      zh: 'USDT 虽同一符号，但不同链在地址体系与费用模型上差异很大。右上角链徽标配合链名称文本，是降低误转风险最有效的模式之一。'
-    },
-    points: {
-      ko: [
-        'USDT ERC/TRC/BSC는 동일 리스트에서도 시각적으로 분리해야 합니다.',
-        '체인 배지는 아이콘 크기와 정렬 기준을 고정해야 합니다.',
-        '송금 전 확인 화면에도 동일 배지를 반복 노출해야 합니다.'
-      ],
-      en: [
-        'USDT ERC/TRC/BSC should be visually separated in lists.',
-        'Keep badge size and alignment rules fixed.',
-        'Repeat the same badge in confirmation screens.'
-      ],
-      zh: [
-        'USDT ERC/TRC/BSC 在列表中应可视化区分。',
-        '链徽标大小与对齐规则应固定。',
-        '转账确认页需重复展示同一链徽标。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-25-2',
-    publishedAt: '2026-03-25',
-    title: {
-      ko: '입력 포커스 스타일 일관성 요구 증가',
-      en: 'Demand Grows for Consistent Input Focus Styles',
-      zh: '对输入聚焦样式一致性的需求上升'
-    },
-    summary: {
-      ko: '웹과 앱을 동시에 운영하는 프로젝트에서 입력 포커스 스타일 불일치가 신뢰도 저하로 이어지는 사례가 자주 보고되고 있습니다. 기본 브라우저 포커스 링을 제거하더라도, 대체 강조색과 에러 상태 색상 규칙은 반드시 일관되게 유지되어야 합니다.',
-      en: 'In cross-web/app projects, inconsistent input focus styling frequently harms perceived quality. Even when removing browser default rings, replacement focus and error colors must remain consistent.',
-      zh: '在 Web 与 App 同时运营的项目中，输入框聚焦样式不一致会明显拉低品质感。即便去除浏览器默认焦点环，也必须保持统一的聚焦与错误配色规则。'
-    },
-    points: {
-      ko: [
-        '포커스는 앰버, 오류는 레드로 상태를 분명히 구분해야 합니다.',
-        '에러 메시지 공간은 사전 확보해 레이아웃 밀림을 막아야 합니다.',
-        '입력 완료 후 포커스 해제 시 기본 테두리로 복귀해야 합니다.'
-      ],
-      en: [
-        'Use amber for focus and red for error, clearly separated.',
-        'Reserve error space to prevent layout shifts.',
-        'Return to base border after blur/completion.'
-      ],
-      zh: [
-        '聚焦用琥珀色，错误用红色，状态需明确区分。',
-        '预留错误提示空间，避免布局位移。',
-        '输入完成失焦后应恢复默认边框。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-26-3',
-    publishedAt: '2026-03-26',
-    title: {
-      ko: '토스트/드롭다운 모션 표준화',
-      en: 'Toast and Dropdown Motion Standardization',
-      zh: 'Toast 与下拉动效标准化'
-    },
-    summary: {
-      ko: '짧은 알림과 드롭다운 동작은 기능보다 체감 품질을 좌우하는 요소로 작동합니다. 토스트는 상단에서 자연스럽게 내려왔다가 올라가며 사라지는 패턴이 가장 안정적이었고, 하단 시트는 배경 처리와 카드 이동 타이밍을 분리할 때 시각적 이질감이 크게 줄어드는 것으로 확인됐습니다.',
-      en: 'Micro-motions in toasts and dropdowns strongly impact perceived polish. Top slide-in/out toasts and decoupled timing between backdrop and sheet motion produce the most stable UX.',
-      zh: 'Toast 与下拉动效虽小，却直接影响“精致感”。顶部滑入滑出的 Toast，以及将背景层与卡片层动效分离，能明显降低视觉割裂感。'
-    },
-    points: {
-      ko: [
-        '토스트는 헤더 아래 고정 위치에서 표시하는 편이 가독성이 높습니다.',
-        '드롭다운/바텀시트는 등장 애니메이션과 배경 처리를 분리해야 합니다.',
-        '접힘/펼침 상태는 테두리 색상으로 즉시 인지 가능해야 합니다.'
-      ],
-      en: [
-        'Render toast below header for better readability.',
-        'Separate sheet motion from backdrop appearance.',
-        'Use border color cues for collapsed/expanded states.'
-      ],
-      zh: [
-        'Toast 放在头部下方更易阅读。',
-        '下拉/底部弹层应分离卡片与背景动效。',
-        '折叠与展开状态应通过边框颜色即时可见。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-17-1',
-    publishedAt: '2026-03-17',
-    title: {
-      ko: '실시간 시세 소스 다중화 필요성',
-      en: 'Need for Multi-Source Real-Time Price Feeds',
-      zh: '实时行情多源化需求提升'
-    },
-    summary: {
-      ko: '가격 표시 정확도에 대한 사용자 기대치가 높아지면서 단일 데이터 소스 의존이 리스크로 지적되고 있습니다. 지연·누락 상황을 대비해 백업 소스와 캐시 정책을 준비하고, 데이터 신선도(갱신 시각) 표시를 제공하는 방향이 서비스 신뢰 확보에 유리합니다.',
-      en: 'As users demand more price accuracy, relying on a single market-data source is increasingly risky. Backup feeds, cache policy, and freshness timestamps improve reliability.',
-      zh: '随着用户对价格准确性的要求提高，单一行情源风险上升。准备备援数据源与缓存策略，并展示数据更新时间，有助于提升服务可信度。'
-    },
-    points: {
-      ko: [
-        '주요 자산은 우선순위 큐로 더 자주 갱신하는 전략이 효과적입니다.',
-        '시세 실패 시 직전 값을 유지하되 stale 표시를 함께 제공해야 합니다.',
-        '환율 변환은 별도 주기로 관리해 계산 부하를 분리해야 합니다.'
-      ],
-      en: [
-        'Refresh top assets with a higher-priority update queue.',
-        'Keep last value on failure but mark it as stale.',
-        'Run FX conversion on a separate cadence.'
-      ],
-      zh: [
-        '对核心资产采用高优先级刷新队列更有效。',
-        '行情失败时可保留上次值，但需标注过期状态。',
-        '汇率换算应独立调度以分离计算负载。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-18-2',
-    publishedAt: '2026-03-18',
-    title: {
-      ko: '디스커버 섹션별 운영 분리 가속',
-      en: 'Discover Operations Shift to Section-Based Ownership',
-      zh: '发现页运营加速按板块分治'
-    },
-    summary: {
-      ko: '운영팀은 “인기 토큰/추적/사이트/브리핑”을 같은 화면에서 다루되, 실제 편집 권한은 섹션별로 분리하려는 수요가 커지고 있습니다. 특히 실시간 데이터와 에디토리얼 콘텐츠가 섞이는 구간에서, 수동 편집 이력과 자동 수집 로그를 함께 남기는 관리 체계가 필수 요구로 떠오르고 있습니다.',
-      en: 'Teams want one Discover surface but section-specific ownership behind the scenes. Where real-time data meets editorial content, combined manual edit history and automation logs are becoming mandatory.',
-      zh: '团队希望前台统一展示发现页，但后台按板块划分运营权限。在实时数据与编辑内容混合区域，手动编辑记录与自动采集日志并存已成刚需。'
-    },
-    points: {
-      ko: [
-        '섹션별 공개/비공개 토글은 즉시 반영되어야 합니다.',
-        '자동 수집 결과는 승인 후 반영되는 워크플로가 안전합니다.',
-        '콘솔에서는 다국어 필드 동기화 점검이 필요합니다.'
-      ],
-      en: [
-        'Section visibility toggles should reflect immediately.',
-        'Auto-ingested content should publish after approval.',
-        'Console should enforce multilingual field sync checks.'
-      ],
-      zh: [
-        '板块显示开关应即时生效。',
-        '自动采集内容建议走“审核后发布”流程。',
-        '后台需具备多语言字段同步校验。'
-      ]
-    }
-  },
-  {
-    id: 'briefing-2026-03-19-3',
-    publishedAt: '2026-03-19',
-    title: {
-      ko: '지갑 온보딩에서 이탈 구간은 “시드 재입력”',
-      en: 'Seed Re-entry Remains the Largest Onboarding Drop-Off',
-      zh: '助记词复核仍是钱包入门最大流失点'
-    },
-    summary: {
-      ko: '신규 지갑 생성 흐름에서 시드 구문 재입력 단계가 가장 큰 이탈 구간으로 반복 확인되고 있습니다. 다만 이 단계는 보안상 반드시 필요하므로 제거보다 “가독성 높은 12칸 입력 UI + 즉시 피드백 + 임시 테스트 패스” 같은 운영 보조 장치를 통해 완료율을 높이는 접근이 더 현실적인 대안입니다.',
-      en: 'Seed phrase re-entry remains the largest drop-off in wallet creation. Because this step is security-critical, completion rates improve more through better 12-slot UX and immediate feedback than by reducing checks.',
-      zh: '在新钱包创建流程中，助记词复核阶段仍是最大流失点。由于该步骤安全上不可省略，更可行的方案是优化 12 格输入体验与即时反馈，而非削减校验。'
-    },
-    points: {
-      ko: [
-        '12칸 입력은 키패드 흐름과 포커스 이동이 자연스러워야 합니다.',
-        '입력 오류는 토스트 + 필드 강조를 함께 제공해야 합니다.',
-        '운영 테스트 환경에서는 임시 패스 버튼 분리 제공이 유용합니다.'
-      ],
-      en: [
-        '12-slot input should have smooth focus movement.',
-        'Combine toast feedback with field-level highlight on errors.',
-        'Separate temporary bypass for QA/staging environments.'
-      ],
-      zh: [
-        '12 格输入需具备顺滑焦点切换。',
-        '错误提示建议同时使用 Toast 与字段高亮。',
-        '测试环境可单独提供临时跳过按钮。'
+        '周期按钮激活态与弹层展示状态已统一视觉规则。',
+        '关闭按钮与背景点击共用同一关闭路径。',
+        '优先级与滚动锁定规则已对齐，避免与其他下拉冲突。'
       ]
     }
   }
@@ -2530,6 +2286,18 @@ const coinIconMap: Record<AssetKey, ImageSourcePropType> = {
   USDT: require('./assets/coins/usdt.png')
 };
 
+const discoverPopularLocalIconMap: Record<string, ImageSourcePropType> = {
+  BTC: coinIconMap.BTC,
+  ETH: coinIconMap.ETH,
+  XRP: coinIconMap.XRP,
+  BNB: coinIconMap.BNB,
+  SOL: coinIconMap.SOL,
+  TRX: coinIconMap.TRX,
+  FIL: coinIconMap.FIL,
+  USDT: coinIconMap.USDT,
+  USDC: require('./assets/coins/usdc.png')
+};
+
 const isRasterRemoteIconUrl = (value: string) => {
   const normalized = String(value || '').trim();
   if (!/^https?:\/\//i.test(normalized)) return false;
@@ -2538,9 +2306,54 @@ const isRasterRemoteIconUrl = (value: string) => {
   return true;
 };
 
-const buildDiscoverPopularIconCandidates = (_symbol: string, iconUrl?: string): string[] => {
+const toDiscoverIconCacheKey = (value: string) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+
+const getDiscoverIconHostFromUrl = (urlRaw: string) => {
+  const normalizedUrl = String(urlRaw || '').trim();
+  if (!isHttpUrl(normalizedUrl)) return '';
+  try {
+    return normalizeHost(new URL(normalizedUrl).hostname).replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+const getDiscoverDappIconCacheKey = (item: {
+  id?: string;
+  title?: string;
+  sourceUrl?: string;
+  ctaUrl?: string;
+  url?: string;
+}) => {
+  const ctaUrl = String(item.ctaUrl || '').trim();
+  const sourceUrl = String(item.sourceUrl || item.url || '').trim();
+  const preferredUrl = isHttpUrl(ctaUrl) ? ctaUrl : sourceUrl;
+  const hostKey = getDiscoverIconHostFromUrl(preferredUrl);
+  return toDiscoverIconCacheKey(hostKey || String(item.id || '').trim() || String(item.title || '').trim());
+};
+
+const getDiscoverSiteIconCacheKey = (item: { id?: string; domain?: string; url?: string }) => {
+  const domainKey = normalizeDiscoverTrustedHost(String(item.domain || '').trim());
+  if (domainKey) return toDiscoverIconCacheKey(domainKey);
+  const hostKey = getDiscoverIconHostFromUrl(String(item.url || '').trim());
+  return toDiscoverIconCacheKey(hostKey || String(item.id || '').trim());
+};
+
+const buildDiscoverPopularIconCandidates = (_symbol: string, iconUrl?: string, preferredIconUrl?: string): string[] => {
   const candidates: string[] = [];
+  const normalizedPreferredUrl = String(preferredIconUrl || '').trim();
   const normalizedIconUrl = String(iconUrl || '').trim();
+
+  if (isRasterRemoteIconUrl(normalizedPreferredUrl)) {
+    candidates.push(normalizedPreferredUrl);
+  }
 
   if (isRasterRemoteIconUrl(normalizedIconUrl)) {
     candidates.push(normalizedIconUrl);
@@ -2561,9 +2374,10 @@ const buildDiscoverPopularIconCandidates = (_symbol: string, iconUrl?: string): 
   return Array.from(new Set(candidates));
 };
 
-const buildDiscoverSiteIconCandidates = (domainRaw: string): string[] => {
+const buildDiscoverSiteIconCandidates = (domainRaw: string, preferredIconUrl?: string): string[] => {
   const domain = domainRaw.trim().toLowerCase();
-  if (!domain) return [];
+  const preferredUrl = String(preferredIconUrl || '').trim();
+  if (!domain && !isRasterRemoteIconUrl(preferredUrl)) return [];
   const explicitOverrides: Record<string, string> = {
     'defillama.com': 'https://defillama.com/favicon.ico',
     'looksrare.org': 'https://icons.duckduckgo.com/ip3/looksrare.org.ico'
@@ -2571,11 +2385,12 @@ const buildDiscoverSiteIconCandidates = (domainRaw: string): string[] => {
   const override = explicitOverrides[domain];
   return Array.from(
     new Set([
+      ...(isRasterRemoteIconUrl(preferredUrl) ? [preferredUrl] : []),
       ...(override ? [override] : []),
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
       `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=256`,
       `https://${domain}/favicon.ico`
-    ])
+    ].filter(Boolean))
   );
 };
 
@@ -2627,13 +2442,13 @@ const chainDemoAddressPool: Record<ChainCode, string[]> = {
 const chainRecipientSamples: Record<ChainCode, string[]> = chainDemoAddressPool;
 
 const chainWalletAddresses: Record<ChainCode, string> = {
-  BTC: 'bc1q9mmywx2uz3m3qj2ejmkcv9f2u9q9y0vk8n2l56',
-  ETH: '0xA6aB5D51c40F9A7b5D6B5A3D4D97fA6f2272A9c7',
-  XRP: 'rL6f4e6Vf6fK8g4oKf31n4BrkQ2YbEm3B9',
-  BSC: '0x4f6F8C1Dc9A11b8e6B6fA4D2A955E2d31A34C2e9',
-  SOL: '7w2fFr8h2Qq7x5yVfZ2AnHf6JdVQzwJfYf4p3W3J1Y3b',
-  TRX: 'TD53rVfBvCJpYvL6Q5fK9VJ4UFs9gx8SgA',
-  FIL: 'f1nkb3w2x7cp2q9z0h6gr0a9m3y8t5z2h8f3t8xya'
+  BTC: '',
+  ETH: '',
+  XRP: '',
+  BSC: '',
+  SOL: '',
+  TRX: '',
+  FIL: ''
 };
 
 const chainRegexMap: Record<ChainCode, RegExp> = {
@@ -2648,6 +2463,7 @@ const chainRegexMap: Record<ChainCode, RegExp> = {
 
 type RecentSendItem = {
   address: string;
+  chain: ChainCode;
   amount: number;
   symbol: string;
   date: string;
@@ -2688,6 +2504,7 @@ const buildDemoRecentItems = (
 ): RecentSendItem[] =>
   chainDemoAddressPool[chain].slice(0, 10).map((address, idx) => ({
     address,
+    chain,
     amount: Number((baseAmount + idx * step).toFixed(digits)),
     symbol,
     date: demoRecentDates[idx],
@@ -2717,7 +2534,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'BTC',
     chainLabel: chainLabelMap.BTC,
     walletAddress: chainWalletAddresses.BTC,
-    balance: 10,
+    balance: 0,
     priceUsd: 84500,
     change24h: 2.87,
     iconBg: '#f7931a',
@@ -2735,7 +2552,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'ETH',
     chainLabel: chainLabelMap.ETH,
     walletAddress: chainWalletAddresses.ETH,
-    balance: 10,
+    balance: 0,
     priceUsd: 3550,
     change24h: -1.34,
     iconBg: '#627eea',
@@ -2753,7 +2570,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'XRP',
     chainLabel: chainLabelMap.XRP,
     walletAddress: chainWalletAddresses.XRP,
-    balance: 10,
+    balance: 0,
     priceUsd: 0.64,
     change24h: 1.12,
     iconBg: '#0f172a',
@@ -2771,7 +2588,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'BSC',
     chainLabel: chainLabelMap.BSC,
     walletAddress: chainWalletAddresses.BSC,
-    balance: 10,
+    balance: 0,
     priceUsd: 612,
     change24h: 1.96,
     iconBg: '#f3ba2f',
@@ -2789,7 +2606,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'SOL',
     chainLabel: chainLabelMap.SOL,
     walletAddress: chainWalletAddresses.SOL,
-    balance: 10,
+    balance: 0,
     priceUsd: 178,
     change24h: 6.42,
     iconBg: '#00d1ff',
@@ -2807,7 +2624,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'TRX',
     chainLabel: chainLabelMap.TRX,
     walletAddress: chainWalletAddresses.TRX,
-    balance: 10,
+    balance: 0,
     priceUsd: 0.14,
     change24h: 4.21,
     iconBg: '#ef4444',
@@ -2825,7 +2642,7 @@ const tokenCatalog: WalletToken[] = [
     chainCode: 'FIL',
     chainLabel: chainLabelMap.FIL,
     walletAddress: chainWalletAddresses.FIL,
-    balance: 10,
+    balance: 0,
     priceUsd: 5.9,
     change24h: -0.88,
     iconBg: '#0090ff',
@@ -2844,7 +2661,7 @@ const tokenCatalog: WalletToken[] = [
     chainLabel: chainLabelMap.ETH,
     chainBadge: 'E',
     walletAddress: chainWalletAddresses.ETH,
-    balance: 10,
+    balance: 0,
     priceUsd: 1,
     change24h: 0,
     iconBg: '#26a17b',
@@ -2863,7 +2680,7 @@ const tokenCatalog: WalletToken[] = [
     chainLabel: chainLabelMap.TRX,
     chainBadge: 'T',
     walletAddress: chainWalletAddresses.TRX,
-    balance: 10,
+    balance: 0,
     priceUsd: 1,
     change24h: 0,
     iconBg: '#26a17b',
@@ -2882,7 +2699,7 @@ const tokenCatalog: WalletToken[] = [
     chainLabel: chainLabelMap.BSC,
     chainBadge: 'B',
     walletAddress: chainWalletAddresses.BSC,
-    balance: 10,
+    balance: 0,
     priceUsd: 1,
     change24h: 0,
     iconBg: '#26a17b',
@@ -3119,9 +2936,11 @@ const copy: Record<Language, Copy> = {
     autoLock5h: '5시간',
     biometricUnavailable: '생체 인증을 사용할 수 없는 기기입니다.',
     biometricNotEnrolled: '등록된 생체 정보가 없습니다.',
+    biometricFingerprintNotEnrolled: '생체인식 정보가 없습니다. 디바이스에 지문을 등록하고 다시 시도해주세요.',
+    biometricFaceNotEnrolled: '생체인식 정보가 없습니다. 디바이스에 얼굴을 등록하고 다시 시도해주세요.',
     biometricFingerprintUnavailable: '지문 인증을 사용할 수 없습니다.',
-    biometricFaceUnavailable: '페이스 인증을 사용할 수 없습니다.',
-    appVersion: '버전 1.0.0 (Mock)',
+    biometricFaceUnavailable: '얼굴 인증을 사용할 수 없습니다.',
+    appVersion: '버전',
     onboardingTitle: 'IMWallet 시작하기',
     onboardingBody: 'Trust Wallet 흐름 기반 온보딩',
     createWallet: '새 지갑 만들기',
@@ -3174,8 +2993,9 @@ const copy: Record<Language, Copy> = {
     amount: '수량',
     availableBalance: '보유',
     recipient: '받는 주소',
+    recipientPlaceholder: '받는 주소를 입력하세요',
     memo: '메모',
-    memoPlaceholder: '메모를 입력하세요 (선택)',
+    memoPlaceholder: '메모를 입력하세요(선택)',
     selectAsset: '자산 선택',
     selectChain: '체인 선택',
     selectChainAssetFirst: '체인과 자산을 선택하세요.',
@@ -3291,9 +3111,11 @@ const copy: Record<Language, Copy> = {
     autoLock5h: '5 hours',
     biometricUnavailable: 'Biometric authentication is unavailable on this device.',
     biometricNotEnrolled: 'No biometric credential is enrolled on this device.',
+    biometricFingerprintNotEnrolled: 'No biometric information found. Please enroll a fingerprint on your device and try again.',
+    biometricFaceNotEnrolled: 'No biometric information found. Please enroll face recognition on your device and try again.',
     biometricFingerprintUnavailable: 'Fingerprint authentication is unavailable.',
     biometricFaceUnavailable: 'Face authentication is unavailable.',
-    appVersion: 'Version 1.0.0 (Mock)',
+    appVersion: 'Version',
     onboardingTitle: 'Get Started',
     onboardingBody: 'Trust-style onboarding flow',
     createWallet: 'Create new wallet',
@@ -3346,8 +3168,9 @@ const copy: Record<Language, Copy> = {
     amount: 'Amount',
     availableBalance: 'Available',
     recipient: 'Recipient',
+    recipientPlaceholder: 'Enter recipient address',
     memo: 'Memo',
-    memoPlaceholder: 'Optional memo',
+    memoPlaceholder: 'Enter memo (optional)',
     selectAsset: 'Select asset',
     selectChain: 'Select chain',
     selectChainAssetFirst: 'Select chain and asset.',
@@ -3463,9 +3286,11 @@ const copy: Record<Language, Copy> = {
     autoLock5h: '5小时',
     biometricUnavailable: '此设备不支持生物识别认证。',
     biometricNotEnrolled: '此设备未录入生物识别信息。',
+    biometricFingerprintNotEnrolled: '未检测到生物识别信息。请先在设备中录入指纹后重试。',
+    biometricFaceNotEnrolled: '未检测到生物识别信息。请先在设备中录入面容后重试。',
     biometricFingerprintUnavailable: '无法使用指纹认证。',
     biometricFaceUnavailable: '无法使用面容认证。',
-    appVersion: '版本 1.0.0 (Mock)',
+    appVersion: '版本',
     onboardingTitle: '开始使用 IMWallet',
     onboardingBody: '基于 Trust 结构的引导流程',
     createWallet: '创建新钱包',
@@ -3518,8 +3343,9 @@ const copy: Record<Language, Copy> = {
     amount: '数量',
     availableBalance: '可用',
     recipient: '接收地址',
+    recipientPlaceholder: '请输入接收地址',
     memo: '备注',
-    memoPlaceholder: '可选备注',
+    memoPlaceholder: '请输入备注（可选）',
     selectAsset: '选择资产',
     selectChain: '选择链',
     selectChainAssetFirst: '请选择链和资产。',
@@ -3668,7 +3494,7 @@ const extraCopy: Record<Language, ExtraCopy> = {
     save: '저장',
     cancel: '취소',
     label: '라벨',
-    memoOptional: '메모 (선택)',
+    memoOptional: '메모(선택)',
     paste: '붙여넣기',
     scan: '스캔',
     camera: '카메라',
@@ -3814,7 +3640,7 @@ const sendFlowCopy: Record<Language, SendFlowCopy> = {
     authContinue: '인증 후 전송',
     authInvalid: '비밀번호가 틀렸습니다.',
     fingerprintTitle: '지문 인증',
-    faceTitle: '페이스 인증',
+    faceTitle: '얼굴 인증',
     processingTitle: '처리 중...',
     processingBody: '트랜잭션이 진행 중입니다. 블록체인 검증이 진행 중입니다. 이 작업은 몇 분 정도 걸릴 수 있습니다.',
     processingDoneTitle: '전송 완료',
@@ -3832,7 +3658,7 @@ const sendFlowCopy: Record<Language, SendFlowCopy> = {
     authMethod: '인증 방식',
     passwordMode: '비밀번호',
     fingerprintMode: '지문',
-    faceMode: '페이스',
+    faceMode: '얼굴',
     sendPasswordLabel: '앱 비밀번호',
     sendPasswordHint: '앱 잠금 비밀번호를 입력하세요.',
     invalidGas: '가스 설정 값을 확인해주세요.',
@@ -4500,6 +4326,9 @@ const buildAssetChartSeries = (tokenId: string, range: AssetChartRange, count = 
 const MARKET_PRICE_REFRESH_MS = 15000;
 const MARKET_POPULAR_REFRESH_MS = 30000;
 const MARKET_FX_REFRESH_MS = 300000;
+const LIVE_NETWORK_FEE_REFRESH_MS = 30000;
+const ONCHAIN_BALANCE_REFRESH_MS = 30000;
+const ONCHAIN_NFT_REFRESH_MS = 45000;
 
 const cloneToken = (token: WalletToken): WalletToken => ({ ...token });
 
@@ -4613,26 +4442,42 @@ const normalizeTxTypeToWalletMode = (raw: unknown): TxItem['type'] => {
   return 'send';
 };
 
-const normalizeStoredTransactions = (raw: unknown): TxItem[] | null => {
+const normalizeStoredTransactions = (raw: unknown): WalletTxItem[] | null => {
   if (!Array.isArray(raw)) return null;
-  const normalized: TxItem[] = [];
+  const normalized: WalletTxItem[] = [];
 
   raw.forEach((entry, index) => {
     if (!entry || typeof entry !== 'object') return;
     const row = entry as Record<string, unknown>;
+    const rowId = String(row.id ?? `restored-tx-${index}`).trim();
+    if (rowId.startsWith('seed-')) return;
     const tokenSymbol = String(row.tokenSymbol ?? '').trim().toUpperCase();
     const assetKey = normalizeAssetKey(tokenSymbol);
     if (!assetKey) return;
     const chain = normalizeChainCode(String(row.chain ?? row.network ?? '')) ?? (assetKey === 'BNB' ? 'BSC' : assetKey === 'USDT' ? 'ETH' : (assetKey as ChainCode));
     const amount = Number(row.amount ?? 0);
     const usdValue = Number(row.usdValue ?? 0);
+    const feeNative = Number(row.feeNative ?? 0);
+    const feeUsd = Number(row.feeUsd ?? 0);
     const counterparty = String(row.counterparty ?? '').trim();
     const createdAtRaw = String(row.createdAt ?? '').trim();
     const createdAtDate = new Date(createdAtRaw.replace(' ', 'T'));
+    const hash = String(row.hash ?? '').trim();
+    const normalizedFeeNative = Number.isFinite(feeNative) && feeNative > 0 ? feeNative : undefined;
+    const normalizedFeeUsd = Number.isFinite(feeUsd) && feeUsd > 0 ? feeUsd : undefined;
+    const feeStatus =
+      row.feeStatus === 'confirmed'
+        ? 'confirmed'
+        : row.feeStatus === 'estimated'
+          ? 'estimated'
+          : normalizedFeeNative
+            ? 'estimated'
+            : undefined;
+    const feeConfirmedAtRaw = String(row.feeConfirmedAt ?? '').trim();
     if (!counterparty) return;
 
     normalized.push({
-      id: String(row.id ?? `restored-tx-${index}`),
+      id: rowId || `restored-tx-${index}`,
       tokenSymbol,
       network: String(row.network ?? chainLabelMap[chain]).trim() || chainLabelMap[chain],
       type: normalizeTxTypeToWalletMode(row.type),
@@ -4642,7 +4487,12 @@ const normalizeStoredTransactions = (raw: unknown): TxItem[] | null => {
       counterparty,
       createdAt: Number.isNaN(createdAtDate.getTime()) ? nowStamp() : createdAtRaw,
       chain,
-      memo: String(row.memo ?? '').trim() || undefined
+      memo: String(row.memo ?? '').trim() || undefined,
+      hash: hash || undefined,
+      feeNative: normalizedFeeNative,
+      feeUsd: normalizedFeeUsd,
+      feeStatus,
+      feeConfirmedAt: feeConfirmedAtRaw || undefined
     });
   });
 
@@ -4658,6 +4508,8 @@ const normalizeStoredAddressBookEntries = (raw: unknown): AddressBookEntry[] | n
   raw.forEach((entry, index) => {
     if (!entry || typeof entry !== 'object') return;
     const row = entry as Record<string, unknown>;
+    const rowId = String(row.id ?? `restored-book-${index}`).trim();
+    if (rowId.startsWith('seed-book-') || rowId.startsWith('seed-nft-book-')) return;
     const chain = normalizeChainCode(String(row.chain ?? ''));
     if (!chain) return;
     const address = String(row.address ?? '').trim();
@@ -4673,7 +4525,7 @@ const normalizeStoredAddressBookEntries = (raw: unknown): AddressBookEntry[] | n
     const createdAtDate = new Date(createdAtRaw.replace(' ', 'T'));
 
     normalized.push({
-      id: String(row.id ?? `restored-book-${index}`),
+      id: rowId || `restored-book-${index}`,
       chain,
       assetKey,
       address,
@@ -4696,7 +4548,7 @@ const resolveTokenIdFromTx = (tx: TxItem) => {
   return resolveTokenIdFromChainAsset(inferChainFromTx(tx), assetKey);
 };
 
-const mergeTransactionsWithSeed = (stored: TxItem[] | null) => {
+const mergeTransactionsWithSeed = (stored: WalletTxItem[] | null) => {
   const base = stored ?? [];
   const seed = defaultSeedTransactions;
 
@@ -4861,21 +4713,72 @@ const getDefaultSeedWordsForWalletIndex = (index: number) => {
   return [...(DEFAULT_COMPAT_SEEDS[normalizedIndex % DEFAULT_COMPAT_SEEDS.length] ?? DEFAULT_SEED_WORDS)];
 };
 
-const buildUniqueWalletName = (rawName: string, existing: WalletAccount[], unnamedBase: string) => {
-  const lowerSet = new Set(existing.map((item) => item.name.toLowerCase()));
+const unnamedWalletBaseByLang: Record<Language, string> = {
+  ko: '메인 지갑',
+  en: 'Main Wallet',
+  zh: '主钱包'
+};
+
+const formatAutoWalletName = (index: number, lang: Language) => {
+  const base = unnamedWalletBaseByLang[lang];
+  return index <= 0 ? base : `${base} ${index}`;
+};
+
+const parseAutoWalletNameIndex = (rawName: string): number | null => {
+  const value = rawName.trim();
+  const patterns = [/^메인\s*지갑(?:\s+(\d+))?$/i, /^main\s*wallet(?:\s+(\d+))?$/i, /^主钱包(?:\s*(\d+))?$/i];
+
+  for (const pattern of patterns) {
+    const matched = value.match(pattern);
+    if (!matched) continue;
+    const parsed = Number.parseInt(matched[1] ?? '0', 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed;
+  }
+  return null;
+};
+
+const resolveWalletDisplayName = (wallet: WalletAccount, lang: Language) => {
+  if (wallet.nameMode === 'auto' && Number.isFinite(wallet.autoNameIndex)) {
+    return formatAutoWalletName(Math.max(0, Math.floor(Number(wallet.autoNameIndex))), lang);
+  }
+  return wallet.name;
+};
+
+const buildNextAutoWalletName = (existing: WalletAccount[], lang: Language) => {
+  const lowerSet = new Set(existing.map((item) => resolveWalletDisplayName(item, lang).trim().toLowerCase()));
+  let idx = 0;
+  let candidate = formatAutoWalletName(idx, lang);
+  while (lowerSet.has(candidate.toLowerCase())) {
+    idx += 1;
+    candidate = formatAutoWalletName(idx, lang);
+  }
+  return { label: candidate, index: idx };
+};
+
+const buildUniqueWalletName = (
+  rawName: string,
+  existing: WalletAccount[],
+  lang: Language
+): { name: string; nameMode: 'auto' | 'custom'; autoNameIndex?: number } => {
   const normalizedInput = rawName.trim();
+  const lowerSet = new Set(existing.map((item) => resolveWalletDisplayName(item, lang).trim().toLowerCase()));
 
   if (!normalizedInput) {
-    if (!lowerSet.has(unnamedBase.toLowerCase())) return unnamedBase;
-    let idx = 1;
-    while (lowerSet.has(`${unnamedBase} ${idx}`.toLowerCase())) idx += 1;
-    return `${unnamedBase} ${idx}`;
+    const nextAuto = buildNextAutoWalletName(existing, lang);
+    return {
+      name: nextAuto.label,
+      nameMode: 'auto',
+      autoNameIndex: nextAuto.index
+    };
   }
 
-  if (!lowerSet.has(normalizedInput.toLowerCase())) return normalizedInput;
+  if (!lowerSet.has(normalizedInput.toLowerCase())) {
+    return { name: normalizedInput, nameMode: 'custom' };
+  }
   let idx = 2;
   while (lowerSet.has(`${normalizedInput} ${idx}`.toLowerCase())) idx += 1;
-  return `${normalizedInput} ${idx}`;
+  return { name: `${normalizedInput} ${idx}`, nameMode: 'custom' };
 };
 
 const isLegacyAutoWalletName = (rawName: string) => {
@@ -4907,6 +4810,7 @@ const THEME_SWITCH_PILL_WIDTH = Math.max(THEME_SWITCH_INNER_WIDTH / 2, 0);
 const DISCOVER_QUICK_SCROLL_OFFSET = 8;
 
 const HEADER_OVERLAY_HEIGHT = 56;
+const HEADER_BUTTON_HIT_SLOP = { top: 22, bottom: 14, left: 14, right: 14 } as const;
 
 type AssetSwitchToggleProps = {
   enabled: boolean;
@@ -4952,9 +4856,21 @@ const AssetSwitchToggle = ({ enabled, onToggle, styles }: AssetSwitchToggleProps
 };
 
 function AppInner() {
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const appBootStartedAtRef = useRef(Date.now());
   const sendFlowStartedAtRef = useRef<number | null>(null);
   const [showLaunchIntro, setShowLaunchIntro] = useState(true);
+  const launchIntroProgress = useRef(new Animated.Value(0)).current;
+  const launchIntroAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const launchIntroLogoOpacity = useMemo(
+    () =>
+      launchIntroProgress.interpolate({
+        inputRange: [0, 0.2667, 0.7333, 1],
+        outputRange: [0, 1, 1, 0],
+        extrapolate: 'clamp'
+      }),
+    [launchIntroProgress]
+  );
   const [lang, setLang] = useState<Language>('ko');
   const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
   const [walletSegment, setWalletSegment] = useState<WalletSegment>('crypto');
@@ -4965,7 +4881,8 @@ function AppInner() {
     firstWidth: 0
   });
   const [stack, setStack] = useState<Screen[]>(['home']);
-  const { walletAccounts, setWalletAccounts, walletId, setWalletId, activeWallet, walletStoreHydrated } = useWalletStore(wallets);
+  const { walletAccounts, setWalletAccounts, walletId, setWalletId, activeWallet, walletStoreHydrated, walletStoreUsesSeedData } =
+    useWalletStore([]);
   const { enabledTokenIds, toggleEnabledToken } = useAssetToggleStore(defaultEnabledTokenIds);
   const [tokens, setTokens] = useState<WalletToken[]>(() =>
     sortByCatalogOrder(tokenCatalog.filter((token) => enabledTokenIds.includes(token.id)).map(cloneToken))
@@ -4975,9 +4892,19 @@ function AppInner() {
   const [marketAssetInfoMap, setMarketAssetInfoMap] = useState<MarketAssetInfoMap>({});
   const [assetLiveHolderCount, setAssetLiveHolderCount] = useState<number | null>(null);
   const [popularMarketTokens, setPopularMarketTokens] = useState<PopularTokenItem[] | null>(null);
+  const [popularMarketDapps, setPopularMarketDapps] = useState<PopularDappItem[] | null>(null);
+  const [popularMarketDappsByCategory, setPopularMarketDappsByCategory] = useState<PopularDappCategoryBuckets | null>(null);
   const [discoverTokenIconUrlBySymbol, setDiscoverTokenIconUrlBySymbol] = useState<Record<string, string>>({});
-  const [collectibles, setCollectibles] = useState<CollectibleItem[]>(initialCollectibles);
-  const [txs, setTxs] = useState<TxItem[]>(defaultSeedTransactions);
+  const [discoverCachedTokenIconUrlBySymbol, setDiscoverCachedTokenIconUrlBySymbol] = useState<Record<string, string>>({});
+  const [discoverCachedDappIconUrlByKey, setDiscoverCachedDappIconUrlByKey] = useState<Record<string, string>>({});
+  const [discoverCachedSiteIconUrlByKey, setDiscoverCachedSiteIconUrlByKey] = useState<Record<string, string>>({});
+  const [collectibles, setCollectibles] = useState<CollectibleItem[]>(() =>
+    initialCollectibles.map((item) => ({
+      ...item,
+      owned: 0
+    }))
+  );
+  const [txs, setTxs] = useState<WalletTxItem[]>([]);
   const [txStoreHydrated, setTxStoreHydrated] = useState(false);
   const [historyScopeFilter, setHistoryScopeFilter] = useState<HistoryScopeFilter>('ALL');
   const [historyChainFilter, setHistoryChainFilter] = useState<'ALL' | ChainCode>('ALL');
@@ -5015,6 +4942,42 @@ function AppInner() {
   const [assetChartWidth, setAssetChartWidth] = useState(0);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [walletMenuAnchorRect, setWalletMenuAnchorRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [homeScanTriggerRect, setHomeScanTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [homeLayoutTriggerRect, setHomeLayoutTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [historyRangeTriggerRect, setHistoryRangeTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [settingsLangTriggerRect, setSettingsLangTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [securityAutoLockTriggerRect, setSecurityAutoLockTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [securityLockMethodTriggerRect, setSecurityLockMethodTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [securityBiometricTypeTriggerRect, setSecurityBiometricTypeTriggerRect] = useState<{ x: number; y: number; width: number; height: number } | null>(
+    null
+  );
+  const [discoverBriefingWeekTriggerRect, setDiscoverBriefingWeekTriggerRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [sendRecentAnchorRect, setSendRecentAnchorRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [nftRecentAnchorRect, setNftRecentAnchorRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [assetRecipientActionAnchorRectMap, setAssetRecipientActionAnchorRectMap] = useState<{
+    scan: { x: number; y: number; width: number; height: number } | null;
+    book: { x: number; y: number; width: number; height: number } | null;
+    save: { x: number; y: number; width: number; height: number } | null;
+  }>({
+    scan: null,
+    book: null,
+    save: null
+  });
+  const [nftRecipientActionAnchorRectMap, setNftRecipientActionAnchorRectMap] = useState<{
+    scan: { x: number; y: number; width: number; height: number } | null;
+    book: { x: number; y: number; width: number; height: number } | null;
+    save: { x: number; y: number; width: number; height: number } | null;
+  }>({
+    scan: null,
+    book: null,
+    save: null
+  });
   const [discoverCategory, setDiscoverCategory] = useState<DiscoverDappFilterId>('all');
   const [discoverTokenCategory, setDiscoverTokenCategory] = useState<DiscoverTokenCategoryId>('all');
   const [discoverSiteCategory, setDiscoverSiteCategory] = useState<DiscoverSiteCategoryId>('all');
@@ -5044,7 +5007,14 @@ function AppInner() {
   const [discoverTrustedEditId, setDiscoverTrustedEditId] = useState<string | null>(null);
   const [discoverWebViewCanGoBack, setDiscoverWebViewCanGoBack] = useState(false);
   const [discoverWebViewCanGoForward, setDiscoverWebViewCanGoForward] = useState(false);
-  const [hasWallet, setHasWallet] = useState(true);
+  const hasWallet = walletAccounts.length > 0;
+  const lockPreviewMode = useMemo<SendAuthMethod | null>(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+    const rawMode = new URLSearchParams(window.location.search).get('lockPreview');
+    if (rawMode === 'password' || rawMode === 'fingerprint' || rawMode === 'face') return rawMode;
+    return null;
+  }, []);
+  const isLockPreviewMode = lockPreviewMode !== null;
   const [allowPush, setAllowPush] = useState(true);
   const [sendReceiveNoti, setSendReceiveNoti] = useState(true);
   const [announcements, setAnnouncements] = useState(false);
@@ -5056,7 +5026,9 @@ function AppInner() {
   const [showLockMethodMenu, setShowLockMethodMenu] = useState(false);
   const [showBiometricTypeMenu, setShowBiometricTypeMenu] = useState(false);
   const [sendAuthMethod, setSendAuthMethod] = useState<SendAuthMethod>('password');
-  const [settingsAuthTarget, setSettingsAuthTarget] = useState<'wallets' | 'security'>('wallets');
+  const [fingerprintBiometricSupported, setFingerprintBiometricSupported] = useState(true);
+  const [faceBiometricSupported, setFaceBiometricSupported] = useState(Platform.OS !== 'android');
+  const [settingsAuthTarget, setSettingsAuthTarget] = useState<'wallets' | 'security' | 'addressBook'>('wallets');
   const [sendPassword, setSendPassword] = useState('');
   const [isSecurityLoaded, setIsSecurityLoaded] = useState(false);
   const [appLocked, setAppLocked] = useState(false);
@@ -5076,20 +5048,45 @@ function AppInner() {
       setShowLaunchIntro(false);
       return;
     }
-    const timer = setTimeout(() => setShowLaunchIntro(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    const launchIntroDuration = 1500;
+    let isMounted = true;
+
+    launchIntroProgress.setValue(0);
+    const animation = Animated.timing(launchIntroProgress, {
+      toValue: 1,
+      duration: launchIntroDuration,
+      easing: Easing.linear,
+      useNativeDriver: true,
+      isInteraction: false
+    });
+
+    launchIntroAnimationRef.current = animation;
+    animation.start(({ finished }) => {
+      if (!isMounted || !finished) return;
+      requestAnimationFrame(() => {
+        if (!isMounted) return;
+        setShowLaunchIntro(false);
+      });
+      launchIntroAnimationRef.current = null;
+    });
+
+    return () => {
+      isMounted = false;
+      launchIntroAnimationRef.current?.stop();
+      launchIntroAnimationRef.current = null;
+    };
+  }, [launchIntroProgress]);
   const [walletSettingsAuthError, setWalletSettingsAuthError] = useState('');
   const [authPasswordInput, setAuthPasswordInput] = useState('');
   const [authErrorMessage, setAuthErrorMessage] = useState('');
   const walletNameMigrationDoneRef = useRef(false);
+  const discoverIconCacheSyncSignatureRef = useRef('');
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const shouldLockOnActiveRef = useRef(false);
+  const appLockBiometricAutoRequestedRef = useRef(false);
   const lastBackgroundAtRef = useRef<number | null>(null);
   const persistedSendPasswordRef = useRef('');
-  const [walletSeedMap, setWalletSeedMap] = useState<Record<string, string[]>>(() =>
-    Object.fromEntries(wallets.map((wallet, index) => [wallet.id, getDefaultSeedWordsForWalletIndex(index)]))
-  );
+  const [walletSeedMap, setWalletSeedMap] = useState<Record<string, string[]>>({});
   const [walletSeedPassphraseMap, setWalletSeedPassphraseMap] = useState<Record<string, string>>({});
   const [walletAccountIndexMap, setWalletAccountIndexMap] = useState<Record<string, number>>({});
   const [recoveryWordCount, setRecoveryWordCount] = useState<RecoveryWordCount>(DEFAULT_RECOVERY_WORD_COUNT);
@@ -5127,16 +5124,16 @@ function AppInner() {
   const [sendAssetFilterTokenId, setSendAssetFilterTokenId] = useState<string | 'ALL'>('ALL');
   const [receiveAssetFilterTokenId, setReceiveAssetFilterTokenId] = useState<string | 'ALL'>('ALL');
   const [sendMemoInput, setSendMemoInput] = useState('');
-  const [nftSendCollectibleId, setNftSendCollectibleId] = useState<string | null>(initialCollectibles[0]?.id ?? null);
+  const [nftSendCollectibleId, setNftSendCollectibleId] = useState<string | null>(null);
   const [receiveNftChainFilter, setReceiveNftChainFilter] = useState<'ALL' | ChainCode>('ALL');
-  const [nftDetailCollectibleId, setNftDetailCollectibleId] = useState<string | null>(initialCollectibles[0]?.id ?? null);
+  const [nftDetailCollectibleId, setNftDetailCollectibleId] = useState<string | null>(null);
   const [nftSendRecipientInput, setNftSendRecipientInput] = useState('');
   const [nftSendMemoInput, setNftSendMemoInput] = useState('');
   const [nftSendRecipientTouched, setNftSendRecipientTouched] = useState(false);
   const [nftSendRecipientFocused, setNftSendRecipientFocused] = useState(false);
-  const [addressBook, setAddressBook] = useState<AddressBookEntry[]>(defaultSeedAddressBookEntries);
+  const [addressBook, setAddressBook] = useState<AddressBookEntry[]>([]);
   const [addressBookStoreHydrated, setAddressBookStoreHydrated] = useState(false);
-  const [nftAddressBook, setNftAddressBook] = useState<AddressBookEntry[]>(defaultSeedNftAddressBookEntries);
+  const [nftAddressBook, setNftAddressBook] = useState<AddressBookEntry[]>([]);
   const [nftAddressBookStoreHydrated, setNftAddressBookStoreHydrated] = useState(false);
   const [addressLabelInput, setAddressLabelInput] = useState('');
   const [addressValueInput, setAddressValueInput] = useState('');
@@ -5165,6 +5162,8 @@ function AppInner() {
   const [supportMessages, setSupportMessages] = useState<SupportChatMessage[]>([]);
   const [supportComposerText, setSupportComposerText] = useState('');
   const [supportComposerImageUri, setSupportComposerImageUri] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [recipientTouched, setRecipientTouched] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
   const [recipientFocused, setRecipientFocused] = useState(false);
@@ -5196,6 +5195,24 @@ function AppInner() {
   const nftSendScrollRef = useRef<ScrollView | null>(null);
   const nftReceiveScrollRef = useRef<ScrollView | null>(null);
   const nftDetailScrollRef = useRef<ScrollView | null>(null);
+  const phoneShellRef = useRef<View | null>(null);
+  const homeWalletAnchorRef = useRef<View | null>(null);
+  const homeScanTriggerRef = useRef<View | null>(null);
+  const homeLayoutTriggerRef = useRef<View | null>(null);
+  const historyRangeTriggerRef = useRef<View | null>(null);
+  const settingsLangTriggerRef = useRef<View | null>(null);
+  const securityAutoLockTriggerRef = useRef<View | null>(null);
+  const securityLockMethodTriggerRef = useRef<View | null>(null);
+  const securityBiometricTypeTriggerRef = useRef<View | null>(null);
+  const discoverBriefingWeekTriggerRef = useRef<View | null>(null);
+  const sendRecentAnchorRef = useRef<View | null>(null);
+  const nftRecentAnchorRef = useRef<View | null>(null);
+  const assetSaveActionRef = useRef<View | null>(null);
+  const assetBookActionRef = useRef<View | null>(null);
+  const assetScanActionRef = useRef<View | null>(null);
+  const nftSaveActionRef = useRef<View | null>(null);
+  const nftBookActionRef = useRef<View | null>(null);
+  const nftScanActionRef = useRef<View | null>(null);
   const discoverWebViewRef = useRef<WebView | null>(null);
   const discoverSecurityAllowHostsRef = useRef<Set<string>>(new Set());
   const discoverSectionOffsetsRef = useRef<Record<DiscoverQuickSection, number>>({
@@ -5212,6 +5229,7 @@ function AppInner() {
     secondX: THEME_SWITCH_INSET + THEME_SWITCH_PILL_WIDTH,
     firstWidth: THEME_SWITCH_PILL_WIDTH
   });
+  const [liveNetworkFeeMap, setLiveNetworkFeeMap] = useState<Partial<Record<ChainCode, LiveNetworkFeeSnapshot>>>({});
   const [sendGasSettings, setSendGasSettings] = useState<SendGasSettings>({ ...DEFAULT_SEND_GAS_SETTINGS });
   const [sendDraft, setSendDraft] = useState<SendDraft | null>(null);
   const [sendIsProcessing, setSendIsProcessing] = useState(false);
@@ -5223,6 +5241,195 @@ function AppInner() {
   const skipNextSendResetRef = useRef(false);
   const skipNextReceiveResetRef = useRef(false);
   const skipNextHistoryResetRef = useRef(false);
+  const discoverIconCacheSyncedStageRef = useRef<{ seed: boolean; live: boolean }>({ seed: false, live: false });
+
+  const measureWalletMenuAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = homeWalletAnchorRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setWalletMenuAnchorRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureHomeLayoutTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = homeLayoutTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setHomeLayoutTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureHomeScanTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = homeScanTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setHomeScanTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureHistoryRangeTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = historyRangeTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setHistoryRangeTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureSettingsLangTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = settingsLangTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setSettingsLangTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureSecurityAutoLockTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = securityAutoLockTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setSecurityAutoLockTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureSecurityLockMethodTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = securityLockMethodTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setSecurityLockMethodTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureSecurityBiometricTypeTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = securityBiometricTypeTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setSecurityBiometricTypeTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureDiscoverBriefingWeekTriggerAnchor = useCallback(() => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = discoverBriefingWeekTriggerRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        setDiscoverBriefingWeekTriggerRect({ x, y, width, height });
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureRecentAnchor = useCallback((scope: 'asset' | 'nft') => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode = scope === 'nft' ? nftRecentAnchorRef.current : sendRecentAnchorRef.current;
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        const rect = { x, y, width, height };
+        if (scope === 'nft') {
+          setNftRecentAnchorRect(rect);
+        } else {
+          setSendRecentAnchorRect(rect);
+        }
+      },
+      () => {}
+    );
+  }, []);
+
+  const measureRecipientActionAnchor = useCallback((scope: 'asset' | 'nft', action: 'scan' | 'book' | 'save') => {
+    const shellNode = phoneShellRef.current;
+    const anchorNode =
+      scope === 'asset'
+        ? action === 'scan'
+          ? assetScanActionRef.current
+          : action === 'book'
+            ? assetBookActionRef.current
+            : assetSaveActionRef.current
+        : action === 'scan'
+          ? nftScanActionRef.current
+          : action === 'book'
+            ? nftBookActionRef.current
+            : nftSaveActionRef.current;
+
+    if (!shellNode || !anchorNode || typeof anchorNode.measureLayout !== 'function') {
+      return;
+    }
+
+    anchorNode.measureLayout(
+      shellNode,
+      (x, y, width, height) => {
+        const rect = { x, y, width, height };
+        if (scope === 'asset') {
+          setAssetRecipientActionAnchorRectMap((prev) => ({ ...prev, [action]: rect }));
+        } else {
+          setNftRecipientActionAnchorRectMap((prev) => ({ ...prev, [action]: rect }));
+        }
+      },
+      () => {}
+    );
+  }, []);
 
   const text = copy[lang];
   const extra = extraCopy[lang];
@@ -5232,15 +5439,15 @@ function AppInner() {
     () =>
       lang === 'ko'
         ? {
-            sendTitle: 'NFT 보내기',
-            sendConfirmTitle: 'NFT 전송 확인',
+            sendTitle: '보내기',
+            sendConfirmTitle: '확인',
             selectNft: 'NFT 선택',
-            recipientPlaceholder: '받는 주소 입력',
-            memoPlaceholder: '전송 메모 (선택)',
+            recipientPlaceholder: '받는 주소를 입력하세요',
+            memoPlaceholder: '메모를 입력하세요(선택)',
             noNftOwned: '보유 중인 NFT가 없습니다.',
             sent: 'NFT 전송이 완료되었습니다.',
             receiveButton: 'NFT 받기',
-            sendButton: 'NFT 보내기',
+            sendButton: '보내기',
             detailTitle: 'NFT 상세',
             contractAddress: '컨트랙트 주소',
             tokenId: '토큰 ID',
@@ -5249,15 +5456,15 @@ function AppInner() {
           }
         : lang === 'zh'
           ? {
-              sendTitle: '发送 NFT',
-              sendConfirmTitle: 'NFT 发送确认',
+              sendTitle: '发送',
+              sendConfirmTitle: '确认',
               selectNft: '选择 NFT',
-              recipientPlaceholder: '输入接收地址',
-              memoPlaceholder: '转账备注（可选）',
+              recipientPlaceholder: '请输入接收地址',
+              memoPlaceholder: '请输入备注（可选）',
               noNftOwned: '暂无可发送的 NFT。',
               sent: 'NFT 发送已完成。',
               receiveButton: '接收 NFT',
-              sendButton: '发送 NFT',
+              sendButton: '发送',
               detailTitle: 'NFT 详情',
               contractAddress: '合约地址',
               tokenId: '代币 ID',
@@ -5265,15 +5472,15 @@ function AppInner() {
               floorPrice: '估值'
             }
           : {
-              sendTitle: 'Send NFT',
-              sendConfirmTitle: 'NFT Send Confirmation',
+              sendTitle: 'Send',
+              sendConfirmTitle: 'Confirm',
               selectNft: 'Select NFT',
-              recipientPlaceholder: 'Recipient address',
-              memoPlaceholder: 'Transfer memo (optional)',
+              recipientPlaceholder: 'Enter recipient address',
+              memoPlaceholder: 'Enter memo (optional)',
               noNftOwned: 'No NFTs available to send.',
               sent: 'NFT transfer completed.',
               receiveButton: 'Receive NFT',
-              sendButton: 'Send NFT',
+              sendButton: 'Send',
               detailTitle: 'NFT Detail',
               contractAddress: 'Contract Address',
               tokenId: 'Token ID',
@@ -5295,12 +5502,15 @@ function AppInner() {
     ]);
   }, [supportMessages.length, text.supportChatGreeting]);
   const assetText = assetDetailCopy[lang];
-  const unnamedWalletBaseByLang: Record<Language, string> = {
-    ko: '메인 지갑',
-    en: 'Main Wallet',
-    zh: '主钱包'
-  };
-  const unnamedWalletBaseName = unnamedWalletBaseByLang[lang];
+  const getWalletDisplayName = useCallback((wallet: WalletAccount) => resolveWalletDisplayName(wallet, lang), [lang]);
+  const nextAutoWalletName = useMemo(() => buildNextAutoWalletName(walletAccounts, lang).label, [walletAccounts, lang]);
+  const walletNamePlaceholder = useMemo(
+    () => {
+      const suggestedName = walletStoreUsesSeedData ? unnamedWalletBaseByLang[lang] : nextAutoWalletName;
+      return lang === 'ko' ? `예: ${suggestedName}` : lang === 'zh' ? `例如：${suggestedName}` : `e.g. ${suggestedName}`;
+    },
+    [lang, nextAutoWalletName, walletStoreUsesSeedData]
+  );
   const currentScreen = stack[stack.length - 1];
   const discoverDataScreens: Screen[] = [
     'discover',
@@ -5318,11 +5528,67 @@ function AppInner() {
   ];
   const shouldLoadDiscoverData =
     discoverDataBootReady || currentScreen === 'assetDetail' || discoverDataScreens.includes(currentScreen);
+  const refreshBiometricSupport = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      setFingerprintBiometricSupported(true);
+      setFaceBiometricSupported(true);
+      return;
+    }
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      if (!hasHardware) {
+        setFingerprintBiometricSupported(false);
+        setFaceBiometricSupported(false);
+        return;
+      }
+      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      const irisType = (LocalAuthentication.AuthenticationType as { IRIS?: number }).IRIS;
+      const supportsFingerprint = supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
+      const supportsFace =
+        supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ||
+        (typeof irisType === 'number' && supportedTypes.includes(irisType));
+      if (Platform.OS === 'android') {
+        // Android BiometricPrompt is modality-agnostic in many OEM implementations.
+        // Prefer one stable option to avoid exposing non-actionable "face" entries.
+        const preferFingerprint = supportsFingerprint;
+        setFingerprintBiometricSupported((prev) => (prev === supportsFingerprint ? prev : supportsFingerprint));
+        setFaceBiometricSupported((prev) => {
+          const next = !preferFingerprint && supportsFace;
+          return prev === next ? prev : next;
+        });
+        return;
+      }
+      setFingerprintBiometricSupported((prev) => (prev === supportsFingerprint ? prev : supportsFingerprint));
+      setFaceBiometricSupported((prev) => (prev === supportsFace ? prev : supportsFace));
+    } catch {
+      setFingerprintBiometricSupported(false);
+      setFaceBiometricSupported(false);
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDiscoverDataBootReady(true), 12000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    void refreshBiometricSupport();
+  }, [refreshBiometricSupport]);
+
+  useEffect(() => {
+    if (currentScreen !== 'settingsSecurity' && !showBiometricTypeMenu) return;
+    void refreshBiometricSupport();
+  }, [currentScreen, showBiometricTypeMenu, refreshBiometricSupport]);
+
+  useEffect(() => {
+    if (sendAuthMethod === 'face' && !faceBiometricSupported) {
+      setSendAuthMethod(fingerprintBiometricSupported ? 'fingerprint' : 'password');
+      return;
+    }
+    if (sendAuthMethod === 'fingerprint' && !fingerprintBiometricSupported) {
+      setSendAuthMethod(faceBiometricSupported ? 'face' : 'password');
+    }
+  }, [sendAuthMethod, faceBiometricSupported, fingerprintBiometricSupported]);
 
   const discoverActiveTab = useMemo(
     () => (discoverActiveTabId ? discoverOpenTabs.find((tab) => tab.id === discoverActiveTabId) ?? null : null),
@@ -5406,16 +5672,15 @@ function AppInner() {
       };
     }
 
-    const walletIndex = Math.max(0, walletAccounts.findIndex((wallet) => wallet.id === selectedWallet.id));
     const fallbackAddressMap = toFallbackChainAddresses(selectedWallet.address);
     setActiveWalletChainAddresses((prev) => (isSameChainAddressMap(fallbackAddressMap, prev) ? prev : fallbackAddressMap));
 
     interactionTask = InteractionManager.runAfterInteractions(() => {
       if (!mounted) return;
-      const seedWords = walletSeedMap[selectedWallet.id] ?? getDefaultSeedWordsForWalletIndex(walletIndex);
+      const seedWords = walletSeedMap[selectedWallet.id];
       const passphrase = walletSeedPassphraseMap[selectedWallet.id] ?? '';
       const accountIndex = normalizeAccountIndex(walletAccountIndexMap[selectedWallet.id] ?? 0);
-      if (!isValidRecoverySeedWords(seedWords)) return;
+      if (!Array.isArray(seedWords) || !isValidRecoverySeedWords(seedWords)) return;
 
       try {
         const derived = deriveTrustCompatibleChainAddresses(seedWords, accountIndex, passphrase);
@@ -5464,8 +5729,8 @@ function AppInner() {
             line: '#2a2d33',
             text: '#f5f7f8',
             muted: '#8a9299',
-            accent: '#f4b447',
-            accentSoft: '#f8d48f',
+            accent: '#ff7842',
+            accentSoft: '#cfd6e2',
             positive: '#38c172',
             negative: '#ff5b5b',
             overlay: 'rgba(0, 0, 0, 0.72)'
@@ -5478,8 +5743,8 @@ function AppInner() {
             line: '#dce2e8',
             text: '#0d1317',
             muted: '#6f7a85',
-            accent: '#e8a63a',
-            accentSoft: '#fff0d8',
+            accent: '#ff7842',
+            accentSoft: '#e9eef5',
             positive: '#16a34a',
             negative: '#dc2626',
             overlay: 'rgba(15, 23, 42, 0.42)'
@@ -5488,23 +5753,28 @@ function AppInner() {
   );
 
   const insets = useSafeAreaInsets();
+  const topSafeInset = Platform.OS === 'android' ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0, 24) : insets.top;
+  const headerOverlayHeightValue = HEADER_OVERLAY_HEIGHT + topSafeInset;
+  const headerContentTopPadValue = headerOverlayHeightValue + 4;
   const effectiveBottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 24) : insets.bottom;
+  const supportComposerBottomPad = isKeyboardVisible ? 0 : effectiveBottomInset + 12;
+  const onboardingKeyboardPad = isKeyboardVisible ? Math.max(effectiveBottomInset + 16, keyboardHeight + 20) : effectiveBottomInset + 12;
   const styles = useMemo(
-    () => createStyles(palette, themeMode, insets),
-    [insets.bottom, insets.left, insets.right, insets.top, palette, themeMode]
+    () => createStyles(palette, themeMode, insets, viewportWidth),
+    [insets.bottom, insets.left, insets.right, insets.top, palette, themeMode, viewportWidth]
   );
   const headerGradientColors = useMemo<readonly [string, string, ...string[]]>(
     () =>
       themeMode === 'dark'
         ? [
-            'rgba(0, 0, 0, 0.74)',
-            'rgba(0, 0, 0, 0.66)',
+            'rgba(0, 0, 0, 0.86)',
+            'rgba(0, 0, 0, 0.78)',
+            'rgba(0, 0, 0, 0.68)',
             'rgba(0, 0, 0, 0.57)',
-            'rgba(0, 0, 0, 0.47)',
-            'rgba(0, 0, 0, 0.36)',
-            'rgba(0, 0, 0, 0.24)',
-            'rgba(0, 0, 0, 0.14)',
-            'rgba(0, 0, 0, 0.07)',
+            'rgba(0, 0, 0, 0.44)',
+            'rgba(0, 0, 0, 0.31)',
+            'rgba(0, 0, 0, 0.20)',
+            'rgba(0, 0, 0, 0.10)',
             'rgba(0, 0, 0, 0.00)'
           ]
         : [
@@ -5520,6 +5790,27 @@ function AppInner() {
           ],
     [themeMode]
   );
+  const bottomSystemGradientColors = useMemo<readonly [string, string, ...string[]]>(
+    () =>
+      themeMode === 'dark'
+        ? [
+            'rgba(0, 0, 0, 0.76)',
+            'rgba(0, 0, 0, 0.62)',
+            'rgba(0, 0, 0, 0.45)',
+            'rgba(0, 0, 0, 0.26)',
+            'rgba(0, 0, 0, 0.10)',
+            'rgba(0, 0, 0, 0.00)'
+          ]
+        : [
+            'rgba(255, 255, 255, 0.86)',
+            'rgba(255, 255, 255, 0.72)',
+            'rgba(255, 255, 255, 0.53)',
+            'rgba(255, 255, 255, 0.31)',
+            'rgba(255, 255, 255, 0.12)',
+            'rgba(255, 255, 255, 0.00)'
+          ],
+    [themeMode]
+  );
   const renderHeaderBackdrop = () => (
     <View pointerEvents="none" style={styles.headerBackdrop}>
       <LinearGradient colors={headerGradientColors} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.headerGradientLayer} />
@@ -5528,7 +5819,19 @@ function AppInner() {
   const ThemedIonicons = ({ style, ...props }: React.ComponentProps<typeof Ionicons>) => (
     <Ionicons {...props} style={[styles.iconGlyphContrast, style]} />
   );
+  const normalizeAuthMethodForPlatform = (method: SendAuthMethod): SendAuthMethod => method;
   const hasAppPassword = isValidAppPassword(normalizePassword(persistedSendPasswordRef.current));
+
+  useEffect(() => {
+    if (!isLockPreviewMode || !lockPreviewMode) return;
+    setShowLaunchIntro(false);
+    setAppLocked(true);
+    setPasswordLockEnabled(true);
+    setBiometric(lockPreviewMode !== 'password');
+    setSendAuthMethod(normalizeAuthMethodForPlatform(lockPreviewMode));
+    setAppUnlockInput('');
+    setAppUnlockError('');
+  }, [isLockPreviewMode, lockPreviewMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -5556,11 +5859,11 @@ function AppInner() {
       if (isValidAppPassword(normalizedSavedPassword)) {
         setSendPassword(normalizedSavedPassword);
         persistedSendPasswordRef.current = normalizedSavedPassword;
-        if (hasWallet) setAppLocked(true);
+        if (hasWallet && !walletStoreUsesSeedData) setAppLocked(true);
       }
 
       if (savedAuthMethod === 'password' || savedAuthMethod === 'fingerprint' || savedAuthMethod === 'face') {
-        setSendAuthMethod(savedAuthMethod);
+        setSendAuthMethod(normalizeAuthMethodForPlatform(savedAuthMethod));
       }
 
       if (savedTrustedHostsRaw) {
@@ -5696,7 +5999,7 @@ function AppInner() {
       isMounted = false;
       interactionTask?.cancel?.();
     };
-  }, [hasWallet]);
+  }, [hasWallet, walletStoreUsesSeedData]);
 
   useEffect(() => {
     let mounted = true;
@@ -5710,15 +6013,15 @@ function AppInner() {
       if (!mounted) return;
 
       const normalizedTxRows = normalizeStoredTransactions(storedTxRows);
-      setTxs(mergeTransactionsWithSeed(normalizedTxRows));
+      setTxs(normalizedTxRows ?? []);
       setTxStoreHydrated(true);
 
       const normalizedAddressBook = normalizeStoredAddressBookEntries(storedAddressBookRows);
-      setAddressBook(mergeAddressBookWithSeed(normalizedAddressBook));
+      setAddressBook(normalizedAddressBook ?? []);
       setAddressBookStoreHydrated(true);
 
       const normalizedNftAddressBook = normalizeStoredAddressBookEntries(storedNftAddressBookRows);
-      setNftAddressBook(mergeNftAddressBookWithSeed(normalizedNftAddressBook));
+      setNftAddressBook(normalizedNftAddressBook ?? []);
       setNftAddressBookStoreHydrated(true);
     };
 
@@ -5749,37 +6052,84 @@ function AppInner() {
   useEffect(() => {
     if (walletNameMigrationDoneRef.current) return;
     if (!walletStoreHydrated || !walletAccounts.length) return;
+    let mutated = false;
+    const usedAutoIndexes = new Set<number>();
+    let autoSequence = 0;
 
-    const hasLegacy = walletAccounts.some((wallet) => isLegacyAutoWalletName(wallet.name));
-    if (!hasLegacy) {
-      walletNameMigrationDoneRef.current = true;
-      return;
-    }
+    const reserveNextAutoIndex = () => {
+      while (usedAutoIndexes.has(autoSequence)) autoSequence += 1;
+      const next = autoSequence;
+      usedAutoIndexes.add(next);
+      autoSequence += 1;
+      return next;
+    };
+    const claimAutoIndex = (preferred: number | null | undefined) => {
+      if (Number.isFinite(preferred)) {
+        const normalized = Math.max(0, Math.floor(Number(preferred)));
+        if (!usedAutoIndexes.has(normalized)) {
+          usedAutoIndexes.add(normalized);
+          if (autoSequence <= normalized) autoSequence = normalized + 1;
+          return normalized;
+        }
+      }
+      return reserveNextAutoIndex();
+    };
 
-    const used = new Set<string>();
-    let sequence = 0;
-    const nextWallets = walletAccounts.map((wallet) => {
-      if (!isLegacyAutoWalletName(wallet.name)) {
-        used.add(wallet.name.trim().toLowerCase());
+    const nextWallets: WalletAccount[] = walletAccounts.map((wallet): WalletAccount => {
+      const normalizedMode = wallet.nameMode === 'auto' || wallet.nameMode === 'custom' ? wallet.nameMode : undefined;
+      const parsedAutoIndex = parseAutoWalletNameIndex(wallet.name);
+
+      if (normalizedMode === 'auto' && Number.isFinite(wallet.autoNameIndex)) {
+        const normalizedIndex = claimAutoIndex(wallet.autoNameIndex);
+        if (normalizedIndex !== wallet.autoNameIndex) {
+          mutated = true;
+          return { ...wallet, autoNameIndex: normalizedIndex };
+        }
         return wallet;
       }
 
-      let candidate = sequence === 0 ? unnamedWalletBaseName : `${unnamedWalletBaseName} ${sequence}`;
-      while (used.has(candidate.toLowerCase())) {
-        sequence += 1;
-        candidate = sequence === 0 ? unnamedWalletBaseName : `${unnamedWalletBaseName} ${sequence}`;
+      if (normalizedMode === 'auto') {
+        const inferredIndex = claimAutoIndex(parsedAutoIndex);
+        mutated = true;
+        return {
+          ...wallet,
+          autoNameIndex: inferredIndex
+        };
       }
-      used.add(candidate.toLowerCase());
-      sequence += 1;
+
+      if (normalizedMode === 'custom') return wallet;
+
+      if (parsedAutoIndex !== null) {
+        const inferredIndex = claimAutoIndex(parsedAutoIndex);
+        mutated = true;
+        return {
+          ...wallet,
+          nameMode: 'auto',
+          autoNameIndex: inferredIndex
+        };
+      }
+
+      if (isLegacyAutoWalletName(wallet.name)) {
+        const inferredIndex = reserveNextAutoIndex();
+        mutated = true;
+        return {
+          ...wallet,
+          nameMode: 'auto',
+          autoNameIndex: inferredIndex
+        };
+      }
+
+      mutated = true;
       return {
         ...wallet,
-        name: candidate
+        nameMode: 'custom'
       };
     });
 
     walletNameMigrationDoneRef.current = true;
+    if (!mutated) return;
     setWalletAccounts(nextWallets);
-  }, [walletAccounts, walletStoreHydrated, unnamedWalletBaseName, setWalletAccounts]);
+  }, [walletAccounts, walletStoreHydrated, setWalletAccounts]);
 
   useEffect(() => {
     if (!isSecurityLoaded) return;
@@ -5822,6 +6172,7 @@ function AppInner() {
       }
 
       if ((prevState === 'inactive' || prevState === 'background') && nextState === 'active') {
+        void refreshBiometricSupport();
         if (shouldLockOnActiveRef.current && hasWallet && hasAppPassword && passwordLockEnabled) {
           const elapsedMs = lastBackgroundAtRef.current ? Date.now() - lastBackgroundAtRef.current : 0;
           const thresholdMs =
@@ -5850,24 +6201,26 @@ function AppInner() {
     });
 
     return () => subscription.remove();
-  }, [hasWallet, hasAppPassword, passwordLockEnabled, autoLockOption]);
+  }, [hasWallet, hasAppPassword, passwordLockEnabled, autoLockOption, refreshBiometricSupport]);
 
   useEffect(() => {
+    if (isLockPreviewMode) return;
     if (!hasWallet) {
       setAppLocked(false);
       setAppUnlockInput('');
       setAppUnlockError('');
       setAppUnlockUsePassword(false);
     }
-  }, [hasWallet]);
+  }, [hasWallet, isLockPreviewMode]);
 
   useEffect(() => {
+    if (isLockPreviewMode) return;
     if (passwordLockEnabled) return;
     setAppLocked(false);
     setAppUnlockInput('');
     setAppUnlockError('');
     setAppUnlockUsePassword(false);
-  }, [passwordLockEnabled]);
+  }, [passwordLockEnabled, isLockPreviewMode]);
 
   useEffect(() => {
     trackPerformance('app.mount', appBootStartedAtRef.current, { platform: Platform.OS });
@@ -6035,7 +6388,6 @@ function AppInner() {
     if (!shouldLoadDiscoverData) return;
     let isMounted = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let interactionTask: { cancel?: () => void } | null = null;
 
     const refresh = async () => {
       try {
@@ -6051,13 +6403,10 @@ function AppInner() {
       }
     };
 
-    interactionTask = InteractionManager.runAfterInteractions(() => {
-      void refresh();
-    });
+    void refresh();
 
     return () => {
       isMounted = false;
-      interactionTask?.cancel?.();
       if (timer) clearTimeout(timer);
     };
   }, [shouldLoadDiscoverData]);
@@ -6066,7 +6415,53 @@ function AppInner() {
     if (!shouldLoadDiscoverData) return;
     let isMounted = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let interactionTask: { cancel?: () => void } | null = null;
+
+    const refresh = async () => {
+      try {
+        const [nextByCategory, nextRows] = await Promise.all([
+          fetchPopularDappsByCategory(10),
+          fetchPopularDappsRanking(50)
+        ]);
+        if (!isMounted) return;
+
+        if (nextByCategory) {
+          setPopularMarketDappsByCategory(nextByCategory);
+          const mergedFromBuckets = Array.from(
+            new Map(
+              popularDappFilterKeys
+                .flatMap((key) => nextByCategory[key] || [])
+                .map((row) => [String(row.url).trim().toLowerCase() || row.id, row] as const)
+            ).values()
+          ).slice(0, 50);
+          if (mergedFromBuckets.length) {
+            setPopularMarketDapps(mergedFromBuckets);
+          }
+        }
+
+        if (nextRows?.length) {
+          setPopularMarketDapps(nextRows);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        trackError('market.popular_dapps.refresh_failed', error, { platform: Platform.OS });
+      } finally {
+        if (!isMounted) return;
+        timer = setTimeout(refresh, MARKET_POPULAR_REFRESH_MS);
+      }
+    };
+
+    void refresh();
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [shouldLoadDiscoverData]);
+
+  useEffect(() => {
+    if (!shouldLoadDiscoverData) return;
+    let isMounted = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const refresh = async () => {
       if (!isMounted) return;
@@ -6078,11 +6473,26 @@ function AppInner() {
           setDiscoverFeed(payload);
           setDiscoverFeedError('');
         } else {
-          setDiscoverFeedError('empty');
+          setDiscoverFeed(null);
+          setDiscoverFeedError(
+            lang === 'ko'
+              ? '브리핑 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
+              : lang === 'zh'
+                ? '无法加载简报数据，请稍后重试。'
+                : 'Failed to load briefing data. Please try again shortly.'
+          );
+          trackError('discover.feed.empty_payload', new Error('discover feed payload empty'), { platform: Platform.OS });
         }
       } catch (error) {
         if (!isMounted) return;
-        setDiscoverFeedError(error instanceof Error ? error.message : 'discover feed unavailable');
+        setDiscoverFeed(null);
+        setDiscoverFeedError(
+          lang === 'ko'
+            ? '브리핑 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
+            : lang === 'zh'
+              ? '无法加载简报数据，请稍后重试。'
+              : 'Failed to load briefing data. Please try again shortly.'
+        );
         trackError('discover.feed.refresh_failed', error, { platform: Platform.OS });
       } finally {
         if (!isMounted) return;
@@ -6091,13 +6501,10 @@ function AppInner() {
       }
     };
 
-    interactionTask = InteractionManager.runAfterInteractions(() => {
-      refresh().catch(() => undefined);
-    });
+    refresh().catch(() => undefined);
 
     return () => {
       isMounted = false;
-      interactionTask?.cancel?.();
       if (timer) clearTimeout(timer);
     };
   }, [lang, shouldLoadDiscoverData]);
@@ -6300,21 +6707,23 @@ function AppInner() {
     const liveItems = discoverFeed?.items?.length ? discoverFeed.items : [];
     if (!liveItems.length) return fallbackDiscoverFeedItems;
 
-    const existingCategory = new Set<DiscoverCategoryId>();
+    const dedup = new Set<string>();
     liveItems.forEach((item) => {
-      existingCategory.add(item.category);
+      const key = resolveDiscoverExternalUrl(item).toLowerCase() || String(item.id || '').trim().toLowerCase();
+      if (!key) return;
+      dedup.add(key);
     });
 
-    const supplemented = [...liveItems];
-    fallbackDiscoverFeedItems.forEach((item) => {
-      if (!existingCategory.has(item.category)) {
-        supplemented.push({
-          ...item,
-          id: `supplement-${item.id}`
-        });
-      }
+    const fallbackRows = fallbackDiscoverFeedItems.filter((item) => item.section === 'dapps' || item.section === 'feature');
+    const appendRows = fallbackRows.filter((item) => {
+      const key = resolveDiscoverExternalUrl(item).toLowerCase() || String(item.id || '').trim().toLowerCase();
+      if (!key) return false;
+      if (dedup.has(key)) return false;
+      dedup.add(key);
+      return true;
     });
-    return supplemented;
+
+    return [...liveItems, ...appendRows];
   }, [discoverFeed, fallbackDiscoverFeedItems]);
   const sortDiscoverItems = (a: DiscoverFeedItem, b: DiscoverFeedItem) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -6382,8 +6791,7 @@ function AppInner() {
             sites: '사이트',
             latestUpdates: 'Latest',
             viewAll: '전체 보기',
-            open: '열기',
-            feedUnavailable: '피드 연결이 불안정해 저장된 콘텐츠를 보여줍니다.'
+            open: '열기'
           }
         : lang === 'zh'
           ? {
@@ -6401,8 +6809,7 @@ function AppInner() {
               sites: '站点',
               latestUpdates: 'Latest',
               viewAll: '查看全部',
-              open: '打开',
-              feedUnavailable: '实时源不稳定，当前展示已保存内容。'
+              open: '打开'
             }
           : {
               searchPlaceholder: 'Search token, site or URL',
@@ -6419,8 +6826,7 @@ function AppInner() {
               sites: 'Sites',
               latestUpdates: 'Latest',
               viewAll: 'View all',
-              open: 'Open',
-              feedUnavailable: 'Live feed is unstable, showing saved content.'
+              open: 'Open'
             },
     [lang]
   );
@@ -6428,7 +6834,111 @@ function AppInner() {
   const discoverVolShortLabel = lang === 'ko' ? '거래량' : lang === 'zh' ? '交易量' : 'vol';
 
   const discoverDappItems = useMemo(() => {
-    const normalizedQuery = discoverSearchInput.trim().toLowerCase();
+    const dedupKey = (item: DiscoverFeedItem) => String(item.ctaUrl || item.sourceUrl || item.id).trim().toLowerCase();
+
+    const buildLiveFeedRows = (rows: PopularDappItem[]) =>
+      rows.reduce<DiscoverFeedItem[]>((acc, row) => {
+        const url = String(row.url || '').trim();
+        if (!isHttpUrl(url)) return acc;
+        const summary = String(row.summary || '').trim();
+        const category = mapPopularDappCategoryToDiscoverCategory(String(row.category || ''), row.name, summary);
+        const filterCategory = mapPopularDappCategoryToDiscoverFilter(String(row.category || ''), row.name, summary);
+        const tags = Array.from(
+          new Set(
+            [
+              String(row.category || '').trim().toLowerCase(),
+              filterCategory,
+              ...(Array.isArray(row.chains) ? row.chains.map((chain) => String(chain || '').trim().toLowerCase()) : []),
+              'live-ranking'
+            ].filter(Boolean)
+          )
+        );
+
+        acc.push({
+          id: `live-dapp-${String(row.id || row.name).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-')}`,
+          kind: 'auto' as const,
+          category,
+          section: 'dapps' as const,
+          pinned: false,
+          priority: Math.max(1, 1000 - Math.max(1, Number(row.rank) || 1)),
+          title: row.name,
+          summary,
+          sourceName: String(row.category || '').trim() || 'DeFiLlama',
+          sourceUrl: url,
+          imageUrl: String(row.logoUrl || '').trim(),
+          ctaLabel: text.continue,
+          ctaUrl: url,
+          actionType: 'external' as const,
+          internalTarget: '',
+          tags,
+          publishedAt: new Date().toISOString()
+        } satisfies DiscoverFeedItem);
+        return acc;
+      }, []);
+
+    const topupToRequiredCount = (rows: DiscoverFeedItem[], filter: DiscoverDappFilterId) => {
+      const deduped: DiscoverFeedItem[] = [];
+      const seen = new Set<string>();
+
+      rows.forEach((item) => {
+        if (deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) return;
+        const key = dedupKey(item);
+        if (!key || seen.has(key)) return;
+        deduped.push(item);
+        seen.add(key);
+      });
+
+      if (filter === 'all' || deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) {
+        return deduped.slice(0, MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY);
+      }
+
+      const topupSeeds = discoverDappTopupSeedMap[filter] || [];
+      const topupCategory = mapTopupSeedFilterToFeedCategory(filter);
+      topupSeeds.forEach((seed, index) => {
+        if (deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) return;
+        const url = String(seed.url || '').trim();
+        if (!isHttpUrl(url)) return;
+        const key = url.toLowerCase();
+        if (seen.has(key)) return;
+        deduped.push({
+          id: `topup-${filter}-${seed.id}`,
+          kind: 'manual' as const,
+          category: topupCategory,
+          section: 'dapps' as const,
+          pinned: false,
+          priority: Math.max(1, 300 - index),
+          title: seed.title,
+          summary: seed.summary,
+          sourceName: seed.sourceName,
+          sourceUrl: url,
+          imageUrl: '',
+          ctaLabel: text.continue,
+          ctaUrl: url,
+          actionType: 'external' as const,
+          internalTarget: '',
+          tags: Array.from(new Set([...(seed.tags || []), filter, 'topup'])),
+          publishedAt: new Date(Date.now() - (index + 1) * 300_000).toISOString()
+        });
+        seen.add(key);
+      });
+
+      return deduped.slice(0, MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY);
+    };
+
+    if (popularMarketDappsByCategory) {
+      const bucketRows = popularMarketDappsByCategory[discoverCategory] || [];
+      const liveRows = buildLiveFeedRows(bucketRows);
+      return topupToRequiredCount(liveRows, discoverCategory);
+    }
+
+    if (popularMarketDapps?.length) {
+      const liveRows = buildLiveFeedRows(popularMarketDapps.slice(0, 50));
+      const filteredLiveRows = liveRows.filter((item) =>
+        discoverCategory === 'all' ? true : resolveDiscoverDappFilter(item) === discoverCategory
+      );
+      return topupToRequiredCount(filteredLiveRows, discoverCategory);
+    }
+
     const sourceCandidates = (discoverSectionItems.dapps.length
       ? discoverSectionItems.dapps
       : discoverFilteredItems.filter((item) => item.section === 'dapps'))
@@ -6436,81 +6946,18 @@ function AppInner() {
 
     const matchesFilter = (item: DiscoverFeedItem) =>
       discoverCategory === 'all' ? true : resolveDiscoverDappFilter(item) === discoverCategory;
-    const dedupKey = (item: DiscoverFeedItem) => String(item.ctaUrl || item.sourceUrl || item.id).trim().toLowerCase();
 
     const rows = sourceCandidates.filter(matchesFilter).sort(sortDiscoverItems);
-    const deduped: DiscoverFeedItem[] = [];
-    const seen = new Set<string>();
-    rows.forEach((item) => {
-      if (deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) return;
-      const key = dedupKey(item);
-      if (!key || seen.has(key)) return;
-      deduped.push(item);
-      seen.add(key);
-    });
-
-    if (normalizedQuery) return deduped.slice(0, MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY);
-
-    const topupSeeds =
-      discoverCategory === 'all'
-        ? ([
-            ...discoverDappTopupSeedMap.defi,
-            ...discoverDappTopupSeedMap.exchanges,
-            ...discoverDappTopupSeedMap.collectibles,
-            ...discoverDappTopupSeedMap.social,
-            ...discoverDappTopupSeedMap.games
-          ] as DiscoverDappTopupSeedItem[])
-        : discoverDappTopupSeedMap[discoverCategory];
-
-    topupSeeds.forEach((seed, index) => {
-      if (deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) return;
-      const key = seed.url.trim().toLowerCase();
-      if (!key || seen.has(key)) return;
-      const filterForSeed: Exclude<DiscoverDappFilterId, 'all'> =
-        discoverCategory === 'all'
-          ? index < discoverDappTopupSeedMap.defi.length
-            ? 'defi'
-            : index < discoverDappTopupSeedMap.defi.length + discoverDappTopupSeedMap.exchanges.length
-              ? 'exchanges'
-              : index <
-                    discoverDappTopupSeedMap.defi.length +
-                      discoverDappTopupSeedMap.exchanges.length +
-                      discoverDappTopupSeedMap.collectibles.length
-                ? 'collectibles'
-                : index <
-                      discoverDappTopupSeedMap.defi.length +
-                        discoverDappTopupSeedMap.exchanges.length +
-                        discoverDappTopupSeedMap.collectibles.length +
-                        discoverDappTopupSeedMap.social.length
-                  ? 'social'
-                  : 'games'
-          : discoverCategory;
-
-      deduped.push({
-        id: `seed-topup-${discoverCategory}-${seed.id}`,
-        kind: 'manual',
-        category: mapTopupSeedFilterToFeedCategory(filterForSeed),
-        section: 'dapps',
-        pinned: false,
-        priority: 10,
-        title: seed.title,
-        summary: seed.summary,
-        sourceName: seed.sourceName,
-        sourceUrl: seed.url,
-        imageUrl: '',
-        ctaLabel: text.continue,
-        ctaUrl: seed.url,
-        actionType: 'external',
-        internalTarget: '',
-        tags: seed.tags ?? [filterForSeed],
-        publishedAt: new Date(Date.now() - index * 3600_000).toISOString()
-      });
-      seen.add(key);
-    });
-
-    return deduped.slice(0, MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY);
-  }, [discoverCategory, discoverFilteredItems, discoverSectionItems, discoverSearchInput, sortDiscoverItems, text.continue]);
-  const discoverPinnedPrimary = discoverSectionItems.feature[0] ?? discoverHeroItems[0] ?? discoverFilteredItems[0] ?? null;
+    return topupToRequiredCount(rows, discoverCategory);
+  }, [
+    discoverCategory,
+    discoverFilteredItems,
+    discoverSectionItems,
+    popularMarketDapps,
+    popularMarketDappsByCategory,
+    sortDiscoverItems,
+    text.continue
+  ]);
   const discoverPopularTokenPool = useMemo(() => {
     type DiscoverPopularSourceRow = {
       id: string;
@@ -6529,7 +6976,11 @@ function AppInner() {
             id: row.id,
             symbol: row.symbol,
             name: row.name,
-            iconUrl: row.iconProxyUrl ?? row.iconUrl ?? discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
+            iconUrl:
+              discoverCachedTokenIconUrlBySymbol[row.symbol.toUpperCase()] ??
+              row.iconProxyUrl ??
+              row.iconUrl ??
+              discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
             priceUsd: row.priceUsd,
             change24h: row.change24h,
             marketCapUsd: row.marketCapUsd,
@@ -6537,7 +6988,7 @@ function AppInner() {
           }))
         : discoverTokens.slice(0, 50).map((row) => ({
             ...row,
-            iconUrl: discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
+            iconUrl: discoverCachedTokenIconUrlBySymbol[row.symbol.toUpperCase()] ?? discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
             volume24hUsd: row.marketCapUsd * 0.03
           }));
 
@@ -6554,8 +7005,9 @@ function AppInner() {
         };
       })
       .sort((a, b) => b.marketCapUsd - a.marketCapUsd);
-  }, [discoverTokenIconUrlBySymbol, marketPrices, popularMarketTokens]);
+  }, [discoverCachedTokenIconUrlBySymbol, discoverTokenIconUrlBySymbol, marketPrices, popularMarketTokens]);
   const discoverPopularTokenFilteredRows = useMemo(() => {
+    const POPULAR_MIN_ROWS = 10;
     const normalizedQuery = currentScreen === 'discover' ? discoverSearchInput.trim().toLowerCase() : '';
     const liveFilteredRows = discoverPopularTokenPool.filter((row) => {
       const tokenCategory = resolveDiscoverTokenCategory(row.symbol, row.name);
@@ -6565,7 +7017,7 @@ function AppInner() {
       const haystack = [row.name, row.symbol].join(' ').toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-    if (discoverTokenCategory === 'all' || normalizedQuery) {
+    if (normalizedQuery) {
       return liveFilteredRows;
     }
 
@@ -6575,8 +7027,10 @@ function AppInner() {
     });
 
     const fallbackBySymbol = new Map(discoverTokens.map((row) => [row.symbol.toUpperCase(), row]));
-    discoverTokenTopupSeedMap[discoverTokenCategory].forEach((seed) => {
-      if (mergedBySymbol.size >= 10) return;
+    const topupSeeds = discoverTokenCategory === 'all' ? discoverTokenTopupAllSeeds : discoverTokenTopupSeedMap[discoverTokenCategory];
+
+    topupSeeds.forEach((seed) => {
+      if (mergedBySymbol.size >= POPULAR_MIN_ROWS) return;
       const symbol = seed.symbol.toUpperCase();
       if (mergedBySymbol.has(symbol)) return;
       const fallbackToken = fallbackBySymbol.get(symbol);
@@ -6586,7 +7040,7 @@ function AppInner() {
         id: `seed-popular-${discoverTokenCategory}-${symbol.toLowerCase()}`,
         symbol,
         name: fallbackToken?.name ?? seed.name,
-        iconUrl: discoverTokenIconUrlBySymbol[symbol],
+          iconUrl: discoverCachedTokenIconUrlBySymbol[symbol] ?? discoverTokenIconUrlBySymbol[symbol],
         priceUsd: pricePoint?.priceUsd ?? fallbackToken?.priceUsd ?? 0,
         change24h: pricePoint?.change24h ?? fallbackToken?.change24h ?? 0,
         marketCapUsd,
@@ -6595,7 +7049,15 @@ function AppInner() {
     });
 
     return Array.from(mergedBySymbol.values()).sort((a, b) => b.marketCapUsd - a.marketCapUsd);
-  }, [currentScreen, discoverPopularTokenPool, discoverSearchInput, discoverTokenCategory, discoverTokenIconUrlBySymbol, marketPrices]);
+  }, [
+    currentScreen,
+    discoverCachedTokenIconUrlBySymbol,
+    discoverPopularTokenPool,
+    discoverSearchInput,
+    discoverTokenCategory,
+    discoverTokenIconUrlBySymbol,
+    marketPrices
+  ]);
   const discoverPopularTokenRows = useMemo(() => discoverPopularTokenFilteredRows.slice(0, 3), [discoverPopularTokenFilteredRows]);
   const discoverPopularTopRows = useMemo(() => discoverPopularTokenFilteredRows.slice(0, 10), [discoverPopularTokenFilteredRows]);
   const weeklyBriefingPosts = useMemo<WeeklyBriefingPost[]>(
@@ -6606,11 +7068,44 @@ function AppInner() {
           publishedAt: item.publishedAt,
           title: item.title[lang],
           summary: item.summary[lang],
+          sources: (item.sources ?? []).map((source) => ({
+            label: source.label[lang],
+            url: source.url
+          })),
           points: item.points[lang]
         }))
         .sort((a, b) => parseLocalDate(b.publishedAt).getTime() - parseLocalDate(a.publishedAt).getTime()),
     [lang]
   );
+
+  const discoverPinnedPrimary = useMemo<DiscoverFeedItem | null>(() => {
+    const liveItems = discoverFeed?.items?.length ? discoverFeed.items : [];
+    const briefingFirst = liveItems.find((item) => isWeeklyBriefingItem(item));
+    if (briefingFirst) return briefingFirst;
+
+    const latestWeeklyPost = weeklyBriefingPosts[0];
+    if (!latestWeeklyPost) return null;
+
+    return {
+      id: 'imwallet-weekly-briefing',
+      kind: 'manual',
+      category: 'featured',
+      section: 'feature',
+      pinned: true,
+      priority: 1000,
+      title: lang === 'ko' ? 'IMWallet 주간 브리핑' : lang === 'zh' ? 'IMWallet 每周简报' : 'IMWallet Weekly Briefing',
+      summary: latestWeeklyPost.summary,
+      sourceName: 'IMWallet Research',
+      sourceUrl: '',
+      imageUrl: '',
+      ctaLabel: lang === 'ko' ? '브리핑 열기' : lang === 'zh' ? '打开简报' : 'Open Briefing',
+      ctaUrl: '',
+      actionType: 'internal',
+      internalTarget: 'discover:briefing',
+      tags: ['imwallet', 'weekly', 'briefing'],
+      publishedAt: latestWeeklyPost.publishedAt
+    };
+  }, [discoverFeed, lang, weeklyBriefingPosts]);
 
   const weeklyBriefingWeekGroups = useMemo<WeeklyBriefingWeekGroup[]>(() => {
     const grouped = new Map<string, WeeklyBriefingPost[]>();
@@ -6659,12 +7154,14 @@ function AppInner() {
     const dappFavoriteRowsByFeedId = discoverFavoriteDappIds.reduce<DiscoverWatchItem[]>((acc, itemId, index) => {
         const sourceItem = discoverItemsSource.find((item) => item.id === itemId);
         if (!sourceItem) return acc;
+        const dappCacheKey = getDiscoverDappIconCacheKey(sourceItem);
+        const preferredIconUrl = discoverCachedDappIconUrlByKey[dappCacheKey];
         const fixedSource = resolveDiscoverDappIconSource(sourceItem);
         const fixedUri =
           fixedSource && typeof fixedSource === 'object' && 'uri' in fixedSource ? String(fixedSource.uri || '').trim() : '';
         const dappIconResolved = fixedSource && !(fixedUri && isUriRecentlyBroken(fixedUri))
           ? { source: fixedSource, activeUri: fixedUri }
-          : resolveIconFromUriCandidates(buildDiscoverDappIconCandidates(sourceItem));
+          : resolveIconFromUriCandidates(buildDiscoverDappIconCandidates(sourceItem, preferredIconUrl));
         const iconSource = dappIconResolved.source;
         const iconUri = dappIconResolved.activeUri;
         const normalizedUrl = String(sourceItem.ctaUrl || sourceItem.sourceUrl || '').trim();
@@ -6703,12 +7200,19 @@ function AppInner() {
           return itemUrl && itemUrl === tab.url;
         });
       const iconItem = sourceItem ?? { title: tab.title, imageUrl: '', sourceUrl: tab.url };
+      const dappCacheKey = getDiscoverDappIconCacheKey({
+        id: sourceItem?.id || tab.id,
+        title: iconItem.title,
+        sourceUrl: sourceItem?.sourceUrl || tab.url,
+        ctaUrl: sourceItem?.ctaUrl
+      });
+      const preferredIconUrl = discoverCachedDappIconUrlByKey[dappCacheKey];
       const fixedSource = resolveDiscoverDappIconSource(iconItem);
       const fixedUri =
         fixedSource && typeof fixedSource === 'object' && 'uri' in fixedSource ? String(fixedSource.uri || '').trim() : '';
       const dappIconResolved = fixedSource && !(fixedUri && isUriRecentlyBroken(fixedUri))
         ? { source: fixedSource, activeUri: fixedUri }
-        : resolveIconFromUriCandidates(buildDiscoverDappIconCandidates(iconItem));
+        : resolveIconFromUriCandidates(buildDiscoverDappIconCandidates(iconItem, preferredIconUrl));
       const iconSource = dappIconResolved.source;
       const iconUri = dappIconResolved.activeUri;
       const domain = getDomainFromUrl(tab.url) || tab.url.replace(/^https?:\/\//i, '').split('/')[0];
@@ -6766,7 +7270,9 @@ function AppInner() {
     const siteFavoritesRows = discoverFavoriteSiteIds.reduce<DiscoverWatchItem[]>((acc, siteId) => {
         const site = discoverSiteSeed.find((entry) => entry.id === siteId);
         if (!site) return acc;
-        const iconCandidates = buildDiscoverSiteIconCandidates(site.domain);
+        const siteCacheKey = getDiscoverSiteIconCacheKey(site);
+        const preferredIconUrl = discoverCachedSiteIconUrlByKey[siteCacheKey];
+        const iconCandidates = buildDiscoverSiteIconCandidates(site.domain, preferredIconUrl);
         const iconUri = iconCandidates.find((uri) => !isUriRecentlyBroken(uri)) ?? '';
         const iconSource = iconUri ? ({ uri: iconUri } as ImageSourcePropType) : undefined;
         acc.push({
@@ -6803,6 +7309,8 @@ function AppInner() {
     discoverFavoriteSiteIds,
     discoverFavoriteTabs,
     discoverFavoriteTokenSymbols,
+    discoverCachedDappIconUrlByKey,
+    discoverCachedSiteIconUrlByKey,
     discoverItemsSource,
     discoverPopularTokenPool,
     discoverBrokenIconUris,
@@ -6835,6 +7343,219 @@ function AppInner() {
   const discoverSitePreviewRows = useMemo(() => discoverSiteRows.slice(0, 3), [discoverSiteRows]);
   const discoverSiteTopRows = useMemo(() => discoverSiteRows.slice(0, 10), [discoverSiteRows]);
   const discoverLatestPreviewItems = useMemo(() => discoverLatestItems.slice(0, 3), [discoverLatestItems]);
+
+  const discoverIconCacheSyncPayload = useMemo<DiscoverIconCacheSyncPayload>(() => {
+    const tokenRowsSource = (popularMarketTokens?.length ? popularMarketTokens.slice(0, 50) : discoverPopularTokenPool.slice(0, 50)) as Array<{
+      id?: string;
+      symbol: string;
+      iconId?: number;
+      iconUrl?: string;
+      iconProxyUrl?: string;
+    }>;
+
+    const tokens = tokenRowsSource
+      .map((row) => {
+        const symbol = String(row.symbol || '')
+          .trim()
+          .toUpperCase();
+        if (!symbol) return null;
+        const iconIdRaw = Number.isFinite(Number(row.iconId)) ? Number(row.iconId) : Number(row.id);
+        const iconId = Number.isFinite(iconIdRaw) && iconIdRaw > 0 ? Math.floor(iconIdRaw) : undefined;
+        const iconUrl = String(row.iconUrl || '').trim() || undefined;
+        const iconProxyUrl = String(row.iconProxyUrl || '').trim() || undefined;
+        const preferredIconUrl = discoverCachedTokenIconUrlBySymbol[symbol];
+        const candidates = buildDiscoverPopularIconCandidates(symbol, iconUrl, preferredIconUrl).slice(0, 6);
+        return {
+          symbol,
+          iconId,
+          iconUrl,
+          iconProxyUrl,
+          candidates
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      .slice(0, 50);
+
+    const liveDappItems = discoverItemsSource
+      .filter((item) => item.section === 'dapps' || item.section === 'feature')
+      .filter((item) => !isWeeklyBriefingItem(item))
+      .filter((item) => Boolean(resolveDiscoverExternalUrl(item)));
+    const fallbackDappItems = fallbackDiscoverFeedItems
+      .filter((item) => item.section === 'dapps' || item.section === 'feature')
+      .filter((item) => !isWeeklyBriefingItem(item))
+      .filter((item) => Boolean(resolveDiscoverExternalUrl(item)));
+    const dappItemsSource = [...liveDappItems, ...fallbackDappItems];
+    const dappByKey = new Map<
+      string,
+      {
+        key: string;
+        title: string;
+        url: string;
+        imageUrl: string;
+        candidates: string[];
+      }
+    >();
+
+    (popularMarketDapps ?? []).slice(0, 50).forEach((row) => {
+      if (dappByKey.size >= 50) return;
+      const url = String(row.url || '').trim();
+      if (!isHttpUrl(url)) return;
+      const key = toDiscoverIconCacheKey(getDiscoverIconHostFromUrl(url) || row.id || row.name);
+      if (!key || dappByKey.has(key)) return;
+      const preferredIconUrl = discoverCachedDappIconUrlByKey[key];
+      dappByKey.set(key, {
+        key,
+        title: row.name,
+        url,
+        imageUrl: String(row.logoUrl || '').trim(),
+        candidates: buildDiscoverDappIconCandidates(
+          {
+            title: row.name,
+            imageUrl: String(row.logoUrl || '').trim(),
+            sourceUrl: url,
+            ctaUrl: url
+          },
+          preferredIconUrl
+        ).slice(0, 6)
+      });
+    });
+
+    dappItemsSource.forEach((item) => {
+      if (dappByKey.size >= 50) return;
+      const url = resolveDiscoverExternalUrl(item);
+      if (!url) return;
+      const key = getDiscoverDappIconCacheKey(item);
+      if (!key || dappByKey.has(key)) return;
+      const preferredIconUrl = discoverCachedDappIconUrlByKey[key];
+      dappByKey.set(key, {
+        key,
+        title: item.title,
+        url,
+        imageUrl: item.imageUrl,
+        candidates: buildDiscoverDappIconCandidates(item, preferredIconUrl).slice(0, 6)
+      });
+    });
+    const dapps = Array.from(dappByKey.values()).slice(0, 50);
+
+    const siteByKey = new Map<
+      string,
+      {
+        key: string;
+        domain: string;
+        url: string;
+        candidates: string[];
+      }
+    >();
+    discoverSiteSeed.forEach((site) => {
+      if (siteByKey.size >= 50) return;
+      const key = getDiscoverSiteIconCacheKey(site);
+      if (!key || siteByKey.has(key)) return;
+      const preferredIconUrl = discoverCachedSiteIconUrlByKey[key];
+      siteByKey.set(key, {
+        key,
+        domain: site.domain,
+        url: site.url,
+        candidates: buildDiscoverSiteIconCandidates(site.domain, preferredIconUrl).slice(0, 6)
+      });
+    });
+    const siteFeedItems = [...discoverItemsSource, ...fallbackDiscoverFeedItems]
+      .filter((item) => item.section === 'sites')
+      .filter((item) => !isWeeklyBriefingItem(item));
+    siteFeedItems.forEach((item) => {
+      if (siteByKey.size >= 50) return;
+      const url = resolveDiscoverExternalUrl(item);
+      const domain = getDiscoverIconHostFromUrl(url);
+      if (!domain) return;
+      const key = toDiscoverIconCacheKey(domain);
+      if (!key || siteByKey.has(key)) return;
+      const preferredIconUrl = discoverCachedSiteIconUrlByKey[key];
+      siteByKey.set(key, {
+        key,
+        domain,
+        url,
+        candidates: buildDiscoverSiteIconCandidates(domain, preferredIconUrl).slice(0, 6)
+      });
+    });
+    const sites = Array.from(siteByKey.values()).slice(0, 50);
+
+    return { tokens, dapps, sites };
+  }, [
+    discoverCachedDappIconUrlByKey,
+    discoverCachedSiteIconUrlByKey,
+    discoverCachedTokenIconUrlBySymbol,
+    discoverItemsSource,
+    popularMarketDapps,
+    discoverPopularTokenPool,
+    fallbackDiscoverFeedItems,
+    popularMarketTokens
+  ]);
+
+  useEffect(() => {
+    if (!shouldLoadDiscoverData) return;
+    const payload = discoverIconCacheSyncPayload;
+    const requestedCount =
+      (payload.tokens?.length ?? 0) +
+      (payload.dapps?.length ?? 0) +
+      (payload.sites?.length ?? 0);
+    if (requestedCount <= 0) return;
+
+    const signature = JSON.stringify(payload);
+    if (!signature || discoverIconCacheSyncSignatureRef.current === signature) return;
+    discoverIconCacheSyncSignatureRef.current = signature;
+
+    let cancelled = false;
+    const syncCachedIcons = async () => {
+      try {
+        const snapshot = await syncDiscoverIconCacheRemote(payload, { limit: 50 });
+        if (cancelled || !snapshot) return;
+
+        const tokenNext: Record<string, string> = {};
+        Object.entries(snapshot.tokens || {}).forEach(([symbolRaw, urlRaw]) => {
+          const symbol = String(symbolRaw || '')
+            .trim()
+            .toUpperCase();
+          const url = String(urlRaw || '').trim();
+          if (!symbol || !isHttpUrl(url)) return;
+          tokenNext[symbol] = url;
+        });
+        if (Object.keys(tokenNext).length) {
+          setDiscoverCachedTokenIconUrlBySymbol((prev) => ({ ...prev, ...tokenNext }));
+        }
+
+        const dappNext: Record<string, string> = {};
+        Object.entries(snapshot.dapps || {}).forEach(([keyRaw, urlRaw]) => {
+          const key = toDiscoverIconCacheKey(keyRaw);
+          const url = String(urlRaw || '').trim();
+          if (!key || !isHttpUrl(url)) return;
+          dappNext[key] = url;
+        });
+        if (Object.keys(dappNext).length) {
+          setDiscoverCachedDappIconUrlByKey((prev) => ({ ...prev, ...dappNext }));
+        }
+
+        const siteNext: Record<string, string> = {};
+        Object.entries(snapshot.sites || {}).forEach(([keyRaw, urlRaw]) => {
+          const key = toDiscoverIconCacheKey(keyRaw);
+          const url = String(urlRaw || '').trim();
+          if (!key || !isHttpUrl(url)) return;
+          siteNext[key] = url;
+        });
+        if (Object.keys(siteNext).length) {
+          setDiscoverCachedSiteIconUrlByKey((prev) => ({ ...prev, ...siteNext }));
+        }
+      } catch (error) {
+        if (cancelled) return;
+        discoverIconCacheSyncSignatureRef.current = '';
+        trackError('discover.icon_cache.sync_failed', error, { platform: Platform.OS });
+      }
+    };
+
+    void syncCachedIcons();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [discoverIconCacheSyncPayload, shouldLoadDiscoverData]);
 
   const discoverQuickChips = useMemo(
     () => [
@@ -7278,6 +7999,96 @@ function AppInner() {
     sendAssetFilterTokenId === 'ALL' ? null : sendAssetOptions.find((token) => token.id === sendAssetFilterTokenId) ?? null;
   const selectedReceiveToken =
     receiveAssetFilterTokenId === 'ALL' ? null : receiveAssetOptions.find((token) => token.id === receiveAssetFilterTokenId) ?? null;
+  const liveNetworkFeeTargets = useMemo(() => {
+    const targetSet = new Set<ChainCode>();
+    if (selectedSendToken?.chainCode) targetSet.add(selectedSendToken.chainCode);
+    if (selectedNftForSend) targetSet.add(getCollectibleChainCode(selectedNftForSend));
+    return chainOrder.filter((chain) => targetSet.has(chain));
+  }, [selectedSendToken?.chainCode, selectedNftForSend]);
+  const liveNetworkFeeTargetKey = liveNetworkFeeTargets.join(',');
+  const liveNetworkFeeRequests = useMemo(() => {
+    const requestMap: Partial<Record<ChainCode, LiveNetworkFeeRequest>> = {};
+
+    if (selectedSendToken?.chainCode === 'FIL') {
+      const toAddress = recipientInput.trim();
+      if (toAddress) {
+        requestMap.FIL = {
+          fromAddress: selectedSendToken.walletAddress,
+          toAddress,
+          amountNative: parseAmountInput(amountInput)
+        };
+      }
+    }
+
+    if (selectedNftForSend && getCollectibleChainCode(selectedNftForSend) === 'FIL') {
+      const toAddress = nftSendRecipientInput.trim();
+      if (toAddress) {
+        requestMap.FIL = {
+          fromAddress: activeWalletChainAddresses.FIL,
+          toAddress,
+          amountNative: 0
+        };
+      }
+    }
+
+    return requestMap;
+  }, [
+    selectedSendToken?.chainCode,
+    selectedSendToken?.walletAddress,
+    recipientInput,
+    amountInput,
+    selectedNftForSend,
+    nftSendRecipientInput,
+    activeWalletChainAddresses.FIL
+  ]);
+  const liveNetworkFeeRequestKey = useMemo(() => JSON.stringify(liveNetworkFeeRequests), [liveNetworkFeeRequests]);
+
+  useEffect(() => {
+    if (!liveNetworkFeeTargets.length) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const controller = new AbortController();
+
+    const refresh = async () => {
+      try {
+        const snapshots = await Promise.all(
+          liveNetworkFeeTargets.map(async (chain) => {
+            const snapshot = await fetchLiveNetworkFee(chain, controller.signal, liveNetworkFeeRequests[chain]);
+            return [chain, snapshot] as const;
+          })
+        );
+        if (cancelled) return;
+        setLiveNetworkFeeMap((prev) => {
+          const next = { ...prev };
+          snapshots.forEach(([chain, snapshot]) => {
+            next[chain] = snapshot;
+          });
+          return next;
+        });
+      } catch (error) {
+        if (cancelled) return;
+        trackError('send.network_fee.refresh_failed', error, {
+          chains: liveNetworkFeeTargets.join(','),
+          requestKey: liveNetworkFeeRequestKey,
+          platform: Platform.OS
+        });
+      } finally {
+        if (cancelled) return;
+        timer = setTimeout(() => {
+          void refresh();
+        }, LIVE_NETWORK_FEE_REFRESH_MS);
+      }
+    };
+
+    void refresh();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      controller.abort();
+    };
+  }, [liveNetworkFeeTargetKey, liveNetworkFeeRequestKey]);
+
   const isSendSelectionComplete = sendChainFilter !== 'ALL' && Boolean(selectedSendToken);
   const isReceiveSelectionComplete = receiveChainFilter !== 'ALL' && Boolean(selectedReceiveToken);
   const sendToken =
@@ -7383,7 +8194,61 @@ function AppInner() {
     return filteredAddressBookEntries.slice(startIndex, startIndex + 5);
   }, [filteredAddressBookEntries, addressBookCurrentPage]);
   const recentSendTargets = useMemo(() => {
-    if (!isSendSelectionComplete || !selectedSendToken) return [];
+    const limit = 5;
+
+    if (!isSendSelectionComplete || !selectedSendToken) {
+      if (sendChainFilter !== 'ALL') {
+        const list: RecentSendItem[] = [];
+        const seen = new Set<string>();
+
+        for (const tx of txs) {
+          if (tx.type !== 'send') continue;
+          if (tx.tokenSymbol.toUpperCase() === 'NFT') continue;
+          const txChain = inferChainFromTx(tx);
+          if (txChain !== sendChainFilter) continue;
+
+          const key = `${txChain}:${normalizeAddress(txChain, tx.counterparty)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          list.push({
+            address: tx.counterparty,
+            chain: txChain,
+            amount: tx.amount,
+            symbol: tx.tokenSymbol,
+            date: tx.createdAt,
+            label: findAddressBookLabel(txChain, tx.counterparty),
+            memo: tx.memo?.trim() || undefined
+          });
+          if (list.length >= limit) break;
+        }
+
+        return list;
+      }
+
+      const list: RecentSendItem[] = [];
+      const seen = new Set<string>();
+      for (const tx of txs) {
+        if (tx.type !== 'send') continue;
+        if (tx.tokenSymbol.toUpperCase() === 'NFT') continue;
+        const txChain = inferChainFromTx(tx);
+        const key = `${txChain}:${normalizeAddress(txChain, tx.counterparty)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        list.push({
+          address: tx.counterparty,
+          chain: txChain,
+          amount: tx.amount,
+          symbol: tx.tokenSymbol,
+          date: tx.createdAt,
+          label: findAddressBookLabel(txChain, tx.counterparty),
+          memo: tx.memo?.trim() || undefined
+        });
+        if (list.length >= limit) break;
+      }
+      return list;
+    }
+
     const list: RecentSendItem[] = [];
     const seen = new Set<string>();
     for (const tx of txs) {
@@ -7395,29 +8260,18 @@ function AppInner() {
       seen.add(key);
       list.push({
         address: tx.counterparty,
+        chain: selectedSendToken.chainCode,
         amount: tx.amount,
         symbol: tx.tokenSymbol,
         date: tx.createdAt,
         label: findAddressBookLabel(selectedSendToken.chainCode, tx.counterparty),
         memo: tx.memo?.trim() || undefined
       });
-      if (list.length >= 5) break;
-    }
-
-    for (const item of demoRecentSendTargetsByToken[selectedSendToken.id] ?? []) {
-      if (list.length >= 5) break;
-      const key = normalizeAddress(selectedSendToken.chainCode, item.address);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      list.push({
-        ...item,
-        label: findAddressBookLabel(selectedSendToken.chainCode, item.address),
-        memo: item.memo?.trim() || undefined
-      });
+      if (list.length >= limit) break;
     }
 
     return list;
-  }, [txs, isSendSelectionComplete, selectedSendToken, addressBookLabelMap]);
+  }, [txs, isSendSelectionComplete, selectedSendToken, sendChainFilter, addressBookLabelMap]);
 
   const latestRecentSend = recentSendTargets[0] ?? null;
   function getCollectibleChainCode(item: CollectibleItem): ChainCode {
@@ -7430,6 +8284,7 @@ function AppInner() {
     lang === 'ko' ? '최근 NFT 전송 내역이 없습니다.' : lang === 'zh' ? '暂无最近 NFT 转账记录。' : 'No recent NFT transfer history.';
 
   const recentNftSendTargets = useMemo(() => {
+    const limit = 5;
     if (!selectedNftForSend) return [];
     const selectedChain = getCollectibleChainCode(selectedNftForSend);
     const selectedTokenId = selectedNftForSend.tokenId;
@@ -7456,30 +8311,10 @@ function AppInner() {
         memo: memoTail || undefined,
         chain: selectedChain
       });
-      if (list.length >= 5) break;
+      if (list.length >= limit) break;
     }
 
-    if (list.length < 5) {
-      const used = new Set(list.map((item) => normalizeAddress(selectedChain, item.address)));
-      const fallbackRows = chainDemoAddressPool[selectedChain].slice(0, 10);
-      for (let index = 0; index < fallbackRows.length && list.length < 5; index += 1) {
-        const address = fallbackRows[index];
-        const key = normalizeAddress(selectedChain, address);
-        if (used.has(key)) continue;
-        used.add(key);
-        list.push({
-          address,
-          date: demoRecentDates[index] ?? nowStamp(),
-          nftTitle: selectedNftForSend.name,
-          tokenId: selectedNftForSend.tokenId,
-          label: findNftAddressBookLabel(selectedChain, address),
-          memo: index % 2 === 0 ? `${selectedNftForSend.collection} transfer ${index + 1}` : undefined,
-          chain: selectedChain
-        });
-      }
-    }
-
-    return list.slice(0, 5);
+    return list.slice(0, limit);
   }, [txs, selectedNftForSend, nftAddressBookLabelMap]);
 
   const latestRecentNftSend = recentNftSendTargets[0] ?? null;
@@ -7755,6 +8590,7 @@ function AppInner() {
   };
 
   const openHistoryDateRangeModal = () => {
+    measureHistoryRangeTriggerAnchor();
     setHistoryRangeDraftStart(historyRangeStart);
     setHistoryRangeDraftEnd(historyRangeEnd);
     setHistoryRangePresetDraft(null);
@@ -8022,6 +8858,10 @@ function AppInner() {
     setToastMessage(bannerMessage);
     toastTranslateY.setValue(-22);
     toastOpacity.setValue(0);
+    const toastQuadEasingBase =
+      typeof (Easing as unknown as { quad?: unknown }).quad === 'function'
+        ? (Easing as unknown as { quad: (value: number) => number }).quad
+        : Easing.cubic;
 
     Animated.parallel([
       Animated.timing(toastTranslateY, {
@@ -8033,7 +8873,7 @@ function AppInner() {
       Animated.timing(toastOpacity, {
         toValue: 1,
         duration: 180,
-        easing: Easing.out(Easing.quad),
+        easing: Easing.out(toastQuadEasingBase),
         useNativeDriver: true
       })
     ]).start();
@@ -8049,7 +8889,7 @@ function AppInner() {
         Animated.timing(toastOpacity, {
           toValue: 0,
           duration: 180,
-          easing: Easing.in(Easing.quad),
+          easing: Easing.in(toastQuadEasingBase),
           useNativeDriver: true
         })
       ]).start(() => {
@@ -8073,6 +8913,27 @@ function AppInner() {
     },
     [supportReplyTimerRef]
   );
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onKeyboardShow = (event: KeyboardEvent) => {
+      setIsKeyboardVisible(true);
+      const nextHeight = Math.max(0, Math.round(event?.endCoordinates?.height ?? 0));
+      setKeyboardHeight(nextHeight);
+    };
+    const onKeyboardHide = () => {
+      setIsKeyboardVisible(false);
+      setKeyboardHeight(0);
+    };
+    const showSub = Keyboard.addListener(showEvent, onKeyboardShow);
+    const hideSub = Keyboard.addListener(hideEvent, onKeyboardHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const isBottomSheetVisible =
     Boolean(discoverSecurityPrompt) ||
@@ -8113,6 +8974,51 @@ function AppInner() {
   }, [showWalletMenu, walletMenuAnim]);
 
   useEffect(() => {
+    if (!showWalletMenu) return;
+    measureWalletMenuAnchor();
+  }, [showWalletMenu, measureWalletMenuAnchor]);
+
+  useEffect(() => {
+    if (!showHomeAssetLayoutModal) return;
+    measureHomeLayoutTriggerAnchor();
+  }, [showHomeAssetLayoutModal, measureHomeLayoutTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showScanMethodModal && scanEntryPoint === 'home')) return;
+    measureHomeScanTriggerAnchor();
+  }, [showScanMethodModal, scanEntryPoint, measureHomeScanTriggerAnchor]);
+
+  useEffect(() => {
+    if (!showHistoryDateRangeModal) return;
+    measureHistoryRangeTriggerAnchor();
+  }, [showHistoryDateRangeModal, measureHistoryRangeTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showLangMenu && currentScreen === 'settings')) return;
+    measureSettingsLangTriggerAnchor();
+  }, [showLangMenu, currentScreen, measureSettingsLangTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showAutoLockMenu && currentScreen === 'settingsSecurity')) return;
+    measureSecurityAutoLockTriggerAnchor();
+  }, [showAutoLockMenu, currentScreen, measureSecurityAutoLockTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showLockMethodMenu && currentScreen === 'settingsSecurity')) return;
+    measureSecurityLockMethodTriggerAnchor();
+  }, [showLockMethodMenu, currentScreen, measureSecurityLockMethodTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showBiometricTypeMenu && currentScreen === 'settingsSecurity')) return;
+    measureSecurityBiometricTypeTriggerAnchor();
+  }, [showBiometricTypeMenu, currentScreen, measureSecurityBiometricTypeTriggerAnchor]);
+
+  useEffect(() => {
+    if (!(showDiscoverBriefingWeekMenu && currentScreen === 'discoverBriefingBoard')) return;
+    measureDiscoverBriefingWeekTriggerAnchor();
+  }, [showDiscoverBriefingWeekMenu, currentScreen, measureDiscoverBriefingWeekTriggerAnchor]);
+
+  useEffect(() => {
     if (!showRecentSendDropdown) {
       recentSendDropdownAnim.setValue(0);
       return;
@@ -8120,7 +9026,7 @@ function AppInner() {
     recentSendDropdownAnim.setValue(0);
     Animated.timing(recentSendDropdownAnim, {
       toValue: 1,
-      duration: 220,
+      duration: 240,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true
     }).start();
@@ -8134,7 +9040,7 @@ function AppInner() {
     nftRecentSendDropdownAnim.setValue(0);
     Animated.timing(nftRecentSendDropdownAnim, {
       toValue: 1,
-      duration: 220,
+      duration: 240,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true
     }).start();
@@ -8288,13 +9194,13 @@ function AppInner() {
         {
           translateY: recentSendDropdownAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [-8, 0]
+            outputRange: [36, 0]
           })
         },
         {
-          scaleY: recentSendDropdownAnim.interpolate({
+          scale: recentSendDropdownAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.94, 1]
+            outputRange: [0.985, 1]
           })
         }
       ]
@@ -8312,13 +9218,13 @@ function AppInner() {
         {
           translateY: nftRecentSendDropdownAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [-8, 0]
+            outputRange: [36, 0]
           })
         },
         {
-          scaleY: nftRecentSendDropdownAnim.interpolate({
+          scale: nftRecentSendDropdownAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0.94, 1]
+            outputRange: [0.985, 1]
           })
         }
       ]
@@ -8333,7 +9239,6 @@ function AppInner() {
         outputRange: [0, 1]
       }),
       transform: [
-        { translateX: -84 },
         {
           translateY: discoverBriefingWeekMenuAnim.interpolate({
             inputRange: [0, 1],
@@ -8491,7 +9396,7 @@ function AppInner() {
       let changed = false;
       const next: Record<string, string[]> = {};
 
-      walletAccounts.forEach((wallet, index) => {
+      walletAccounts.forEach((wallet) => {
         const existing = prev[wallet.id];
         if (Array.isArray(existing)) {
           const normalized = normalizeSeedWords(existing.map((word) => String(word ?? '')));
@@ -8500,8 +9405,7 @@ function AppInner() {
             return;
           }
         }
-        changed = true;
-        next[wallet.id] = getDefaultSeedWordsForWalletIndex(index);
+        if (prev[wallet.id]) changed = true;
       });
 
       if (Object.keys(prev).some((walletKey) => !next[walletKey])) changed = true;
@@ -8604,6 +9508,138 @@ function AppInner() {
       return changed ? next : prev;
     });
   }, [activeWalletChainAddresses]);
+
+  useEffect(() => {
+    if (!walletStoreHydrated || !walletAccounts.length) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const refresh = async () => {
+      try {
+        const snapshot = await fetchOnchainBalances(activeWalletChainAddresses);
+        if (cancelled) return;
+
+        setTokens((prev) => {
+          let changed = false;
+          const next = prev.map((token) => {
+            let nextBalance = token.balance;
+
+            if (token.assetKey === 'USDT') {
+              if (token.chainCode === 'ETH') nextBalance = snapshot.usdtByChain.ETH ?? 0;
+              if (token.chainCode === 'BSC') nextBalance = snapshot.usdtByChain.BSC ?? 0;
+              if (token.chainCode === 'TRX') nextBalance = snapshot.usdtByChain.TRX ?? 0;
+            } else {
+              nextBalance = snapshot.nativeByChain[token.chainCode] ?? 0;
+            }
+
+            if (!Number.isFinite(nextBalance)) nextBalance = 0;
+            if (Math.abs(nextBalance - token.balance) < 0.0000000001) return token;
+            changed = true;
+            return {
+              ...token,
+              balance: nextBalance
+            };
+          });
+          return changed ? next : prev;
+        });
+      } catch (error) {
+        if (!cancelled) {
+          trackError('wallet.onchain_balance.refresh_failed', error, {
+            walletId,
+            platform: Platform.OS
+          });
+        }
+      } finally {
+        if (cancelled) return;
+        timer = setTimeout(() => {
+          void refresh();
+        }, ONCHAIN_BALANCE_REFRESH_MS);
+      }
+    };
+
+    void refresh();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [walletStoreHydrated, walletAccounts.length, activeWalletChainAddresses, walletId]);
+
+  useEffect(() => {
+    if (!walletStoreHydrated || !walletAccounts.length) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const refresh = async () => {
+      try {
+        const targets = initialCollectibles.flatMap((item) => {
+          const chain = normalizeChainCode(item.network);
+          if (chain !== 'ETH' && chain !== 'BSC' && chain !== 'SOL' && chain !== 'TRX') return [];
+          return [
+            {
+              id: item.id,
+              chain,
+              contractAddress: item.contractAddress,
+              tokenId: item.tokenId
+            }
+          ];
+        });
+
+        if (!targets.length) {
+          if (!cancelled) {
+            setCollectibles((prev) => prev.map((item) => (item.owned === 0 ? item : { ...item, owned: 0 })));
+          }
+          return;
+        }
+
+        const snapshot = await fetchOnchainNftOwnership({
+          addressByChain: {
+            ETH: activeWalletChainAddresses.ETH,
+            BSC: activeWalletChainAddresses.BSC,
+            SOL: activeWalletChainAddresses.SOL,
+            TRX: activeWalletChainAddresses.TRX
+          },
+          targets
+        });
+        if (cancelled) return;
+
+        setCollectibles((prev) => {
+          let changed = false;
+          const next = prev.map((item) => {
+            const nextOwnedRaw = snapshot.ownedById[item.id];
+            if (typeof nextOwnedRaw !== 'number') return item;
+            const nextOwned = Math.max(0, Math.floor(nextOwnedRaw));
+            if (nextOwned === item.owned) return item;
+            changed = true;
+            return {
+              ...item,
+              owned: nextOwned
+            };
+          });
+          return changed ? next : prev;
+        });
+      } catch (error) {
+        if (!cancelled) {
+          trackError('wallet.onchain_nft.refresh_failed', error, {
+            walletId,
+            platform: Platform.OS
+          });
+        }
+      } finally {
+        if (cancelled) return;
+        timer = setTimeout(() => {
+          void refresh();
+        }, ONCHAIN_NFT_REFRESH_MS);
+      }
+    };
+
+    void refresh();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [walletStoreHydrated, walletAccounts.length, activeWalletChainAddresses, walletId]);
 
   useEffect(() => {
     if (!tokens.length) return;
@@ -8756,6 +9792,8 @@ function AppInner() {
     setDiscoverSecurityPrompt(null);
     setShowHomeAssetLayoutModal(false);
     setShowRecipientBookModal(false);
+    setShowSaveRecipientModal(false);
+    setShowAddressBookEditModal(false);
     setShowScanMethodModal(false);
     setShowHistoryDateRangeModal(false);
     setShowHistoryDateCalendarModal(false);
@@ -8775,6 +9813,8 @@ function AppInner() {
     setDiscoverSecurityPrompt(null);
     setShowHomeAssetLayoutModal(false);
     setShowRecipientBookModal(false);
+    setShowSaveRecipientModal(false);
+    setShowAddressBookEditModal(false);
     setShowScanMethodModal(false);
     setShowHistoryDateRangeModal(false);
     setShowHistoryDateCalendarModal(false);
@@ -8794,6 +9834,8 @@ function AppInner() {
     setDiscoverSecurityPrompt(null);
     setShowHomeAssetLayoutModal(false);
     setShowRecipientBookModal(false);
+    setShowSaveRecipientModal(false);
+    setShowAddressBookEditModal(false);
     setShowScanMethodModal(false);
     setShowHistoryDateRangeModal(false);
     setShowHistoryDateCalendarModal(false);
@@ -8842,6 +9884,8 @@ function AppInner() {
     setDiscoverSecurityPrompt(null);
     setShowHomeAssetLayoutModal(false);
     setShowRecipientBookModal(false);
+    setShowSaveRecipientModal(false);
+    setShowAddressBookEditModal(false);
     setShowScanMethodModal(false);
     setShowHistoryDateRangeModal(false);
     setShowHistoryDateCalendarModal(false);
@@ -9009,6 +10053,25 @@ function AppInner() {
     navigate('onboardingCreateCheck');
   };
 
+  const startAddExistingWalletFlow = (options?: { root?: boolean }) => {
+    setOnboardingWalletName('');
+    setPhraseInput('');
+    setRecoveryWordCount(DEFAULT_RECOVERY_WORD_COUNT);
+    setSeedPassphraseInput('');
+    setSeedAccountIndexInput('0');
+    setSelectedNetwork('Ethereum');
+    setRecoveryIndexScanResult(null);
+    setRecoveryIndexScanLoading(false);
+    clearSeedWords(DEFAULT_RECOVERY_WORD_COUNT);
+    setPendingInitialCreateAfterPassword(false);
+    setOnboardingDoneGoHomeOnly(false);
+    if (options?.root) {
+      openRoot('onboardingAddExisting');
+      return;
+    }
+    navigate('onboardingAddExisting');
+  };
+
   const saveAppPassword = async (rawPassword: string, options?: { showSavedBanner?: boolean }) => {
     const normalized = normalizePassword(rawPassword);
     if (!isValidAppPassword(normalized)) {
@@ -9038,15 +10101,17 @@ function AppInner() {
     if (!saved) return;
   };
 
-  const submitOnboardingPasswordSetup = async () => {
+  const submitOnboardingPasswordSetup = async (options?: { confirmPassword?: string }) => {
     const nextPassword = normalizePassword(onboardingPasswordInput);
-    const confirmPassword = normalizePassword(onboardingPasswordConfirmInput);
+    const confirmPassword = normalizePassword(options?.confirmPassword ?? onboardingPasswordConfirmInput);
     if (!isValidAppPassword(nextPassword)) {
       setOnboardingPasswordError(flow.appPasswordInvalid);
       return;
     }
     if (nextPassword !== confirmPassword) {
       setOnboardingPasswordError(flow.appPasswordMismatch);
+      setOnboardingPasswordConfirmInput('');
+      setOnboardingPasswordTarget('confirm');
       return;
     }
 
@@ -9071,29 +10136,53 @@ function AppInner() {
     openRoot('home');
   };
 
-  const authenticateWithBiometricMode = async (mode: SendAuthMethod, promptMessage: string) => {
-    if (mode === 'password') return false;
+  const ensureBiometricModeAvailable = async (mode: Exclude<SendAuthMethod, 'password'>) => {
     if (Platform.OS === 'web') return true;
+    if (mode === 'fingerprint' && !fingerprintBiometricSupported) {
+      setBannerMessage(text.biometricFingerprintUnavailable);
+      return false;
+    }
+    if (mode === 'face' && !faceBiometricSupported) {
+      setBannerMessage(text.biometricFaceUnavailable);
+      return false;
+    }
     try {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       if (!hasHardware) {
         setBannerMessage(text.biometricUnavailable);
         return false;
       }
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!enrolled) {
-        setBannerMessage(text.biometricNotEnrolled);
-        return false;
-      }
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      const irisType = (LocalAuthentication.AuthenticationType as { IRIS?: number }).IRIS;
+      const supportsFace =
+        supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ||
+        (typeof irisType === 'number' && supportedTypes.includes(irisType));
       if (mode === 'fingerprint' && !supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
         setBannerMessage(text.biometricFingerprintUnavailable);
         return false;
       }
-      if (mode === 'face' && !supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+      if (mode === 'face' && !supportsFace) {
         setBannerMessage(text.biometricFaceUnavailable);
         return false;
       }
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!enrolled) {
+        setBannerMessage(mode === 'fingerprint' ? text.biometricFingerprintNotEnrolled : text.biometricFaceNotEnrolled);
+        return false;
+      }
+      return true;
+    } catch {
+      setBannerMessage(text.biometricUnavailable);
+      return false;
+    }
+  };
+
+  const authenticateWithBiometricMode = async (mode: SendAuthMethod, promptMessage: string) => {
+    if (mode === 'password') return false;
+    if (Platform.OS === 'web') return true;
+    try {
+      const available = await ensureBiometricModeAvailable(mode);
+      if (!available) return false;
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage,
         cancelLabel: text.historyRangeCancel,
@@ -9112,6 +10201,10 @@ function AppInner() {
   };
 
   const openWalletSettingsWithAuth = async () => {
+    if (!hasAppPassword) {
+      navigate('settingsWallets');
+      return;
+    }
     if (Platform.OS !== 'web' && biometric && sendAuthMethod !== 'password') {
       const authenticated = await authenticateWithBiometricMode(sendAuthMethod, text.wallets);
       if (authenticated) {
@@ -9126,6 +10219,10 @@ function AppInner() {
   };
 
   const openSecuritySettingsWithAuth = async () => {
+    if (!hasAppPassword) {
+      navigate('settingsSecurity');
+      return;
+    }
     if (Platform.OS !== 'web' && biometric && sendAuthMethod !== 'password') {
       const authenticated = await authenticateWithBiometricMode(sendAuthMethod, text.security);
       if (authenticated) {
@@ -9139,7 +10236,40 @@ function AppInner() {
     navigate('settingsWalletsAuth');
   };
 
-  const openSettingsTargetAfterAuth = (target: 'security' | 'wallets') => {
+  const openAddressBookWithAuth = async () => {
+    if (!hasAppPassword) {
+      openAddressBookTypeSelect();
+      return;
+    }
+    if (Platform.OS !== 'web' && biometric && sendAuthMethod !== 'password') {
+      const authenticated = await authenticateWithBiometricMode(sendAuthMethod, extra.addressBookManage);
+      if (authenticated) {
+        openAddressBookTypeSelect();
+        return;
+      }
+    }
+    setSettingsAuthTarget('addressBook');
+    setWalletSettingsAuthInput('');
+    setWalletSettingsAuthError('');
+    navigate('settingsWalletsAuth');
+  };
+
+  const openSettingsTargetAfterAuth = (target: 'security' | 'wallets' | 'addressBook') => {
+    if (target === 'addressBook') {
+      const scope = addressBookScopeRef.current;
+      setShowRecipientBookModal(false);
+      applyAddressBookScope(scope);
+      resetAddressBookFormState(scope);
+      applyEntryResets('addressBook');
+      setStack((prev) => {
+        if (!prev.length) return ['addressBook'];
+        if (prev[prev.length - 1] === 'settingsWalletsAuth') {
+          return [...prev.slice(0, -1), 'addressBook'];
+        }
+        return [...prev, 'addressBook'];
+      });
+      return;
+    }
     const targetScreen: Screen = target === 'security' ? 'settingsSecurity' : 'settingsWallets';
     applyEntryResets(targetScreen);
     setStack((prev) => {
@@ -9166,7 +10296,8 @@ function AppInner() {
 
   const confirmWalletSettingsWithBiometric = async () => {
     if (sendAuthMethod === 'password') return;
-    const promptMessage = settingsAuthTarget === 'security' ? text.security : text.wallets;
+    const promptMessage =
+      settingsAuthTarget === 'security' ? text.security : settingsAuthTarget === 'addressBook' ? extra.addressBookManage : text.wallets;
     const authenticated = await authenticateWithBiometricMode(sendAuthMethod, promptMessage);
     if (!authenticated) return;
     setWalletSettingsAuthError('');
@@ -9198,7 +10329,21 @@ function AppInner() {
     setAppLocked(false);
   };
 
-  const pushTx = (item: Omit<TxItem, 'id' | 'createdAt'>) => {
+  useEffect(() => {
+    if (isLockPreviewMode) return;
+    if (!appLocked) {
+      appLockBiometricAutoRequestedRef.current = false;
+      return;
+    }
+    const shouldAutoBiometricUnlock = hasWallet && hasAppPassword && passwordLockEnabled && biometric && sendAuthMethod !== 'password';
+    if (!shouldAutoBiometricUnlock) return;
+    if (appLockBiometricAutoRequestedRef.current) return;
+
+    appLockBiometricAutoRequestedRef.current = true;
+    void unlockWithBiometricMode();
+  }, [appLocked, hasWallet, hasAppPassword, passwordLockEnabled, biometric, sendAuthMethod, isLockPreviewMode]);
+
+  const pushTx = (item: Omit<WalletTxItem, 'id' | 'createdAt'>) => {
     setTxs((prev) => [{ ...item, id: `tx-${Date.now()}`, createdAt: nowStamp() }, ...prev]);
   };
 
@@ -9379,7 +10524,7 @@ function AppInner() {
       accountIndex?: number;
     }
   ) => {
-    const nextName = buildUniqueWalletName(rawName, walletAccounts, unnamedWalletBaseName);
+    const nextName = buildUniqueWalletName(rawName, walletAccounts, lang);
     const normalizedPassphrase = String(options?.passphrase ?? '').normalize('NFKD');
     const normalizedAccountIndex = normalizeAccountIndex(options?.accountIndex ?? 0);
     const normalizedSeedWords =
@@ -9391,7 +10536,9 @@ function AppInner() {
       : generateWalletAddress();
     const newWallet: WalletAccount = {
       id: `wallet-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      name: nextName,
+      name: nextName.name,
+      nameMode: nextName.nameMode,
+      autoNameIndex: nextName.autoNameIndex,
       address: derivedPrimaryAddress,
       isPrimary: walletAccounts.length === 0
     };
@@ -9400,9 +10547,8 @@ function AppInner() {
     setWalletSeedPassphraseMap((prev) => ({ ...prev, [newWallet.id]: normalizedPassphrase }));
     setWalletAccountIndexMap((prev) => ({ ...prev, [newWallet.id]: normalizedAccountIndex }));
     setWalletId(newWallet.id);
-    setHasWallet(true);
     setOnboardingWalletName('');
-    logEvent({ type: 'wallet.added', payload: { walletId: newWallet.id, walletName: nextName } });
+    logEvent({ type: 'wallet.added', payload: { walletId: newWallet.id, walletName: nextName.name } });
     setBannerMessage(walletUi.walletAdded);
     return newWallet;
   };
@@ -9537,10 +10683,11 @@ function AppInner() {
   };
 
   const getRecipientError = (rawAddress = recipientInput, chain = sendToken.chainCode) => {
-    if (!isSendSelectionComplete) return null;
     const address = rawAddress.trim();
     if (!address) return text.recipientRequired;
-    return validateRecipientForChain(chain, address);
+    const targetChain = isSendSelectionComplete ? chain : detectAddressChains(address)[0];
+    if (!targetChain) return text.addressInvalid;
+    return validateRecipientForChain(targetChain, address);
   };
 
   const getAmountError = (rawAmount = amountInput, balance = sendToken.balance) => {
@@ -9647,13 +10794,65 @@ function AppInner() {
   };
 
   const openScanMethodPicker = (entryPoint: 'send' | 'nftSend' | 'home') => {
-    if (entryPoint === 'send' && !ensureSendSelectionOrToast()) return;
     if (entryPoint === 'nftSend' && !selectedNftForSend) {
       setBannerMessage(nftUi.noNftOwned);
       return;
     }
     setScanEntryPoint(entryPoint);
     setShowScanMethodModal(true);
+  };
+
+  const applyDetectedAddressSelection = (detectedChains: ChainCode[]) => {
+    if (!detectedChains.length) return null;
+
+    const targetChain = detectedChains.includes(sendChainCode) ? sendChainCode : detectedChains[0];
+    setSendChainFilter(targetChain);
+    setSendChainCode(targetChain);
+
+    const nativeAssetKey = chainNativeAssetMap[targetChain];
+    const matchedToken =
+      allFilterTokens.find((token) => token.chainCode === targetChain && token.assetKey === nativeAssetKey) ??
+      allFilterTokens.find((token) => token.chainCode === targetChain);
+    if (matchedToken) {
+      setSendTokenId(matchedToken.id);
+      setSendAssetFilterTokenId(matchedToken.id);
+      return targetChain;
+    }
+    setSendAssetFilterTokenId('ALL');
+    return targetChain;
+  };
+
+  const applyRecentSendSelection = (item: RecentSendItem) => {
+    const targetChain = item.chain;
+    const targetSymbol = item.symbol.trim().toUpperCase();
+
+    setSendChainFilter(targetChain);
+    setSendChainCode(targetChain);
+
+    const targetAssetKey = normalizeAssetKey(targetSymbol);
+    const matchedToken =
+      allFilterTokens.find((token) => token.chainCode === targetChain && token.symbol.toUpperCase() === targetSymbol) ??
+      (targetAssetKey ? allFilterTokens.find((token) => token.chainCode === targetChain && token.assetKey === targetAssetKey) : undefined) ??
+      allFilterTokens.find((token) => token.chainCode === targetChain);
+
+    if (matchedToken) {
+      setSendTokenId(matchedToken.id);
+      setSendAssetFilterTokenId(matchedToken.id);
+      return;
+    }
+    setSendAssetFilterTokenId('ALL');
+  };
+
+  const handleSendRecipientInputChange = (nextValue: string) => {
+    setRecipientInput(nextValue);
+    const trimmed = nextValue.trim();
+    setRecipientTouched(trimmed.length > 0);
+    if (!trimmed) return;
+
+    const detected = extractAddressCandidate(trimmed) ?? trimmed;
+    const detectedChains = detectAddressChains(detected);
+    if (!detectedChains.length) return;
+    applyDetectedAddressSelection(detectedChains);
   };
 
   const applyDetectedAddress = (raw: string) => {
@@ -9664,33 +10863,43 @@ function AppInner() {
     }
     const detectedChains = detectAddressChains(detected);
     if (scanEntryPoint === 'home') {
-      if (detectedChains.length) {
-        const chain = detectedChains[0];
-        setSendChainFilter(chain);
-        setSendChainCode(chain);
-        const chainToken = tokens.find((token) => token.chainCode === chain);
-        if (chainToken) {
-          setSendTokenId(chainToken.id);
-          setSendAssetFilterTokenId(chainToken.id);
-        }
-      }
-      setRecipientTouched(false);
+      const targetChain = applyDetectedAddressSelection(detectedChains);
+      setRecipientTouched(true);
       setShowWalletMenu(false);
       setRecipientInput(detected);
+      if (!targetChain) {
+        setBannerMessage(text.addressInvalid);
+      } else {
+        const recipientIssue = validateRecipientForChain(targetChain, detected);
+        if (recipientIssue) setBannerMessage(recipientIssue);
+      }
       skipNextSendResetRef.current = true;
       navigate('send');
       return;
     }
     if (scanEntryPoint === 'nftSend') {
       setNftSendRecipientInput(detected);
-      setNftSendRecipientTouched(false);
+      setNftSendRecipientTouched(true);
+      if (!selectedNftForSend) {
+        setBannerMessage(nftUi.noNftOwned);
+        return;
+      }
+      const nftRecipientIssue = validateRecipientForChain(getCollectibleChainCode(selectedNftForSend), detected);
+      if (nftRecipientIssue) setBannerMessage(nftRecipientIssue);
       return;
     }
+    const targetChain = applyDetectedAddressSelection(detectedChains);
+    setRecipientTouched(true);
     setRecipientInput(detected);
+    if (!targetChain) {
+      setBannerMessage(text.addressInvalid);
+      return;
+    }
+    const recipientIssue = validateRecipientForChain(targetChain, detected);
+    if (recipientIssue) setBannerMessage(recipientIssue);
   };
 
   const pasteRecipientFromClipboard = async () => {
-    if (!ensureSendSelectionOrToast()) return;
     try {
       const raw = await Clipboard.getStringAsync();
       if (!raw.trim()) {
@@ -9698,7 +10907,18 @@ function AppInner() {
         return;
       }
       const detected = extractAddressCandidate(raw) ?? raw.trim();
+      const detectedChains = detectAddressChains(detected);
+      const targetChain = applyDetectedAddressSelection(detectedChains);
       setRecipientInput(detected);
+      setRecipientTouched(true);
+      if (!targetChain) {
+        setBannerMessage(text.addressInvalid);
+        return;
+      }
+      const recipientIssue = validateRecipientForChain(targetChain, detected);
+      if (recipientIssue) {
+        setBannerMessage(recipientIssue);
+      }
     } catch (error) {
       trackError('clipboard.paste_failed', error, { screen: currentScreen });
       setBannerMessage(text.recipientRequired);
@@ -9718,7 +10938,11 @@ function AppInner() {
       }
       const detected = extractAddressCandidate(raw) ?? raw.trim();
       setNftSendRecipientInput(detected);
-      setNftSendRecipientTouched(false);
+      setNftSendRecipientTouched(true);
+      const recipientIssue = validateRecipientForChain(getCollectibleChainCode(selectedNftForSend), detected);
+      if (recipientIssue) {
+        setBannerMessage(recipientIssue);
+      }
     } catch (error) {
       trackError('clipboard.paste_failed', error, { screen: currentScreen });
       setBannerMessage(text.recipientRequired);
@@ -10225,10 +11449,35 @@ function AppInner() {
   };
 
   const calculateFeeUsd = (chain: ChainCode, feeNative: number) => {
-    if (chain === 'ETH' || chain === 'BSC') {
-      return Number((feeNative * getChainNativePrice(chain)).toFixed(6));
+    const nativePrice = getChainNativePrice(chain);
+    if (Number.isFinite(nativePrice) && nativePrice > 0) {
+      return Number((feeNative * nativePrice).toFixed(6));
     }
     return parseUsdNumber(estimateNetworkFee(chain));
+  };
+
+  const estimateRuntimeNativeFee = (chain: ChainCode, gas: SendGasSettings) => {
+    const liveSnapshot = liveNetworkFeeMap[chain];
+    const hasManualGasOverride =
+      (chain === 'ETH' || chain === 'BSC') &&
+      (gas.gasPrice.trim() !== DEFAULT_SEND_GAS_SETTINGS.gasPrice || gas.gasLimit.trim() !== DEFAULT_SEND_GAS_SETTINGS.gasLimit);
+
+    if (hasManualGasOverride) {
+      return estimateNativeFee(chain, gas.gasPrice, gas.gasLimit);
+    }
+
+    const liveNativeFee = Number(liveSnapshot?.nativeFee ?? 0);
+    if (Number.isFinite(liveNativeFee) && liveNativeFee > 0) {
+      return liveNativeFee;
+    }
+
+    return estimateNativeFee(chain, gas.gasPrice, gas.gasLimit);
+  };
+
+  const fetchLatestFilFeeSnapshot = async (request: LiveNetworkFeeRequest) => {
+    const snapshot = await fetchLiveNetworkFee('FIL', undefined, request);
+    setLiveNetworkFeeMap((prev) => ({ ...prev, FIL: snapshot }));
+    return snapshot;
   };
 
   const getNativeWalletTokenByChain = (chain: ChainCode) => {
@@ -10266,10 +11515,14 @@ function AppInner() {
     return getInsufficientNetworkFeeMessage(chain, requiredNative, nativeBalance);
   };
 
-  const buildSendDraft = (): SendDraft | null => {
+  const buildSendDraft = (overrideFeeNative?: number): SendDraft | null => {
     if (!isSendSelectionComplete || !selectedSendToken) return null;
     const amount = parseAmount();
-    const feeNative = estimateNativeFee(selectedSendToken.chainCode, sendGasSettings.gasPrice, sendGasSettings.gasLimit);
+    const overrideFee = Number(overrideFeeNative);
+    const feeNative =
+      Number.isFinite(overrideFee) && overrideFee > 0
+        ? overrideFee
+        : estimateRuntimeNativeFee(selectedSendToken.chainCode, sendGasSettings);
     const feeUsd = calculateFeeUsd(selectedSendToken.chainCode, feeNative);
     const recipient = recipientInput.trim();
     const draft = buildSendDraftFromInput({
@@ -10289,7 +11542,7 @@ function AppInner() {
     return { ...draft, assetType: 'asset' };
   };
 
-  const openSendConfirm = () => {
+  const openSendConfirm = async () => {
     if (!ensureSendSelectionOrToast()) return;
     const selectedToken = selectedSendToken;
     if (!selectedToken) return;
@@ -10305,7 +11558,21 @@ function AppInner() {
       setBannerMessage(amountIssue);
       return;
     }
-    const nativeFeePreview = estimateNativeFee(selectedToken.chainCode, sendGasSettings.gasPrice, sendGasSettings.gasLimit);
+    let nativeFeePreview = estimateRuntimeNativeFee(selectedToken.chainCode, sendGasSettings);
+    if (selectedToken.chainCode === 'FIL') {
+      const recipient = recipientInput.trim();
+      if (recipient) {
+        const latestSnapshot = await fetchLatestFilFeeSnapshot({
+          fromAddress: selectedToken.walletAddress,
+          toAddress: recipient,
+          amountNative: parseAmount()
+        });
+        const latestFee = Number(latestSnapshot?.nativeFee ?? 0);
+        if (Number.isFinite(latestFee) && latestFee > 0) {
+          nativeFeePreview = latestFee;
+        }
+      }
+    }
     const networkFeeIssue = validateSendNetworkFeeBudget({
       chain: selectedToken.chainCode,
       tokenId: selectedToken.id,
@@ -10316,7 +11583,7 @@ function AppInner() {
       setBannerMessage(networkFeeIssue);
       return;
     }
-    const nextDraft = buildSendDraft();
+    const nextDraft = buildSendDraft(nativeFeePreview);
     if (!nextDraft) return;
     sendFlowStartedAtRef.current = Date.now();
     setSendDraft(nextDraft);
@@ -10336,7 +11603,7 @@ function AppInner() {
       return;
     }
     if (sendDraft) {
-      const feeNative = estimateNativeFee(sendDraft.chainCode, sendGasSettings.gasPrice, sendGasSettings.gasLimit);
+      const feeNative = estimateRuntimeNativeFee(sendDraft.chainCode, sendGasSettings);
       const feeUsd = calculateFeeUsd(sendDraft.chainCode, feeNative);
       setSendDraft({
         ...sendDraft,
@@ -10355,9 +11622,89 @@ function AppInner() {
     navigate('sendAuth');
   };
 
-  const completeSendTransaction = (draft: SendDraft) => {
+  const waitMs = (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, Math.max(0, Math.floor(ms)));
+    });
+
+  const resolveActualFeeForSentTx = (params: { txId: string; txHash: string; chainCode: ChainCode }) => {
+    const hash = params.txHash.trim();
+    if (!hash) return;
+    const retryDelaysMs = [0, 2500, 8000, 18000];
+
+    void (async () => {
+      let lastError: unknown = null;
+
+      for (let attempt = 0; attempt < retryDelaysMs.length; attempt += 1) {
+        if (attempt > 0) {
+          await waitMs(retryDelaysMs[attempt]);
+        }
+
+        try {
+          const snapshot = await resolveActualNetworkFee(params.chainCode as TxFeeChainCode, hash);
+          const feeNative = Number(snapshot?.feeNative ?? 0);
+          if (!snapshot || !Number.isFinite(feeNative) || feeNative <= 0) continue;
+
+          const feeUsd = calculateFeeUsd(params.chainCode, feeNative);
+          const feeConfirmedAt = snapshot.confirmedAt || new Date().toISOString();
+
+          setTxs((prev) =>
+            prev.map((tx) =>
+              tx.id === params.txId
+                ? {
+                    ...tx,
+                    hash,
+                    feeNative,
+                    feeUsd,
+                    feeStatus: 'confirmed',
+                    feeConfirmedAt
+                  }
+                : tx
+            )
+          );
+
+          setTxDetailData((prev) => {
+            if (!prev) return prev;
+            if (prev.hash.trim() !== hash || prev.chainCode !== params.chainCode) return prev;
+            return {
+              ...prev,
+              feeNative,
+              feeUsd,
+              feeStatus: 'confirmed',
+              feeConfirmedAt
+            };
+          });
+
+          logEvent({
+            type: 'send.fee.confirmed',
+            payload: {
+              txId: params.txId,
+              txHash: hash,
+              chain: params.chainCode,
+              feeNative,
+              source: snapshot.source
+            }
+          });
+          return;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (lastError) {
+        trackError('send.actual_fee.resolve_failed', lastError, {
+          txId: params.txId,
+          txHash: hash,
+          chain: params.chainCode,
+          platform: Platform.OS
+        });
+      }
+    })();
+  };
+
+  const completeSendTransaction = (draft: SendDraft, options?: { txHash?: string }) => {
     const isNftDraft = draft.assetType === 'nft';
-    const txHash = generateTxHash(draft.chainCode);
+    const txHash = options?.txHash?.trim() || generateTxHash(draft.chainCode);
     const createdAt = nowStamp();
     const txId = `tx-${Date.now()}`;
 
@@ -10373,7 +11720,11 @@ function AppInner() {
         usdValue: draft.usdValue,
         counterparty: draft.recipient,
         memo: draft.memo,
-        createdAt
+        createdAt,
+        hash: txHash,
+        feeNative: draft.feeNative,
+        feeUsd: draft.feeUsd,
+        feeStatus: 'estimated'
       },
       ...prev
     ]);
@@ -10397,6 +11748,7 @@ function AppInner() {
     }
 
     setTxDetailData({
+      txId,
       hash: txHash,
       txType: 'send',
       tokenSymbol: isNftDraft ? 'NFT' : draft.tokenSymbol,
@@ -10410,6 +11762,7 @@ function AppInner() {
       status: 'completed',
       feeNative: draft.feeNative,
       feeUsd: draft.feeUsd,
+      feeStatus: 'estimated',
       gas: draft.gas,
       memo: draft.memo
     });
@@ -10445,10 +11798,17 @@ function AppInner() {
       sendFlowStartedAtRef.current = null;
     }
     setBannerMessage(isNftDraft ? nftUi.sent : text.sendSuccess);
+
+    resolveActualFeeForSentTx({
+      txId,
+      txHash,
+      chainCode: draft.chainCode
+    });
   };
 
   const confirmSendWithAuth = async (overrideInput?: string) => {
     if (!sendDraft) return;
+    if (sendIsProcessing) return;
     if (sendAuthMethod === 'password') {
       if (normalizePassword(overrideInput ?? authPasswordInput) !== normalizePassword(sendPassword)) {
         setAuthPasswordInput('');
@@ -10461,19 +11821,230 @@ function AppInner() {
       if (!authenticated) return;
     }
     setAuthErrorMessage('');
+
+    const selectedWallet = walletAccounts.find((wallet) => wallet.id === walletId) ?? activeWallet ?? walletAccounts[0] ?? null;
+    if (!selectedWallet) {
+      setBannerMessage(
+        lang === 'ko'
+          ? '활성 지갑 정보를 찾을 수 없습니다.'
+          : lang === 'zh'
+            ? '未找到当前钱包信息。'
+            : 'Active wallet information is missing.'
+      );
+      return;
+    }
+
+    const seedWords = walletSeedMap[selectedWallet.id];
+    if (!Array.isArray(seedWords) || !isValidRecoverySeedWords(seedWords)) {
+      setBannerMessage(
+        lang === 'ko'
+          ? '이 지갑의 복구 구문 정보가 없어 전송할 수 없습니다. 지갑을 다시 복구해주세요.'
+          : lang === 'zh'
+            ? '该钱包缺少助记词信息，无法转账。请重新恢复钱包。'
+            : 'This wallet is missing recovery-phrase data. Please recover it again before sending.'
+      );
+      return;
+    }
+
+    const isNftDraft = sendDraft.assetType === 'nft';
+    const selectedNftOnchainItem = isNftDraft ? collectibles.find((item) => item.id === sendDraft.nftId) ?? null : null;
+    if (isNftDraft && !selectedNftOnchainItem) {
+      setBannerMessage(
+        lang === 'ko'
+          ? '선택한 NFT 정보를 찾을 수 없습니다.'
+          : lang === 'zh'
+            ? '未找到所选 NFT 信息。'
+            : 'Could not find the selected NFT metadata.'
+      );
+      return;
+    }
+
+    const transferAsset = sendDraft.tokenSymbol.trim().toUpperCase() === 'USDT' ? 'USDT' : 'NATIVE';
+    if (!isNftDraft) {
+      const chainTicker = chainTickerMap[sendDraft.chainCode];
+      if (transferAsset === 'NATIVE' && sendDraft.tokenSymbol.trim().toUpperCase() !== chainTicker) {
+        setBannerMessage(
+          lang === 'ko'
+            ? '현재 실거래 전송은 네트워크 기본자산 또는 USDT만 지원됩니다.'
+            : lang === 'zh'
+              ? '当前仅支持网络原生资产或 USDT 的实链转账。'
+              : 'Real on-chain transfer currently supports native coin or USDT only.'
+        );
+        return;
+      }
+      if (transferAsset === 'USDT' && sendDraft.chainCode !== 'ETH' && sendDraft.chainCode !== 'BSC' && sendDraft.chainCode !== 'TRX') {
+        setBannerMessage(
+          lang === 'ko'
+            ? 'USDT 실거래 전송은 ETH/BSC/TRX 네트워크에서만 지원됩니다.'
+            : lang === 'zh'
+              ? 'USDT 实链转账仅支持 ETH/BSC/TRX 网络。'
+              : 'USDT on-chain transfer is supported only on ETH/BSC/TRX.'
+        );
+        return;
+      }
+    }
+
+    const amountToPlainString = (value: number) => {
+      if (!Number.isFinite(value) || value <= 0) return '';
+      const text = value.toString();
+      if (!/[eE]/.test(text)) return text;
+      const [mantissaRaw, exponentRaw] = text.toLowerCase().split('e');
+      const exponent = Number(exponentRaw);
+      if (!Number.isFinite(exponent)) return '';
+      const negative = mantissaRaw.startsWith('-');
+      const mantissa = negative ? mantissaRaw.slice(1) : mantissaRaw;
+      const [wholePart, fractionPart = ''] = mantissa.split('.');
+      const digits = `${wholePart}${fractionPart}`.replace(/^0+/, '') || '0';
+      const decimalIndex = wholePart.length + exponent;
+      let normalized = '';
+      if (decimalIndex <= 0) {
+        normalized = `0.${'0'.repeat(Math.abs(decimalIndex))}${digits}`;
+      } else if (decimalIndex >= digits.length) {
+        normalized = `${digits}${'0'.repeat(decimalIndex - digits.length)}`;
+      } else {
+        normalized = `${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
+      }
+      return negative ? `-${normalized}` : normalized;
+    };
+
+    const draftGas = sendDraft.gas;
+    const parsedManualGasPrice = Number(draftGas.gasPrice);
+    const parsedManualGasLimit = Number(draftGas.gasLimit);
+    const parsedManualNonce = Number(draftGas.nonce);
+    const manualGasPriceGwei =
+      draftGas.gasPrice.trim() !== DEFAULT_SEND_GAS_SETTINGS.gasPrice && Number.isFinite(parsedManualGasPrice) && parsedManualGasPrice > 0
+        ? parsedManualGasPrice
+        : undefined;
+    const manualGasLimit =
+      draftGas.gasLimit.trim() !== DEFAULT_SEND_GAS_SETTINGS.gasLimit && Number.isFinite(parsedManualGasLimit) && parsedManualGasLimit > 0
+        ? Math.floor(parsedManualGasLimit)
+        : undefined;
+    const manualNonce =
+      draftGas.nonce.trim() !== DEFAULT_SEND_GAS_SETTINGS.nonce && Number.isFinite(parsedManualNonce) && parsedManualNonce >= 0
+        ? Math.floor(parsedManualNonce)
+        : undefined;
+
+    if (isNftDraft && sendDraft.chainCode !== 'ETH' && sendDraft.chainCode !== 'BSC' && sendDraft.chainCode !== 'SOL' && sendDraft.chainCode !== 'TRX') {
+      setBannerMessage(
+        lang === 'ko'
+          ? '현재 NFT 실거래 전송은 ETH/BSC/SOL/TRX 네트워크에서만 지원됩니다.'
+          : lang === 'zh'
+            ? '当前 NFT 实链转账仅支持 ETH/BSC/SOL/TRX 网络。'
+            : 'NFT on-chain transfer is supported only on ETH/BSC/SOL/TRX.'
+      );
+      return;
+    }
+
+    const amountText = isNftDraft ? '' : amountInput.trim() || amountToPlainString(sendDraft.amount);
+    if (!isNftDraft && !amountText) {
+      setBannerMessage(text.invalidAmount);
+      return;
+    }
+
     setSendIsProcessing(true);
     setSendIsDone(false);
-    logEvent({
-      type: 'send.auth.confirmed',
-      payload: {
-        chain: sendDraft.chainCode,
-        symbol: sendDraft.tokenSymbol,
-        method: sendAuthMethod
-      }
-    });
     navigate('sendProcessing');
-    const activeDraft = sendDraft;
-    setTimeout(() => completeSendTransaction(activeDraft), 1800);
+
+    try {
+      const result = isNftDraft
+        ? await sendOnchainNftTransaction({
+            chain: sendDraft.chainCode as 'ETH' | 'BSC' | 'SOL' | 'TRX',
+            contractAddress: selectedNftOnchainItem!.contractAddress,
+            tokenId: selectedNftOnchainItem!.tokenId,
+            fromAddress: activeWalletChainAddresses[sendDraft.chainCode],
+            toAddress: sendDraft.recipient,
+            seedWords,
+            accountIndex: normalizeAccountIndex(walletAccountIndexMap[selectedWallet.id] ?? 0),
+            passphrase: walletSeedPassphraseMap[selectedWallet.id] ?? '',
+            manualGasPriceGwei,
+            manualGasLimit,
+            manualNonce
+          })
+        : await sendOnchainTransaction({
+            chain: sendDraft.chainCode,
+            asset: transferAsset,
+            amountText,
+            fromAddress: activeWalletChainAddresses[sendDraft.chainCode],
+            toAddress: sendDraft.recipient,
+            seedWords,
+            accountIndex: normalizeAccountIndex(walletAccountIndexMap[selectedWallet.id] ?? 0),
+            passphrase: walletSeedPassphraseMap[selectedWallet.id] ?? '',
+            manualGasPriceGwei,
+            manualGasLimit,
+            manualNonce,
+            txDataHex: sendDraft.gas.txData.trim() || undefined
+          });
+
+      const appliedDraft: SendDraft =
+        typeof result.nonce === 'number' || typeof result.gasLimit === 'number'
+          ? {
+              ...sendDraft,
+              gas: {
+                ...sendDraft.gas,
+                nonce: typeof result.nonce === 'number' ? String(result.nonce) : sendDraft.gas.nonce,
+                gasLimit: typeof result.gasLimit === 'number' && result.gasLimit > 0 ? String(result.gasLimit) : sendDraft.gas.gasLimit
+              }
+            }
+          : sendDraft;
+
+      completeSendTransaction(appliedDraft, { txHash: result.txHash });
+    } catch (error) {
+      setSendIsProcessing(false);
+      setSendIsDone(false);
+      navigate('sendConfirm');
+
+      let fallbackMessage =
+        lang === 'ko'
+          ? '실거래 전송에 실패했습니다. 잠시 후 다시 시도해주세요.'
+          : lang === 'zh'
+            ? '实链转账失败，请稍后重试。'
+            : 'On-chain transfer failed. Please try again shortly.';
+
+      if (error instanceof OnchainSendError) {
+        if (error.code === 'invalid_amount') fallbackMessage = text.invalidAmount;
+        if (error.code === 'invalid_recipient') fallbackMessage = text.addressInvalid;
+        if (error.code === 'invalid_token') {
+          fallbackMessage =
+            lang === 'ko'
+              ? 'NFT 토큰 식별자 정보가 올바르지 않습니다.'
+              : lang === 'zh'
+                ? 'NFT 代币标识信息无效。'
+                : 'The NFT token identifier is invalid.';
+        }
+        if (error.code === 'unsupported_asset' || error.code === 'unsupported_chain') {
+          fallbackMessage =
+            lang === 'ko'
+              ? '선택한 네트워크/자산 조합은 아직 실거래 전송을 지원하지 않습니다.'
+              : lang === 'zh'
+                ? '当前尚不支持该网络/资产组合的实链转账。'
+                : 'This network/asset combination is not yet supported for live on-chain transfer.';
+        }
+        if (error.code === 'insufficient_balance') {
+          fallbackMessage =
+            lang === 'ko'
+              ? '잔액이 부족합니다. 네트워크 수수료를 포함해 다시 확인해주세요.'
+              : lang === 'zh'
+                ? '余额不足，请包含网络手续费后重试。'
+                : 'Insufficient balance. Please include network fee and try again.';
+        }
+        if (error.code === 'sender_mismatch') {
+          fallbackMessage =
+            lang === 'ko'
+              ? '현재 지갑 주소와 시드 정보가 일치하지 않아 전송을 진행할 수 없습니다.'
+              : lang === 'zh'
+                ? '当前钱包地址与助记词信息不一致，无法转账。'
+                : 'Wallet address and seed data do not match, so transfer was blocked.';
+        }
+      }
+
+      trackError('send.onchain.broadcast_failed', error, {
+        chain: sendDraft.chainCode,
+        tokenId: sendDraft.tokenId,
+        symbol: sendDraft.tokenSymbol,
+        platform: Platform.OS
+      });
+      setBannerMessage(fallbackMessage);
+    }
   };
 
   const openSendTxDetail = () => {
@@ -10551,9 +12122,9 @@ function AppInner() {
     }
   };
 
-  const openHistoryTxDetail = (tx: TxItem) => {
+  const openHistoryTxDetail = (tx: WalletTxItem) => {
     const chainCode = inferChainFromTx(tx);
-    const hash = buildMockHashFromSeed(chainCode, `${tx.id}-${tx.counterparty}-${tx.createdAt}`);
+    const hash = tx.hash?.trim() || buildMockHashFromSeed(chainCode, `${tx.id}-${tx.counterparty}-${tx.createdAt}`);
     const tokenPriceOnWallet = tokens.find((token) => token.symbol.toUpperCase() === tx.tokenSymbol.toUpperCase())?.priceUsd;
     const tokenPriceCatalog = tokenCatalog.find((token) => token.symbol.toUpperCase() === tx.tokenSymbol.toUpperCase())?.priceUsd;
     const tokenPrice = tokenPriceOnWallet ?? tokenPriceCatalog ?? 0;
@@ -10566,10 +12137,13 @@ function AppInner() {
       txData: '',
       nonce: '0'
     };
-    const feeNative = estimateNativeFee(chainCode, fallbackGas.gasPrice, fallbackGas.gasLimit);
-    const feeUsd = calculateFeeUsd(chainCode, feeNative);
+    const savedFeeNative = Number(tx.feeNative ?? 0);
+    const feeNative = Number.isFinite(savedFeeNative) && savedFeeNative > 0 ? savedFeeNative : estimateRuntimeNativeFee(chainCode, fallbackGas);
+    const savedFeeUsd = Number(tx.feeUsd ?? 0);
+    const feeUsd = Number.isFinite(savedFeeUsd) && savedFeeUsd > 0 ? savedFeeUsd : calculateFeeUsd(chainCode, feeNative);
 
     setTxDetailData({
+      txId: tx.id,
       hash,
       txType: tx.type,
       tokenSymbol: tx.tokenSymbol.toUpperCase(),
@@ -10583,11 +12157,21 @@ function AppInner() {
       status: tx.status,
       feeNative,
       feeUsd,
+      feeStatus: tx.feeStatus,
+      feeConfirmedAt: tx.feeConfirmedAt,
       gas: fallbackGas,
       memo: tx.memo
     });
     setTxDetailHeaderMode('history');
     navigate('sendTxDetail');
+
+    if (tx.hash?.trim() && tx.feeStatus !== 'confirmed') {
+      resolveActualFeeForSentTx({
+        txId: tx.id,
+        txHash: tx.hash,
+        chainCode
+      });
+    }
   };
 
   const openAssetDetail = (token: WalletToken) => {
@@ -10658,7 +12242,7 @@ function AppInner() {
     navigate('nftDetail');
   };
 
-  const submitNftSend = () => {
+  const submitNftSend = async () => {
     if (!selectedNftForSend) {
       setBannerMessage(nftUi.noNftOwned);
       return;
@@ -10675,7 +12259,18 @@ function AppInner() {
     const chainCode = getCollectibleChainCode(selectedNftForSend);
     const recipientLabel = findNftAddressBookLabel(chainCode, recipient);
     const gas = { ...DEFAULT_SEND_GAS_SETTINGS };
-    const feeNative = estimateNativeFee(chainCode, gas.gasPrice, gas.gasLimit);
+    let feeNative = estimateRuntimeNativeFee(chainCode, gas);
+    if (chainCode === 'FIL') {
+      const latestSnapshot = await fetchLatestFilFeeSnapshot({
+        fromAddress: activeWalletChainAddresses.FIL,
+        toAddress: recipient,
+        amountNative: 0
+      });
+      const latestFee = Number(latestSnapshot?.nativeFee ?? 0);
+      if (Number.isFinite(latestFee) && latestFee > 0) {
+        feeNative = latestFee;
+      }
+    }
     const feeUsd = calculateFeeUsd(chainCode, feeNative);
     const networkFeeIssue = validateSendNetworkFeeBudget({
       chain: chainCode,
@@ -10724,6 +12319,39 @@ function AppInner() {
     });
   };
 
+  const isAnyDropdownBackdropActive =
+    showWalletMenu ||
+    showLangMenu ||
+    showAutoLockMenu ||
+    showLockMethodMenu ||
+    showBiometricTypeMenu ||
+    showDiscoverBriefingWeekMenu ||
+    showAddressBookEditModal ||
+    showRecipientBookModal ||
+    showSaveRecipientModal ||
+    showScanMethodModal ||
+    showHomeAssetLayoutModal ||
+    showHistoryDateRangeModal ||
+    showHistoryDateCalendarModal ||
+    showRecentSendDropdown ||
+    showNftRecentSendDropdown;
+
+  const isBottomDockInteractionBlocked =
+    (currentScreen === 'home' && (showWalletMenu || showHomeAssetLayoutModal || (showScanMethodModal && scanEntryPoint === 'home'))) ||
+    (currentScreen === 'send' &&
+      (showRecentSendDropdown ||
+        (showScanMethodModal && scanEntryPoint === 'send') ||
+        (showRecipientBookModal && recipientBookScope === 'asset') ||
+        (showSaveRecipientModal && saveRecipientScope === 'asset'))) ||
+    (currentScreen === 'nftSend' &&
+      (showNftRecentSendDropdown ||
+        (showScanMethodModal && scanEntryPoint === 'nftSend') ||
+        (showRecipientBookModal && recipientBookScope === 'nft') ||
+        (showSaveRecipientModal && saveRecipientScope === 'nft'))) ||
+    (currentScreen === 'history' && (showHistoryDateRangeModal || showHistoryDateCalendarModal)) ||
+    (currentScreen === 'discoverBriefingBoard' && showDiscoverBriefingWeekMenu);
+  const isBottomDockDimmed = isBottomDockInteractionBlocked && !showWalletMenu;
+
   const renderTopHeader = (
     title: string,
     leftIcon: keyof typeof Ionicons.glyphMap,
@@ -10736,26 +12364,37 @@ function AppInner() {
     }[]
   ) => (
     <View style={styles.subHeader}>
-      {renderHeaderBackdrop()}
+      {isAnyDropdownBackdropActive ? null : renderHeaderBackdrop()}
+      <View pointerEvents="none" style={styles.topHeaderTitleLayer}>
+        <Text numberOfLines={1} style={styles.subHeaderTitle}>
+          {title}
+        </Text>
+      </View>
       <View style={styles.topHeaderSide}>
-        <Pressable style={styles.backBtn} onPress={leftAction}>
-          <ThemedIonicons name={leftIcon} size={18} color={palette.text} />
+        <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={leftAction}>
+          <ThemedIonicons
+            name={leftIcon}
+            size={18}
+            color={palette.text}
+            style={[
+              styles.backBtnIconGlyph,
+              leftIcon === 'chevron-back' || leftIcon === 'chevron-back-outline' ? styles.backBtnChevronGlyph : undefined
+            ]}
+          />
         </Pressable>
       </View>
-      <Text pointerEvents="none" numberOfLines={1} style={[styles.subHeaderTitle, styles.topHeaderTitleAbsolute]}>
-        {title}
-      </Text>
       <View style={[styles.topHeaderSide, styles.topHeaderSideRight]}>
         {(rightItems ?? []).map((item, index) => (
           <Pressable
             key={`${title}-r-${index}`}
             style={[styles.backBtn, index > 0 ? styles.headerBtnGap : undefined]}
+            hitSlop={HEADER_BUTTON_HIT_SLOP}
             onPress={item.action}
           >
             {item.materialIcon ? (
-              <MaterialIcons name={item.materialIcon} size={19} color={item.color ?? palette.text} />
+              <MaterialIcons name={item.materialIcon} size={19} color={item.color ?? palette.text} style={styles.backBtnIconGlyph} />
             ) : (
-              <ThemedIonicons name={item.icon ?? 'ellipse-outline'} size={18} color={item.color ?? palette.text} />
+              <ThemedIonicons name={item.icon ?? 'ellipse-outline'} size={18} color={item.color ?? palette.text} style={styles.backBtnIconGlyph} />
             )}
           </Pressable>
         ))}
@@ -10774,27 +12413,30 @@ function AppInner() {
     }[]
   ) => (
     <View style={styles.subHeader}>
-      {renderHeaderBackdrop()}
+      {isAnyDropdownBackdropActive ? null : renderHeaderBackdrop()}
+      <View pointerEvents="none" style={styles.topHeaderTitleLayer}>
+        <Text numberOfLines={1} style={styles.subHeaderTitle}>
+          {title}
+        </Text>
+      </View>
       <View style={styles.topHeaderSide}>
-        <Pressable style={styles.backBtn} onPress={goBack}>
-          <ThemedIonicons name="chevron-back" size={20} color={palette.text} />
+        <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={goBack}>
+          <ThemedIonicons name="chevron-back" size={20} color={palette.text} style={[styles.backBtnIconGlyph, styles.backBtnChevronGlyph]} />
         </Pressable>
       </View>
-      <Text pointerEvents="none" numberOfLines={1} style={[styles.subHeaderTitle, styles.topHeaderTitleAbsolute]}>
-        {title}
-      </Text>
       <View style={[styles.topHeaderSide, styles.topHeaderSideRight]}>
         {(rightItems ?? []).map((item, index) => (
           <Pressable
             key={`${title}-sub-r-${index}`}
             testID={item.testId}
             style={[styles.backBtn, index > 0 ? styles.headerBtnGap : undefined]}
+            hitSlop={HEADER_BUTTON_HIT_SLOP}
             onPress={item.action}
           >
             {item.materialIcon ? (
-              <MaterialIcons name={item.materialIcon} size={19} color={item.color ?? palette.text} />
+              <MaterialIcons name={item.materialIcon} size={19} color={item.color ?? palette.text} style={styles.backBtnIconGlyph} />
             ) : (
-              <ThemedIonicons name={item.icon ?? 'ellipse-outline'} size={18} color={item.color ?? palette.text} />
+              <ThemedIonicons name={item.icon ?? 'ellipse-outline'} size={18} color={item.color ?? palette.text} style={styles.backBtnIconGlyph} />
             )}
           </Pressable>
         ))}
@@ -10969,6 +12611,8 @@ function AppInner() {
   };
 
   const renderBottomDock = () => {
+    if (!hasWallet) return null;
+
     const discoverNavScreens: Screen[] = [
       'discover',
       'discoverEarn',
@@ -10982,13 +12626,16 @@ function AppInner() {
     const isBottomNavScreen =
       currentScreen === 'home' ||
       currentScreen === 'send' ||
+      currentScreen === 'nftSend' ||
       currentScreen === 'receive' ||
       currentScreen === 'nftReceive' ||
       currentScreen === 'history' ||
       discoverNavScreens.includes(currentScreen);
     if (!isBottomNavScreen) return null;
+    if (showRecentSendDropdown || showNftRecentSendDropdown) return null;
     const discoverDockActive = discoverNavScreens.includes(currentScreen);
     const bottomDockBottomOffset = Math.max(10, effectiveBottomInset + 10);
+    const bottomGradientHeight = Math.max(0, bottomDockBottomOffset + 2);
 
     const navItems: {
       key: 'send' | 'receive' | 'home' | 'history' | 'discover';
@@ -10997,7 +12644,7 @@ function AppInner() {
       onPress: () => void;
       center?: boolean;
     }[] = [
-      { key: 'send', icon: 'arrow-up-outline', active: currentScreen === 'send', onPress: () => openRoot('send') },
+      { key: 'send', icon: 'arrow-up-outline', active: currentScreen === 'send' || currentScreen === 'nftSend', onPress: () => openRoot('send') },
       {
         key: 'receive',
         icon: 'arrow-down-outline',
@@ -11010,79 +12657,222 @@ function AppInner() {
     ];
 
     return (
-      <View style={[styles.bottomWrap, { bottom: bottomDockBottomOffset }]}>
-        <View style={styles.bottomDock}>
-	          {navItems.map((item) => {
-	            const iconColor = item.center ? '#101010' : item.active ? palette.accent : palette.text;
-	            return (
-	              <Pressable
-	                key={`bottom-nav-${item.key}`}
+      <>
+        <View pointerEvents="none" style={[styles.bottomSystemGradient, { height: bottomGradientHeight }]}>
+          <LinearGradient
+            colors={bottomSystemGradientColors}
+            start={{ x: 0.5, y: 1 }}
+            end={{ x: 0.5, y: 0 }}
+            style={styles.bottomSystemGradientLayer}
+          />
+        </View>
+        <View pointerEvents={isBottomDockInteractionBlocked ? 'none' : 'auto'} style={[styles.bottomWrap, { bottom: bottomDockBottomOffset }]}>
+          <View style={styles.bottomDock}>
+	            {navItems.map((item) => {
+		              const iconColor = item.center ? '#101010' : item.active ? palette.accent : palette.text;
+		              return (
+	                <Pressable
+	                  key={`bottom-nav-${item.key}`}
                 style={[
                   styles.bottomBtn,
                   item.center ? styles.bottomBtnCenter : undefined,
                   item.active && !item.center ? styles.bottomBtnActive : undefined
                 ]}
-	                onPress={item.onPress}
-	              >
+	                  onPress={item.onPress}
+	                >
                 {item.key === 'home' ? (
                   <MaterialIcons name="home" size={item.center ? 21 : 20} color={iconColor} />
                 ) : (
                   <ThemedIonicons name={item.icon} size={item.center ? 22 : 21} color={iconColor} />
                 )}
-              </Pressable>
-            );
-          })}
+	                </Pressable>
+	              );
+	            })}
+            {isBottomDockDimmed ? <View pointerEvents="none" style={styles.bottomDockDimLayer} /> : null}
+          </View>
         </View>
+      </>
+    );
+  };
+
+  const closeRecentSendOverlay = () => {
+    setShowRecentSendDropdown(false);
+    setShowNftRecentSendDropdown(false);
+  };
+
+  const closeTopDropdownOverlay = () => {
+    setShowWalletMenu(false);
+    closeRecentSendOverlay();
+  };
+
+  const renderRecipientActionTriggerOverlay = (
+    scope: 'asset' | 'nft',
+    action: 'scan' | 'book' | 'save' | null
+  ) => {
+    if (!action) return null;
+    const rectMap = scope === 'asset' ? assetRecipientActionAnchorRectMap : nftRecipientActionAnchorRectMap;
+    const rect = rectMap[action];
+    if (!rect) return null;
+
+    const closeActionOverlay = () => {
+      if (action === 'scan') {
+        setShowScanMethodModal(false);
+        return;
+      }
+      if (action === 'book') {
+        setShowRecipientBookModal(false);
+        return;
+      }
+      setShowSaveRecipientModal(false);
+    };
+
+    const iconName = action === 'scan' ? 'scan-outline' : action === 'book' ? 'book-outline' : 'bookmark-outline';
+
+    return (
+      <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+        <Pressable
+          style={[
+            styles.saveAddressIconBtn,
+            styles.iconCircleBtnActive,
+            styles.globalRecentOverlayTrigger,
+            {
+              top: rect.y,
+              left: rect.x,
+              width: rect.width,
+              height: rect.height,
+              borderRadius: rect.height / 2
+            }
+          ]}
+          onPress={closeActionOverlay}
+        >
+          <ThemedIonicons name={iconName} size={16} color="#16110a" />
+        </Pressable>
       </View>
     );
   };
 
-  const renderHomeHeader = () => (
-    <View style={[styles.subHeader, styles.homeHeaderOverlay]}>
-      {renderHeaderBackdrop()}
-      <Pressable style={styles.backBtn} onPress={() => navigate('settings')}>
-        <ThemedIonicons name="settings-outline" size={18} color={palette.text} />
-      </Pressable>
-      <View pointerEvents="box-none" style={styles.homeWalletPillCenterWrap}>
-        <Pressable
-          style={[styles.homeWalletPillCenter, showWalletMenu ? styles.homeWalletPillCenterActive : undefined]}
-          onPress={() => setShowWalletMenu((prev) => !prev)}
-        >
-          <Text style={styles.homeWalletPillText} numberOfLines={1}>
-            {activeWallet.name}
-          </Text>
-          <ThemedIonicons
-            name={showWalletMenu ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={palette.text}
-            style={styles.homeWalletPillChevron}
-          />
-        </Pressable>
-      </View>
-      <Pressable style={styles.backBtn} onPress={() => openScanMethodPicker('home')}>
-        <ThemedIonicons name="scan-outline" size={18} color={palette.text} />
-      </Pressable>
-    </View>
-  );
-
-  const renderHome = () => {
-    const deltaUsd = tokens.reduce((sum, token) => sum + token.balance * token.priceUsd * (token.change24h / 100), 0);
-    const deltaPercent = totalBalance > 0 ? (deltaUsd / totalBalance) * 100 : 0;
-    const deltaUp = deltaUsd >= 0;
+  const renderHomeLayoutTriggerOverlay = () => {
+    if (!(currentScreen === 'home' && showHomeAssetLayoutModal && homeLayoutTriggerRect)) return null;
 
     return (
-      <View style={styles.screen}>
-        {renderHomeHeader()}
-        {showWalletMenu ? (
-          <>
-            <Pressable style={styles.walletMenuScrim} onPress={() => setShowWalletMenu(false)} />
-            <Animated.View style={[styles.walletMenuWrap, walletMenuAnimatedStyle]}>
+      <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+        <Pressable
+          style={[
+            styles.assetPanelToolBtn,
+            styles.iconCircleBtnActive,
+            styles.globalRecentOverlayTrigger,
+            {
+              top: homeLayoutTriggerRect.y,
+              left: homeLayoutTriggerRect.x,
+              width: homeLayoutTriggerRect.width,
+              height: homeLayoutTriggerRect.height,
+              borderRadius: homeLayoutTriggerRect.height / 2
+            }
+          ]}
+          onPress={closeHomeAssetLayoutModal}
+        >
+          <ThemedIonicons name="options-outline" size={16} color="#16110a" />
+        </Pressable>
+      </View>
+    );
+  };
+
+  const renderHistoryRangeTriggerOverlay = () => {
+    if (!(currentScreen === 'history' && (showHistoryDateRangeModal || showHistoryDateCalendarModal) && historyRangeTriggerRect)) return null;
+
+    return (
+      <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+        <Pressable
+          style={[
+            styles.historyDateChip,
+            styles.historyDateRangeChip,
+            styles.historyDateChipActive,
+            styles.globalRecentOverlayTrigger,
+            {
+              top: historyRangeTriggerRect.y,
+              left: historyRangeTriggerRect.x,
+              width: historyRangeTriggerRect.width,
+              height: historyRangeTriggerRect.height,
+              borderRadius: historyRangeTriggerRect.height / 2
+            }
+          ]}
+          onPress={() => {
+            setShowHistoryDateCalendarModal(false);
+            setShowHistoryDateRangeModal(false);
+          }}
+        >
+          <Text style={styles.historyDateChipTextActive}>{text.historyDateRange}</Text>
+        </Pressable>
+      </View>
+    );
+  };
+
+  const renderHomeScanTriggerOverlay = () => {
+    if (!(currentScreen === 'home' && showScanMethodModal && scanEntryPoint === 'home' && homeScanTriggerRect)) return null;
+
+    return (
+      <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+        <Pressable
+          style={[
+            styles.backBtn,
+            styles.iconCircleBtnActive,
+            styles.globalRecentOverlayTrigger,
+            {
+              top: homeScanTriggerRect.y,
+              left: homeScanTriggerRect.x,
+              width: homeScanTriggerRect.width,
+              height: homeScanTriggerRect.height,
+              borderRadius: homeScanTriggerRect.height / 2
+            }
+          ]}
+          onPress={() => setShowScanMethodModal(false)}
+        >
+          <ThemedIonicons name="scan-outline" size={18} color="#16110a" style={styles.backBtnIconGlyph} />
+        </Pressable>
+      </View>
+    );
+  };
+
+  const renderRecentSendOverlay = () => {
+    const isWalletOverlayOpen = currentScreen === 'home' && showWalletMenu;
+    const isAssetOverlayOpen = showRecentSendDropdown;
+    const isNftOverlayOpen = showNftRecentSendDropdown;
+    if (!isWalletOverlayOpen && !isAssetOverlayOpen && !isNftOverlayOpen) return null;
+
+    if (isWalletOverlayOpen) {
+      const walletTriggerTop = walletMenuAnchorRect ? walletMenuAnchorRect.y : topSafeInset + 6;
+      const walletListTop = walletMenuAnchorRect ? walletTriggerTop + Math.max(36, walletMenuAnchorRect.height) + 6 : headerOverlayHeightValue + 4;
+      return (
+        <>
+          <Pressable style={styles.globalDropdownScrim} onPress={closeTopDropdownOverlay} />
+          <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+            {walletMenuAnchorRect ? (
+              <Pressable
+                style={[
+                  styles.homeWalletPillCenter,
+                  styles.homeWalletPillCenterActive,
+                  styles.globalRecentOverlayTrigger,
+                  {
+                    top: walletTriggerTop,
+                    left: walletMenuAnchorRect.x,
+                    width: walletMenuAnchorRect.width
+                  }
+                ]}
+                onPress={closeTopDropdownOverlay}
+              >
+                <Text style={[styles.homeWalletPillText, styles.homeWalletPillTextActive]} numberOfLines={1}>
+                  {getWalletDisplayName(activeWallet)}
+                </Text>
+                <ThemedIonicons name="chevron-up" size={16} color="#16110a" style={styles.homeWalletPillChevron} />
+              </Pressable>
+            ) : null}
+            <Animated.View style={[styles.walletMenuWrap, styles.globalWalletMenuWrap, walletMenuAnimatedStyle, { top: walletListTop }]}>
               <ScrollView style={styles.walletMenuList} showsVerticalScrollIndicator={false}>
                 {walletAccounts.map((wallet) => {
                   const active = wallet.id === walletId;
                   return (
                     <Pressable
-                      key={`wallet-menu-${wallet.id}`}
+                      key={`wallet-menu-overlay-${wallet.id}`}
                       style={[styles.walletMenuRow, active ? styles.walletMenuRowActive : undefined]}
                       onPress={() => {
                         setWalletId(wallet.id);
@@ -11091,7 +12881,7 @@ function AppInner() {
                     >
                       <View style={styles.walletMenuMeta}>
                         <Text style={[styles.walletMenuName, active ? styles.walletMenuNameActive : undefined]} numberOfLines={1}>
-                          {wallet.name}
+                          {getWalletDisplayName(wallet)}
                         </Text>
                       </View>
                       {active ? <ThemedIonicons name="checkmark-circle" size={18} color={palette.accent} /> : null}
@@ -11109,15 +12899,227 @@ function AppInner() {
                 <ThemedIonicons name="add" size={16} color={palette.text} />
               </Pressable>
             </Animated.View>
-          </>
+          </View>
+        </>
+      );
+    }
+
+    const isNftOverlay = isNftOverlayOpen;
+    const anchorRect = isNftOverlay ? nftRecentAnchorRect : sendRecentAnchorRect;
+    const recentList = isNftOverlay ? recentNftSendTargets : recentSendTargets;
+    const latestItem = isNftOverlay ? latestRecentNftSend : latestRecentSend;
+    const animatedStyle = isNftOverlay ? nftRecentSendDropdownAnimatedStyle : recentSendDropdownAnimatedStyle;
+    const hasAnchorRect = Boolean(anchorRect);
+    const triggerTop = hasAnchorRect ? Math.max(headerOverlayHeightValue + 8, anchorRect!.y) : headerOverlayHeightValue + 8;
+    const triggerLeft = hasAnchorRect ? anchorRect!.x : 16;
+    const triggerWidth = hasAnchorRect ? anchorRect!.width : undefined;
+
+    return (
+      <>
+        <Pressable
+          style={[styles.globalDropdownScrim, !hasAnchorRect ? styles.globalDropdownScrimTransparent : undefined]}
+          onPress={closeTopDropdownOverlay}
+        />
+        <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+          {hasAnchorRect ? (
+            <Pressable
+              style={[
+                styles.recentSummaryBtn,
+                styles.sendRecentSummaryBtn,
+                styles.recentSummaryBtnActive,
+                styles.globalRecentOverlayTrigger,
+                {
+                  top: triggerTop,
+                  left: triggerLeft,
+                  width: triggerWidth
+                }
+              ]}
+              onPress={closeRecentSendOverlay}
+            >
+              <View style={styles.recentSummaryMeta}>
+                <Text style={[styles.recipientPrimary, styles.recentSummaryPrimaryActive]} numberOfLines={1}>
+                  {latestItem ? shortAddressCenter(latestItem.address, 8, 6) : '-'}
+                </Text>
+                <Text style={[styles.recipientSecondary, styles.recentSummarySecondaryActive]} numberOfLines={1}>
+                  {isNftOverlay
+                    ? latestItem
+                      ? `${(latestItem as RecentNftSendItem).nftTitle} #${(latestItem as RecentNftSendItem).tokenId}`
+                      : ' '
+                    : latestItem
+                      ? `${formatAmount((latestItem as RecentSendItem).amount, text.locale)} ${(latestItem as RecentSendItem).symbol}`
+                      : ' '}
+                  {latestItem?.label ? <Text style={styles.recentSummarySecondaryAccentActive}> / {latestItem.label}</Text> : null}
+                  {latestItem ? ` / ${latestItem.memo ?? '-'} / ${latestItem.date}` : ''}
+                </Text>
+              </View>
+              <ThemedIonicons name="chevron-up" size={16} color="#16110a" />
+            </Pressable>
+          ) : null}
+
+          <View pointerEvents="box-none" style={styles.globalBottomRecentOverlayWrap}>
+            <Animated.View style={[styles.modalCard, animatedStyle]}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{isNftOverlay ? nftRecentSendTitle : text.recentSends}</Text>
+                <Pressable style={styles.modalCloseBtn} onPress={closeRecentSendOverlay}>
+                  <ThemedIonicons name="close" size={18} color={palette.text} />
+                </Pressable>
+              </View>
+              <ScrollView style={[styles.modalList, styles.globalBottomRecentOverlayList]}>
+                {isNftOverlay
+                  ? recentList.map((item) => (
+                      <Pressable
+                        key={`overlay-nft-recent-${(item as RecentNftSendItem).address}-${(item as RecentNftSendItem).tokenId}-${(item as RecentNftSendItem).date}`}
+                        style={styles.modalRow}
+                        onPress={() => {
+                          const selected = item as RecentNftSendItem;
+                          setNftSendRecipientInput(selected.address);
+                          setNftSendRecipientTouched(false);
+                          closeRecentSendOverlay();
+                        }}
+                      >
+                        <View style={styles.modalRowIcon}>
+                          <ThemedIonicons name="bookmark-outline" size={15} color={palette.accent} />
+                        </View>
+                        <View style={styles.modalRowMeta}>
+                          <Text style={styles.modalPrimary} numberOfLines={1}>
+                            {shortAddressCenter((item as RecentNftSendItem).address, 8, 6)}
+                          </Text>
+                          <Text style={styles.modalSecondary} numberOfLines={1}>
+                            {(item as RecentNftSendItem).nftTitle} #{(item as RecentNftSendItem).tokenId}
+                            {(item as RecentNftSendItem).label ? (
+                              <Text style={styles.recipientSecondaryAccent}> / {(item as RecentNftSendItem).label}</Text>
+                            ) : null}
+                            {` / ${(item as RecentNftSendItem).memo ?? '-'} / ${(item as RecentNftSendItem).date}`}
+                          </Text>
+                        </View>
+                        <ThemedIonicons name="chevron-forward" size={16} color={palette.muted} />
+                      </Pressable>
+                    ))
+                  : recentList.map((item) => (
+                      <Pressable
+                        key={`overlay-recent-${(item as RecentSendItem).address}-${(item as RecentSendItem).date}`}
+                        style={styles.modalRow}
+                        onPress={() => {
+                          const selected = item as RecentSendItem;
+                          setRecipientInput(selected.address);
+                          setRecipientTouched(false);
+                          applyRecentSendSelection(selected);
+                          closeRecentSendOverlay();
+                        }}
+                      >
+                        <View style={styles.modalRowIcon}>
+                          <ThemedIonicons name="bookmark-outline" size={15} color={palette.accent} />
+                        </View>
+                        <View style={styles.modalRowMeta}>
+                          <Text style={styles.modalPrimary} numberOfLines={1}>
+                            {shortAddressCenter((item as RecentSendItem).address, 8, 6)}
+                          </Text>
+                          <Text style={styles.modalSecondary} numberOfLines={1}>
+                            {formatAmount((item as RecentSendItem).amount, text.locale)} {(item as RecentSendItem).symbol}
+                            {(item as RecentSendItem).label ? (
+                              <Text style={styles.recipientSecondaryAccent}> / {(item as RecentSendItem).label}</Text>
+                            ) : null}
+                            {` / ${(item as RecentSendItem).memo ?? '-'} / ${(item as RecentSendItem).date}`}
+                          </Text>
+                        </View>
+                        <ThemedIonicons name="chevron-forward" size={16} color={palette.muted} />
+                      </Pressable>
+                    ))}
+              </ScrollView>
+            </Animated.View>
+          </View>
+        </View>
+      </>
+    );
+  };
+
+  const renderHomeHeader = () => (
+    <View
+      style={[
+        styles.subHeader,
+        styles.homeHeaderOverlay,
+        showWalletMenu ? styles.homeHeaderOverlayOpen : undefined
+      ]}
+    >
+      {isAnyDropdownBackdropActive ? null : renderHeaderBackdrop()}
+      <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => navigate('settings')}>
+        <ThemedIonicons name="settings-outline" size={18} color={palette.text} style={styles.backBtnIconGlyph} />
+      </Pressable>
+      <View pointerEvents="box-none" style={styles.homeWalletPillCenterWrap}>
+        <View ref={homeWalletAnchorRef} style={styles.homeWalletAnchor} onLayout={measureWalletMenuAnchor}>
+          <Pressable
+            style={[styles.homeWalletPillCenter, showWalletMenu ? styles.homeWalletPillCenterActive : undefined]}
+            onPress={() => {
+              setShowWalletMenu((prev) => {
+                if (prev) return false;
+                measureWalletMenuAnchor();
+                return true;
+              });
+            }}
+          >
+            <Text style={[styles.homeWalletPillText, showWalletMenu ? styles.homeWalletPillTextActive : undefined]} numberOfLines={1}>
+              {getWalletDisplayName(activeWallet)}
+            </Text>
+            <ThemedIonicons
+              name={showWalletMenu ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={showWalletMenu ? '#16110a' : palette.text}
+              style={styles.homeWalletPillChevron}
+            />
+          </Pressable>
+        </View>
+      </View>
+      <Pressable
+        ref={homeScanTriggerRef}
+        onLayout={measureHomeScanTriggerAnchor}
+        style={[styles.backBtn, showScanMethodModal && scanEntryPoint === 'home' ? styles.iconCircleBtnActive : undefined]}
+        hitSlop={HEADER_BUTTON_HIT_SLOP}
+        onPress={() => {
+          measureHomeScanTriggerAnchor();
+          openScanMethodPicker('home');
+        }}
+      >
+        <ThemedIonicons
+          name="scan-outline"
+          size={18}
+          color={showScanMethodModal && scanEntryPoint === 'home' ? '#16110a' : palette.text}
+          style={styles.backBtnIconGlyph}
+        />
+      </Pressable>
+    </View>
+  );
+
+  const renderHome = () => {
+    const deltaUsd = tokens.reduce((sum, token) => sum + token.balance * token.priceUsd * (token.change24h / 100), 0);
+    const deltaPercent = totalBalance > 0 ? (deltaUsd / totalBalance) * 100 : 0;
+    const deltaUp = deltaUsd >= 0;
+
+    return (
+      <View style={styles.screen}>
+        {renderHomeHeader()}
+        {(showScanMethodModal && scanEntryPoint === 'home') || showHomeAssetLayoutModal ? (
+          <Pressable
+            style={styles.walletMenuScrim}
+            onPress={() => {
+              if (showScanMethodModal && scanEntryPoint === 'home') {
+                setShowScanMethodModal(false);
+              }
+              if (showHomeAssetLayoutModal) {
+                closeHomeAssetLayoutModal();
+              }
+            }}
+          />
         ) : null}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.homeScrollPad}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={!(showWalletMenu || showHomeAssetLayoutModal || (showScanMethodModal && scanEntryPoint === 'home'))}
           onScrollBeginDrag={() => setShowWalletMenu(false)}
         >
-          <View style={styles.homeBalanceWrap}>
+          <View style={styles.homeScrollContentWrap}>
+            <View style={styles.homeBalanceWrap}>
             <Text style={styles.balanceLabel}>{text.totalBalance}</Text>
             <Pressable style={styles.balanceAmountPress} onPress={() => setShowBalance((prev) => !prev)}>
               <Text style={[styles.balanceTextCenter, !showBalance ? styles.balanceTextMasked : undefined]}>
@@ -11145,7 +13147,7 @@ function AppInner() {
             ))}
           </View>
 
-          <View style={styles.assetPanel}>
+	          <View style={styles.assetPanel}>
             <View style={styles.segmentWrap} onLayout={(event) => setSegmentTrackWidth(event.nativeEvent.layout.width)}>
               <Animated.View style={[styles.segmentActivePill, segmentIndicatorStyle]} pointerEvents="none" />
               <Pressable
@@ -11178,8 +13180,24 @@ function AppInner() {
                   <Pressable style={styles.assetPanelToolBtn} onPress={() => navigate('manageAssets')}>
                     <ThemedIonicons name="wallet-outline" size={16} color={palette.text} />
                   </Pressable>
-                  <Pressable style={[styles.assetPanelToolBtn, styles.assetPanelToolBtnGap]} onPress={openHomeAssetLayoutModal}>
-                    <ThemedIonicons name="options-outline" size={16} color={palette.text} />
+                  <Pressable
+                    ref={homeLayoutTriggerRef}
+                    onLayout={measureHomeLayoutTriggerAnchor}
+                    style={[
+                      styles.assetPanelToolBtn,
+                      styles.assetPanelToolBtnGap,
+                      showHomeAssetLayoutModal ? styles.iconCircleBtnActive : undefined
+                    ]}
+                    onPress={() => {
+                      if (showHomeAssetLayoutModal) {
+                        closeHomeAssetLayoutModal();
+                        return;
+                      }
+                      measureHomeLayoutTriggerAnchor();
+                      openHomeAssetLayoutModal();
+                    }}
+                  >
+                    <ThemedIonicons name="options-outline" size={16} color={showHomeAssetLayoutModal ? '#16110a' : palette.text} />
                   </Pressable>
                 </View>
                 <View style={styles.tokenList}>
@@ -11221,12 +13239,13 @@ function AppInner() {
                   </Pressable>
                 </View>
               </View>
-            )}
+	            )}
+	          </View>
           </View>
-        </ScrollView>
-      </View>
-    );
-  };
+	        </ScrollView>
+	      </View>
+	    );
+	  };
 
   const discoverActionText = useMemo(
     () =>
@@ -11253,7 +13272,8 @@ function AppInner() {
         ? {
             blockedOpen: '보안 정책으로 차단된 주소입니다.',
             invalidUrl: '유효한 HTTPS 주소를 입력해주세요.',
-            highRiskToast: '위험 가능성이 높은 도메인입니다. 확인 후 열어주세요.',
+            cautionToast: '검증되지 않은 도메인입니다. 주소를 확인한 뒤 열어주세요.',
+            highRiskBlockedToast: '고위험 도메인은 자동으로 차단됩니다.',
             promptTitle: '보안 경고',
             promptBodyPrefix: '다음 주소는 피싱 위험이 있을 수 있습니다:',
             promptContinue: '계속 열기',
@@ -11275,7 +13295,8 @@ function AppInner() {
           ? {
               blockedOpen: '该地址已被安全策略拦截。',
               invalidUrl: '请输入有效的 HTTPS 地址。',
-              highRiskToast: '检测到高风险域名，请确认后再打开。',
+              cautionToast: '检测到未验证域名，请先确认后再打开。',
+              highRiskBlockedToast: '高风险域名将被自动拦截。',
               promptTitle: '安全警告',
               promptBodyPrefix: '以下地址可能存在钓鱼风险：',
               promptContinue: '仍然打开',
@@ -11296,7 +13317,8 @@ function AppInner() {
           : {
               blockedOpen: 'This URL is blocked by security policy.',
               invalidUrl: 'Please enter a valid HTTPS URL.',
-              highRiskToast: 'High-risk domain detected. Please confirm before opening.',
+              cautionToast: 'Unverified domain detected. Please verify the URL before opening.',
+              highRiskBlockedToast: 'High-risk domains are blocked automatically.',
               promptTitle: 'Security Warning',
               promptBodyPrefix: 'This URL may be a phishing risk:',
               promptContinue: 'Open anyway',
@@ -11323,7 +13345,7 @@ function AppInner() {
         ? {
             settingsLabel: 'DApp 보안 도메인',
             title: 'DApp 보안 도메인',
-            description: '신뢰하는 도메인만 추가하세요. 추가된 도메인은 고위험 경고를 건너뜁니다.',
+            description: '앱이 기본적으로 위험 도메인을 자동 차단합니다. 필요할 때만 예외 도메인을 추가하세요.',
             placeholder: '예: app.example.com',
             memoPlaceholder: '메모 (선택)',
             add: '추가',
@@ -11345,7 +13367,7 @@ function AppInner() {
           ? {
               settingsLabel: 'DApp 安全域名',
               title: 'DApp 安全域名',
-              description: '仅添加你信任的域名。加入后将跳过高风险警告。',
+              description: '应用会默认自动拦截高风险域名。仅在必要时添加例外域名。',
               placeholder: '例如：app.example.com',
               memoPlaceholder: '备注（可选）',
               add: '添加',
@@ -11366,7 +13388,7 @@ function AppInner() {
           : {
               settingsLabel: 'DApp Security Domains',
               title: 'DApp Security Domains',
-              description: 'Add only domains you trust. Added domains bypass high-risk warning prompts.',
+              description: 'The app blocks high-risk domains automatically. Add exception domains only when needed.',
               placeholder: 'e.g. app.example.com',
               memoPlaceholder: 'Memo (optional)',
               add: 'Add',
@@ -11413,6 +13435,7 @@ function AppInner() {
   const getDiscoverUrlSecurityCheckWithAllowlist = (normalizedUrl: string): DiscoverUrlSecurityCheck => {
     const base = getDiscoverUrlSecurityCheck(normalizedUrl);
     if (base.level === 'blocked') return base;
+    if (base.level === 'high') return base;
     if (base.host && Array.from(discoverTrustedHostSet).some((trusted) => hostMatchesDomain(base.host, trusted))) {
       return { ...base, level: 'safe', reason: 'user-allowed' };
     }
@@ -11437,6 +13460,12 @@ function AppInner() {
     const host = normalizeDiscoverTrustedHost(rawHost);
     if (!host) {
       if (!options?.silent) setBannerMessage(discoverAllowlistText.invalid);
+      return false;
+    }
+    const hostSecurity = getDiscoverUrlSecurityCheck(`https://${host}`);
+    if (hostSecurity.level === 'high' || hostSecurity.level === 'blocked') {
+      if (!options?.silent) setBannerMessage(discoverSecurityText.highRiskBlockedToast);
+      if (options?.clearInput) setDiscoverTrustedHostInput('');
       return false;
     }
     if (TRUSTED_DISCOVER_DAPP_HOSTS.some((trusted) => hostMatchesDomain(host, trusted)) || discoverTrustedHostSet.has(host)) {
@@ -11504,6 +13533,11 @@ function AppInner() {
       setBannerMessage(discoverAllowlistText.invalid);
       return false;
     }
+    const nextHostSecurity = getDiscoverUrlSecurityCheck(`https://${nextHost}`);
+    if (nextHostSecurity.level === 'high' || nextHostSecurity.level === 'blocked') {
+      setBannerMessage(discoverSecurityText.highRiskBlockedToast);
+      return false;
+    }
     if (TRUSTED_DISCOVER_DAPP_HOSTS.some((trusted) => hostMatchesDomain(nextHost, trusted))) {
       setBannerMessage(discoverAllowlistText.exists);
       return false;
@@ -11565,10 +13599,16 @@ function AppInner() {
     }
   };
 
-  const isWeeklyBriefingItem = (item: DiscoverFeedItem) => {
-    const haystack = [item.title, item.summary, item.sourceName, item.ctaLabel, ...(item.tags ?? [])].join(' ').toLowerCase();
-    return haystack.includes('브리핑') || haystack.includes('briefing') || haystack.includes('简报');
-  };
+  function isWeeklyBriefingItem(item: DiscoverFeedItem) {
+    const id = String(item.id || '').trim().toLowerCase();
+    const internalTarget = String(item.internalTarget || '').trim().toLowerCase();
+    const tags = Array.isArray(item.tags) ? item.tags.map((entry) => String(entry || '').trim().toLowerCase()) : [];
+    const hasImwalletTag = tags.includes('imwallet');
+    const hasWeeklyBriefingTag = tags.includes('weekly') || tags.includes('briefing');
+    if (id === 'imwallet-weekly-briefing') return true;
+    if (internalTarget === 'discover:briefing' && hasImwalletTag && hasWeeklyBriefingTag) return true;
+    return false;
+  }
 
   const openWeeklyBriefingBoard = () => {
     setDiscoverBriefingWeekKey(null);
@@ -11708,8 +13748,13 @@ function AppInner() {
       return false;
     }
 
+    if (securityCheck.level === 'high') {
+      setBannerMessage(discoverSecurityText.highRiskBlockedToast);
+      return false;
+    }
+
     if (
-      securityCheck.level === 'high' &&
+      securityCheck.level === 'caution' &&
       !options?.bypassRiskPrompt &&
       !discoverSecurityAllowHostsRef.current.has(securityCheck.host)
     ) {
@@ -11721,7 +13766,7 @@ function AppInner() {
         reason: securityCheck.reason,
         source: options?.source ?? 'open'
       });
-      setBannerMessage(discoverSecurityText.highRiskToast);
+      setBannerMessage(discoverSecurityText.cautionToast);
       return false;
     }
 
@@ -11866,7 +13911,11 @@ function AppInner() {
       setBannerMessage(discoverSecurityText.blockedOpen);
       return;
     }
-    if (securityCheck.level === 'high' && !discoverSecurityAllowHostsRef.current.has(securityCheck.host)) {
+    if (securityCheck.level === 'high') {
+      setBannerMessage(discoverSecurityText.highRiskBlockedToast);
+      return;
+    }
+    if (securityCheck.level === 'caution' && !discoverSecurityAllowHostsRef.current.has(securityCheck.host)) {
       setDiscoverSecurityPrompt({
         url: normalizedUrl,
         title: discoverActiveTab?.title ?? '',
@@ -11875,7 +13924,7 @@ function AppInner() {
         reason: securityCheck.reason,
         source: 'open'
       });
-      setBannerMessage(discoverSecurityText.highRiskToast);
+      setBannerMessage(discoverSecurityText.cautionToast);
       return;
     }
     const now = new Date().toISOString();
@@ -11953,7 +14002,11 @@ function AppInner() {
       setBannerMessage(discoverSecurityText.blockedOpen);
       return false;
     }
-    if (securityCheck.level === 'high' && !discoverSecurityAllowHostsRef.current.has(securityCheck.host)) {
+    if (securityCheck.level === 'high') {
+      setBannerMessage(discoverSecurityText.highRiskBlockedToast);
+      return false;
+    }
+    if (securityCheck.level === 'caution' && !discoverSecurityAllowHostsRef.current.has(securityCheck.host)) {
       setDiscoverSecurityPrompt({
         url: normalized,
         title: discoverActiveTab?.title ?? '',
@@ -11962,7 +14015,7 @@ function AppInner() {
         reason: securityCheck.reason,
         source: 'navigation'
       });
-      setBannerMessage(discoverSecurityText.highRiskToast);
+      setBannerMessage(discoverSecurityText.cautionToast);
       return false;
     }
     return true;
@@ -11974,8 +14027,6 @@ function AppInner() {
 
   const continueDiscoverSecurityPrompt = () => {
     if (!discoverSecurityPrompt) return;
-    const host = normalizeHost(discoverSecurityPrompt.host);
-    if (host) addDiscoverTrustedHost(host, { silent: true, memo: '' });
     const pending = discoverSecurityPrompt;
     setDiscoverSecurityPrompt(null);
     void openDiscoverDappBrowser(pending.url, pending.title, pending.sourceItemId, {
@@ -12066,16 +14117,16 @@ function AppInner() {
     emitClickLog('none', false, 'no_action', '');
   };
 
-  const ICON_BROKEN_RETRY_WINDOW_MS = 15_000;
-  const isUriRecentlyBroken = (uri: string) => {
+  function isUriRecentlyBroken(uri: string) {
+    const iconBrokenRetryWindowMs = 15_000;
     const normalized = String(uri || '').trim();
     if (!normalized) return false;
     const brokenAt = discoverBrokenIconUris[normalized];
     if (!brokenAt) return false;
-    return Date.now() - brokenAt < ICON_BROKEN_RETRY_WINDOW_MS;
-  };
+    return Date.now() - brokenAt < iconBrokenRetryWindowMs;
+  }
 
-  const resolveIconFromUriCandidates = (uriCandidates: string[], allowBrokenRetry = false) => {
+  function resolveIconFromUriCandidates(uriCandidates: string[], allowBrokenRetry = false) {
     for (const uri of uriCandidates) {
       const normalized = String(uri || '').trim();
       if (!normalized) continue;
@@ -12084,14 +14135,20 @@ function AppInner() {
       }
     }
     return { source: undefined as ImageSourcePropType | undefined, activeUri: '' };
-  };
+  }
 
-  const resolveDiscoverPopularIconWithFallback = (symbol: string, iconUrl?: string) => {
-    const iconCandidates = buildDiscoverPopularIconCandidates(symbol, iconUrl);
+  function resolveDiscoverPopularIconWithFallback(symbol: string, iconUrl?: string) {
+    const normalizedSymbol = String(symbol || '').trim().toUpperCase();
+    const preferredIconUrl = discoverCachedTokenIconUrlBySymbol[normalizedSymbol];
+    const iconCandidates = buildDiscoverPopularIconCandidates(symbol, iconUrl, preferredIconUrl);
     const resolved = resolveIconFromUriCandidates(iconCandidates);
     if (resolved.source) return resolved;
+    const localIconSource = discoverPopularLocalIconMap[normalizedSymbol];
+    if (localIconSource) {
+      return { source: localIconSource, activeUri: '' };
+    }
     return resolveIconFromUriCandidates(iconCandidates, true);
-  };
+  }
 
   const renderAssetDetail = () => {
     const trendUp = assetChartTrend.up;
@@ -12435,25 +14492,24 @@ function AppInner() {
   };
 
   const renderDiscoverList = (rowsInput: DiscoverFeedItem[], limit?: number) => {
-    const rowsWithVerifiedIcon = rowsInput
-      .map((item) => {
-        const fixedSource = resolveDiscoverDappIconSource(item);
-        if (fixedSource && typeof fixedSource !== 'object') {
-          return { item, iconSource: fixedSource, iconUri: '' };
+    const rowsWithVerifiedIcon = rowsInput.map((item) => {
+      const dappCacheKey = getDiscoverDappIconCacheKey(item);
+      const preferredIconUrl = discoverCachedDappIconUrlByKey[dappCacheKey];
+      const fixedSource = resolveDiscoverDappIconSource(item);
+      if (fixedSource && typeof fixedSource !== 'object') {
+        return { item, iconSource: fixedSource as ImageSourcePropType, iconUri: '' };
+      }
+      if (fixedSource && typeof fixedSource === 'object' && 'uri' in fixedSource) {
+        const fixedUri = String(fixedSource.uri || '').trim();
+        if (fixedUri && !isUriRecentlyBroken(fixedUri)) {
+          return { item, iconSource: fixedSource as ImageSourcePropType, iconUri: fixedUri };
         }
-        if (fixedSource && typeof fixedSource === 'object' && 'uri' in fixedSource) {
-          const fixedUri = String(fixedSource.uri || '').trim();
-          if (fixedUri && !isUriRecentlyBroken(fixedUri)) {
-            return { item, iconSource: fixedSource, iconUri: fixedUri };
-          }
-        }
+      }
 
-        const iconCandidates = buildDiscoverDappIconCandidates(item);
-        const { source: iconSource, activeUri: iconUri } = resolveIconFromUriCandidates(iconCandidates);
-        if (!iconSource) return null;
-        return { item, iconSource, iconUri };
-      })
-      .filter((entry): entry is { item: DiscoverFeedItem; iconSource: ImageSourcePropType; iconUri: string } => Boolean(entry));
+      const iconCandidates = buildDiscoverDappIconCandidates(item, preferredIconUrl);
+      const { source: iconSource, activeUri: iconUri } = resolveIconFromUriCandidates(iconCandidates);
+      return { item, iconSource, iconUri };
+    });
 
     const rows = (typeof limit === 'number' ? rowsWithVerifiedIcon.slice(0, limit) : rowsWithVerifiedIcon).slice(
       0,
@@ -12482,16 +14538,20 @@ function AppInner() {
             >
               <Text style={styles.discoverDappRank}>{index + 1}</Text>
               <View style={styles.discoverDappIcon}>
-                <View style={styles.discoverDappIconImageLayer}>
-                  <Image
-                    source={iconSource}
-                    style={styles.discoverDappIconImage}
-                    onError={() => {
-                      if (!iconUri) return;
-                      setDiscoverBrokenIconUris((prev) => ({ ...prev, [iconUri]: Date.now() }));
-                    }}
-                  />
-                </View>
+                {iconSource ? (
+                  <View style={styles.discoverDappIconImageLayer}>
+                    <Image
+                      source={iconSource}
+                      style={styles.discoverDappIconImage}
+                      onError={() => {
+                        if (!iconUri) return;
+                        setDiscoverBrokenIconUris((prev) => ({ ...prev, [iconUri]: Date.now() }));
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <ThemedIonicons name="apps-outline" size={16} color={palette.muted} />
+                )}
               </View>
               <View style={styles.discoverDappMeta}>
                 <View style={styles.discoverDappNameRow}>
@@ -12541,7 +14601,9 @@ function AppInner() {
     return (
       <View>
         {rows.map((site, index) => {
-          const iconCandidates = buildDiscoverSiteIconCandidates(site.domain);
+          const siteCacheKey = getDiscoverSiteIconCacheKey(site);
+          const preferredIconUrl = discoverCachedSiteIconUrlByKey[siteCacheKey];
+          const iconCandidates = buildDiscoverSiteIconCandidates(site.domain, preferredIconUrl);
           const { source: siteIconSource, activeUri } = resolveIconFromUriCandidates(iconCandidates);
           const isFavorite = discoverFavoriteSiteIdSet.has(site.id);
           const siteNameDisplay = resolveDiscoverSiteDisplayName(site.id, site.name, lang);
@@ -12603,12 +14665,13 @@ function AppInner() {
     );
   };
 
-  const renderDiscover = () => (
-    <View style={styles.screen}>
-      {renderTopHeader(text.discover, 'chevron-back', () => openRoot('home'), [
-        { materialIcon: 'star-border', action: () => navigate('discoverFavorite') },
-        { icon: 'browsers-outline', action: () => navigate('discoverNoTabs') }
-      ])}
+  const renderDiscover = () => {
+    return (
+      <View style={styles.screen}>
+        {renderTopHeader(text.discover, 'chevron-back', () => openRoot('home'), [
+          { materialIcon: 'star-border', action: () => navigate('discoverFavorite') },
+          { icon: 'browsers-outline', action: () => navigate('discoverNoTabs') }
+        ])}
       <ScrollView
         ref={(ref) => {
           discoverScrollRef.current = ref;
@@ -12631,10 +14694,12 @@ function AppInner() {
             />
           </View>
         </View>
-        {discoverFeedLoading ? <Text style={styles.discoverHintText}>...</Text> : null}
-        {discoverFeedError && !discoverFeed ? (
-          <Text style={[styles.discoverHintText, { color: palette.negative }]}>{discoverBlendText.feedUnavailable}</Text>
+        {discoverFeedError ? (
+          <View style={[styles.infoCard, { marginBottom: 12 }]}>
+            <Text style={styles.infoBody}>{discoverFeedError}</Text>
+          </View>
         ) : null}
+        {discoverFeedLoading ? <Text style={styles.discoverHintText}>...</Text> : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.discoverQuickRow}>
           {discoverQuickChips.map((chip) => (
@@ -12785,7 +14850,7 @@ function AppInner() {
                           />
                         </View>
                       ) : (
-                        <ThemedIonicons name="diamond-outline" size={16} color={palette.muted} />
+                        <Text style={styles.discoverDappIconText}>{token.symbol.slice(0, 2)}</Text>
                       )}
                     </View>
                     <View style={styles.discoverMarketMeta}>
@@ -12905,7 +14970,7 @@ function AppInner() {
                               />
                         </View>
                       ) : (
-                        <ThemedIonicons name="diamond-outline" size={16} color={palette.muted} />
+                        <Text style={styles.discoverDappIconText}>{String(row.symbol || '??').slice(0, 2)}</Text>
                       )}
                     </View>
                     <View style={styles.discoverMarketMeta}>
@@ -12946,8 +15011,9 @@ function AppInner() {
         </View>
 
       </ScrollView>
-    </View>
-  );
+      </View>
+    );
+  };
 
   const renderDiscoverSectionListScreen = (section: DiscoverFullSection) => {
     const emptyLabel =
@@ -13046,7 +15112,7 @@ function AppInner() {
                               />
                           </View>
                         ) : (
-                          <ThemedIonicons name="diamond-outline" size={16} color={palette.muted} />
+                          <Text style={styles.discoverDappIconText}>{String(row.symbol || '??').slice(0, 2)}</Text>
                         )}
                       </View>
                         <View style={styles.discoverMarketMeta}>
@@ -13564,7 +15630,7 @@ function AppInner() {
                             />
                           </View>
                         ) : (
-                          <ThemedIonicons name="diamond-outline" size={16} color={palette.muted} />
+                          <Text style={styles.discoverDappIconText}>{token.symbol.slice(0, 2)}</Text>
                         )}
                       </View>
                       <View style={styles.discoverMarketMeta}>
@@ -13615,9 +15681,10 @@ function AppInner() {
   };
 
   const renderDiscoverBriefingBoard = () => {
-    const title = lang === 'ko' ? '주간 브리핑' : lang === 'zh' ? '每周简报' : 'Weekly Briefing';
+    const title = lang === 'ko' ? 'IMWallet 주간 브리핑' : lang === 'zh' ? 'IMWallet 每周简报' : 'IMWallet Weekly Briefing';
     const latestTag = lang === 'ko' ? '최신' : lang === 'zh' ? '最新' : 'Latest';
     const issueLabel = lang === 'ko' ? '이슈' : lang === 'zh' ? '议题' : 'Issue';
+    const sourcesLabel = lang === 'ko' ? '출처' : lang === 'zh' ? '来源' : 'Sources';
     const expandLabel = lang === 'ko' ? '펼쳐보기' : lang === 'zh' ? '展开查看' : 'Expand';
     const collapseLabel = lang === 'ko' ? '접기' : lang === 'zh' ? '收起' : 'Collapse';
     const noPostsLabel =
@@ -13637,50 +15704,41 @@ function AppInner() {
     return (
       <View style={styles.screen}>
         {renderSubHeader(title)}
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollPad}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!showDiscoverBriefingWeekMenu}
+        >
           <View
             style={[
               styles.discoverBriefingWeekWrap,
               hasExpandedCard ? styles.discoverBriefingBlurredArea : undefined,
-              hasExpandedCard ? blurFxStyle : undefined,
-              showDiscoverBriefingWeekMenu ? styles.discoverBriefingWeekWrapOpen : undefined
+              hasExpandedCard ? blurFxStyle : undefined
             ]}
           >
-            <Pressable
-              style={[styles.discoverBriefingWeekBtn, showDiscoverBriefingWeekMenu ? styles.discoverBriefingWeekBtnActive : undefined]}
-              onPress={() => setShowDiscoverBriefingWeekMenu((prev) => !prev)}
-            >
-              <Text style={styles.discoverBriefingWeekBtnText} numberOfLines={1}>
-                {selectedWeekChipLabel}
-              </Text>
-              <ThemedIonicons
-                name={showDiscoverBriefingWeekMenu ? 'chevron-up' : 'chevron-down'}
-                size={14}
-                color={palette.text}
-                style={styles.discoverBriefingWeekBtnChevron}
-              />
-            </Pressable>
-            {showDiscoverBriefingWeekMenu ? (
-              <Animated.View style={[styles.discoverBriefingWeekMenu, discoverBriefingWeekMenuAnimatedStyle]}>
-                {weeklyBriefingWeekGroups.map((group) => {
-                  const selected = activeBriefingWeekGroup?.weekKey === group.weekKey;
-                  return (
-                    <Pressable
-                      key={group.weekKey}
-                      style={[styles.discoverBriefingWeekItem, selected ? styles.discoverBriefingWeekItemActive : undefined]}
-                      onPress={() => {
-                        setDiscoverBriefingWeekKey(group.weekKey);
-                        setShowDiscoverBriefingWeekMenu(false);
-                      }}
-                    >
-                      <Text style={[styles.discoverBriefingWeekItemText, selected ? styles.discoverBriefingWeekItemTextActive : undefined]}>
-                        {group.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </Animated.View>
-            ) : null}
+            <View ref={discoverBriefingWeekTriggerRef} onLayout={measureDiscoverBriefingWeekTriggerAnchor}>
+              <Pressable
+                style={[styles.discoverBriefingWeekBtn, showDiscoverBriefingWeekMenu ? styles.discoverBriefingWeekBtnActive : undefined]}
+                onPress={() =>
+                  setShowDiscoverBriefingWeekMenu((prev) => {
+                    if (prev) return false;
+                    measureDiscoverBriefingWeekTriggerAnchor();
+                    return true;
+                  })
+                }
+              >
+                <Text style={[styles.discoverBriefingWeekBtnText, showDiscoverBriefingWeekMenu ? styles.discoverBriefingWeekBtnTextActive : undefined]} numberOfLines={1}>
+                  {selectedWeekChipLabel}
+                </Text>
+                <ThemedIonicons
+                  name={showDiscoverBriefingWeekMenu ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={showDiscoverBriefingWeekMenu ? '#16110a' : palette.text}
+                  style={styles.discoverBriefingWeekBtnChevron}
+                />
+              </Pressable>
+            </View>
           </View>
 
           {selectedPosts.length === 0 ? (
@@ -13726,7 +15784,7 @@ function AppInner() {
                     <Text style={[styles.discoverBriefingToggleText, expanded ? styles.discoverBriefingToggleTextActive : undefined]}>
                       {expanded ? collapseLabel : expandLabel}
                     </Text>
-                    <ThemedIonicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={expanded ? '#17120a' : palette.muted} />
+                    <ThemedIonicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={expanded ? '#16110a' : palette.muted} />
                   </Pressable>
                 </View>
                 <Text style={styles.discoverBriefingTitle} numberOfLines={expanded ? undefined : 2}>
@@ -13747,6 +15805,16 @@ function AppInner() {
                         • {point}
                       </Text>
                     ))}
+                    {post.sources.length ? (
+                      <View style={styles.discoverBriefingSourcesWrap}>
+                        <Text style={styles.discoverBriefingSourcesLabel}>{sourcesLabel}</Text>
+                        {post.sources.map((source, sourceIndex) => (
+                          <Pressable key={`${post.id}-source-${sourceIndex}`} onPress={() => void Linking.openURL(source.url)}>
+                            <Text style={styles.discoverBriefingSourceLink}>{source.label}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
               </View>
@@ -13760,131 +15828,264 @@ function AppInner() {
   const renderSettings = () => (
     <View style={styles.screen}>
       {renderSubHeader(text.settings)}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-        <Text style={styles.settingSectionTitle} numberOfLines={1}>
-          {text.wallets}
-        </Text>
-        <Pressable style={styles.settingRow} onPress={() => void openWalletSettingsWithAuth()}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollPad}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!showLangMenu}
+      >
+        <View style={styles.settingsScrollContent}>
+          <Text style={styles.settingSectionTitle} numberOfLines={1}>
             {text.wallets}
           </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <Pressable style={styles.settingRow} onPress={openAddressBookTypeSelect}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {extra.addressBookManage}
-          </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => void openWalletSettingsWithAuth()}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.wallets}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => void openAddressBookWithAuth()}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {extra.addressBookManage}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
 
-        <Text style={styles.settingSectionTitle} numberOfLines={1}>
-          {text.security}
-        </Text>
-        <Pressable style={styles.settingRow} onPress={() => void openSecuritySettingsWithAuth()}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
+          <Text style={styles.settingSectionTitle} numberOfLines={1}>
             {text.security}
           </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <Pressable style={styles.settingRow} onPress={() => navigate('settingsDappSecurity')}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {discoverAllowlistText.settingsLabel}
-          </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <Pressable style={styles.settingRow} onPress={() => navigate('settingsNotifications')}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {text.notifications}
-          </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <View style={styles.settingRow}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {text.theme}
-          </Text>
-          <View style={styles.settingThemeSwitch}>
-            <Animated.View pointerEvents="none" style={[styles.settingThemeActivePill, settingThemeIndicatorStyle]} />
-            <Pressable
-              style={styles.settingThemeBtn}
-              onLayout={(event) => {
-                const { x, width } = event.nativeEvent.layout;
-                setSettingThemeLayout((prev) =>
-                  Math.abs(prev.firstX - x) > 0.5 || Math.abs(prev.firstWidth - width) > 0.5 ? { ...prev, firstX: x, firstWidth: width } : prev
-                );
-              }}
-              onPress={() => setThemeMode('light')}
-            >
-              <Text style={themeMode === 'light' ? styles.settingThemeBtnTextActive : styles.settingThemeBtnText}>{text.light}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.settingThemeBtn}
-              onLayout={(event) => {
-                const { x } = event.nativeEvent.layout;
-                setSettingThemeLayout((prev) => (Math.abs(prev.secondX - x) > 0.5 ? { ...prev, secondX: x } : prev));
-              }}
-              onPress={() => setThemeMode('dark')}
-            >
-              <Text style={themeMode === 'dark' ? styles.settingThemeBtnTextActive : styles.settingThemeBtnText}>{text.dark}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={[styles.settingRow, styles.settingRowLang]}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {text.language}
-          </Text>
-          <Pressable style={[styles.langBtn, showLangMenu ? styles.langBtnActive : undefined]} onPress={() => setShowLangMenu((prev) => !prev)}>
-            <Text style={styles.langBtnText}>{languageLabel[lang]}</Text>
-            <ThemedIonicons name={showLangMenu ? 'chevron-up' : 'chevron-down'} size={14} color={palette.text} />
+          <Pressable style={styles.settingRow} onPress={() => void openSecuritySettingsWithAuth()}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.security}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
           </Pressable>
-          {showLangMenu ? (
-            <Animated.View style={[styles.langMenu, langMenuAnimatedStyle]}>
-              {(['ko', 'en', 'zh'] as Language[]).map((code) => (
-                <Pressable
-                  key={`lang-${code}`}
-                  style={[styles.langItem, lang === code ? styles.langItemActive : undefined]}
-                  onPress={() => {
-                    setLang(code);
-                    setShowLangMenu(false);
-                  }}
-                >
-                  <Text style={lang === code ? styles.langItemTextActive : styles.langItemText}>{languageLabel[code]}</Text>
-                </Pressable>
-              ))}
-            </Animated.View>
-          ) : null}
-        </View>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsDappSecurity')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {discoverAllowlistText.settingsLabel}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsNotifications')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.notifications}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.theme}
+            </Text>
+            <View style={styles.settingThemeSwitch}>
+              <Animated.View pointerEvents="none" style={[styles.settingThemeActivePill, settingThemeIndicatorStyle]} />
+              <Pressable
+                style={styles.settingThemeBtn}
+                onLayout={(event) => {
+                  const { x, width } = event.nativeEvent.layout;
+                  setSettingThemeLayout((prev) =>
+                    Math.abs(prev.firstX - x) > 0.5 || Math.abs(prev.firstWidth - width) > 0.5 ? { ...prev, firstX: x, firstWidth: width } : prev
+                  );
+                }}
+                onPress={() => setThemeMode('light')}
+              >
+                <Text style={themeMode === 'light' ? styles.settingThemeBtnTextActive : styles.settingThemeBtnText}>{text.light}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.settingThemeBtn}
+                onLayout={(event) => {
+                  const { x } = event.nativeEvent.layout;
+                  setSettingThemeLayout((prev) => (Math.abs(prev.secondX - x) > 0.5 ? { ...prev, secondX: x } : prev));
+                }}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Text style={themeMode === 'dark' ? styles.settingThemeBtnTextActive : styles.settingThemeBtnText}>{text.dark}</Text>
+              </Pressable>
+            </View>
+          </View>
 
-        <Text style={styles.settingSectionTitle} numberOfLines={1}>
-          {text.helpCenter}
-        </Text>
-        <Pressable style={styles.settingRow} onPress={() => navigate('settingsHelp')}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
+          <View style={[styles.settingRow, styles.settingRowLang]}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.language}
+            </Text>
+            <View ref={settingsLangTriggerRef} onLayout={measureSettingsLangTriggerAnchor}>
+              <Pressable
+                style={[
+                  styles.langBtn,
+                  showLangMenu ? styles.langBtnActive : undefined
+                ]}
+                onPress={() => {
+                  measureSettingsLangTriggerAnchor();
+                  setShowLangMenu((prev) => !prev);
+                }}
+              >
+                <Text style={[styles.langBtnText, showLangMenu ? styles.langBtnTextActive : undefined]}>{languageLabel[lang]}</Text>
+                <ThemedIonicons name={showLangMenu ? 'chevron-up' : 'chevron-down'} size={14} color={showLangMenu ? '#16110a' : palette.text} />
+              </Pressable>
+            </View>
+          </View>
+
+          <Text style={styles.settingSectionTitle} numberOfLines={1}>
             {text.helpCenter}
           </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <Pressable style={styles.settingRow} onPress={() => navigate('settingsSupport')}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {text.support}
-          </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-        <Pressable style={styles.settingRow} onPress={() => navigate('settingsAbout')}>
-          <Text style={styles.settingLabel} numberOfLines={1}>
-            {text.about}
-          </Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
-
-        <Text style={styles.settingSectionTitle}>Preview</Text>
-        <Pressable style={styles.settingRow} onPress={() => openRoot('onboardingWelcome')}>
-          <Text style={styles.settingLabel}>{text.previewOnboarding}</Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsHelp')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.helpCenter}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsSupport')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.support}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsAbout')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.about}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
+
+  const renderSettingsLangOverlay = () => {
+    if (!(currentScreen === 'settings' && showLangMenu && settingsLangTriggerRect)) return null;
+
+    const menuHeight = 116;
+    const desiredTop = settingsLangTriggerRect.y + settingsLangTriggerRect.height + 8;
+    const minTop = headerOverlayHeightValue + 8;
+    const maxTop = Math.max(minTop, viewportHeight - effectiveBottomInset - menuHeight - 10);
+    const menuTop = Math.min(desiredTop, maxTop);
+
+    return (
+      <>
+        <Pressable style={styles.globalDropdownScrim} onPress={() => setShowLangMenu(false)} />
+        <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+          <Pressable
+            style={[
+              styles.langBtn,
+              styles.langBtnActive,
+              styles.globalRecentOverlayTrigger,
+              {
+                top: settingsLangTriggerRect.y,
+                left: settingsLangTriggerRect.x,
+                width: settingsLangTriggerRect.width,
+                height: settingsLangTriggerRect.height,
+                borderRadius: settingsLangTriggerRect.height / 2
+              }
+            ]}
+            onPress={() => setShowLangMenu(false)}
+          >
+            <Text style={[styles.langBtnText, styles.langBtnTextActive]}>{languageLabel[lang]}</Text>
+            <ThemedIonicons name="chevron-up" size={14} color="#16110a" />
+          </Pressable>
+          <Animated.View
+            style={[
+              styles.langMenuFloating,
+              styles.globalRecentOverlayTrigger,
+              langMenuAnimatedStyle,
+              {
+                top: menuTop,
+                left: settingsLangTriggerRect.x,
+                width: settingsLangTriggerRect.width
+              }
+            ]}
+          >
+            {(['ko', 'en', 'zh'] as Language[]).map((code, index, items) => (
+              <Pressable
+                key={`lang-overlay-${code}`}
+                style={[
+                  styles.langItem,
+                  index < items.length - 1 ? styles.langItemDivider : undefined,
+                  index === items.length - 1 ? styles.langItemLast : undefined,
+                  lang === code ? styles.langItemActive : undefined
+                ]}
+                onPress={() => {
+                  setLang(code);
+                  setShowLangMenu(false);
+                }}
+              >
+                <Text style={lang === code ? styles.langItemTextActive : styles.langItemText}>{languageLabel[code]}</Text>
+              </Pressable>
+            ))}
+          </Animated.View>
+        </View>
+      </>
+    );
+  };
+
+  const renderDiscoverBriefingWeekOverlay = () => {
+    if (!(currentScreen === 'discoverBriefingBoard' && showDiscoverBriefingWeekMenu && discoverBriefingWeekTriggerRect)) return null;
+
+    const selectWeekLabel = lang === 'ko' ? '주차 선택' : lang === 'zh' ? '选择周次' : 'Select week';
+    const selectedWeekChipLabel = activeBriefingWeekGroup?.label ?? selectWeekLabel;
+    const menuHeight = Math.max(120, Math.min(weeklyBriefingWeekGroups.length * 39 + 2, 240));
+    const desiredTop = discoverBriefingWeekTriggerRect.y + discoverBriefingWeekTriggerRect.height + 8;
+    const minTop = headerOverlayHeightValue + 8;
+    const maxTop = Math.max(minTop, viewportHeight - effectiveBottomInset - menuHeight - 10);
+    const menuTop = Math.min(desiredTop, maxTop);
+
+    return (
+      <>
+        <Pressable style={styles.globalDropdownScrim} onPress={() => setShowDiscoverBriefingWeekMenu(false)} />
+        <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+          <Pressable
+            style={[
+              styles.discoverBriefingWeekBtn,
+              styles.discoverBriefingWeekBtnActive,
+              styles.globalRecentOverlayTrigger,
+              {
+                top: discoverBriefingWeekTriggerRect.y,
+                left: discoverBriefingWeekTriggerRect.x,
+                width: discoverBriefingWeekTriggerRect.width,
+                height: discoverBriefingWeekTriggerRect.height,
+                borderRadius: discoverBriefingWeekTriggerRect.height / 2
+              }
+            ]}
+            onPress={() => setShowDiscoverBriefingWeekMenu(false)}
+          >
+            <Text style={[styles.discoverBriefingWeekBtnText, styles.discoverBriefingWeekBtnTextActive]} numberOfLines={1}>
+              {selectedWeekChipLabel}
+            </Text>
+            <ThemedIonicons name="chevron-up" size={14} color="#16110a" style={styles.discoverBriefingWeekBtnChevron} />
+          </Pressable>
+          <Animated.View
+            style={[
+              styles.discoverBriefingWeekMenu,
+              styles.discoverBriefingWeekMenuFloating,
+              styles.globalRecentOverlayTrigger,
+              discoverBriefingWeekMenuAnimatedStyle,
+              {
+                top: menuTop,
+                left: discoverBriefingWeekTriggerRect.x,
+                width: discoverBriefingWeekTriggerRect.width
+              }
+            ]}
+          >
+            {weeklyBriefingWeekGroups.map((group) => {
+              const selected = activeBriefingWeekGroup?.weekKey === group.weekKey;
+              return (
+                <Pressable
+                  key={`briefing-week-overlay-${group.weekKey}`}
+                  style={[styles.discoverBriefingWeekItem, selected ? styles.discoverBriefingWeekItemActive : undefined]}
+                  onPress={() => {
+                    setDiscoverBriefingWeekKey(group.weekKey);
+                    setShowDiscoverBriefingWeekMenu(false);
+                  }}
+                >
+                  <Text style={[styles.discoverBriefingWeekItemText, selected ? styles.discoverBriefingWeekItemTextActive : undefined]}>
+                    {group.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+        </View>
+      </>
+    );
+  };
 
   const renderThemeSettings = () => (
     <View style={styles.screen}>
@@ -13920,11 +16121,17 @@ function AppInner() {
     const lockMethodKind: 'password' | 'biometric' = sendAuthMethod === 'password' ? 'password' : 'biometric';
     const lockMethodLabel = lockMethodKind === 'password' ? flow.passwordMode : text.biometric;
     const biometricTypeLabel = sendAuthMethod === 'face' ? flow.faceMode : flow.fingerprintMode;
+    const showSecurityDropdownScrim = showAutoLockMenu || showLockMethodMenu || showBiometricTypeMenu;
 
     return (
       <View style={styles.screen}>
         {renderSubHeader(text.security)}
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollPad}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!showSecurityDropdownScrim}
+        >
           <View style={styles.toggleRow}>
             <Text style={styles.settingLabel}>{text.passwordLock}</Text>
             <AssetSwitchToggle enabled={passwordLockEnabled} onToggle={() => setPasswordLockEnabled((prev) => !prev)} styles={styles} />
@@ -13940,121 +16147,272 @@ function AppInner() {
 
           <View style={[styles.securityInfoRow, styles.securityPickerRow, styles.securityPickerRowTop]}>
             <Text style={styles.settingLabel}>{text.autoLock}</Text>
-            <Pressable
-              style={[styles.langBtn, showAutoLockMenu ? styles.langBtnActive : undefined]}
-              onPress={() => {
-                setShowLockMethodMenu(false);
-                setShowBiometricTypeMenu(false);
-                setShowAutoLockMenu((prev) => !prev);
-              }}
+            <View
+              ref={securityAutoLockTriggerRef}
+              onLayout={measureSecurityAutoLockTriggerAnchor}
+              style={showAutoLockMenu ? styles.dropdownTriggerMenuWrapOpen : styles.dropdownTriggerMenuWrap}
             >
-              <Text style={styles.langBtnText}>{currentAutoLockLabel}</Text>
-              <ThemedIonicons name={showAutoLockMenu ? 'chevron-up' : 'chevron-down'} size={14} color={palette.text} />
-            </Pressable>
-            {showAutoLockMenu ? (
-              <Animated.View style={[styles.langMenu, styles.securityDropdownMenu, autoLockMenuAnimatedStyle]}>
-                {autoLockOptions.map((item) => {
-                  const active = autoLockOption === item.value;
-                  return (
-                    <Pressable
-                      key={`lock-${item.value}`}
-                      style={[styles.langItem, active ? styles.langItemActive : undefined]}
-                      onPress={() => {
-                        setAutoLockOption(item.value);
-                        setShowAutoLockMenu(false);
-                      }}
-                    >
-                      <Text style={active ? styles.langItemTextActive : styles.langItemText}>{item.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </Animated.View>
-            ) : null}
+              <Pressable
+                style={[styles.langBtn, showAutoLockMenu ? styles.langBtnActive : undefined]}
+                onPress={() => {
+                  measureSecurityAutoLockTriggerAnchor();
+                  setShowLockMethodMenu(false);
+                  setShowBiometricTypeMenu(false);
+                  setShowAutoLockMenu((prev) => !prev);
+                }}
+              >
+                <Text style={[styles.langBtnText, showAutoLockMenu ? styles.langBtnTextActive : undefined]}>{currentAutoLockLabel}</Text>
+                <ThemedIonicons
+                  name={showAutoLockMenu ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={showAutoLockMenu ? '#16110a' : palette.text}
+                />
+              </Pressable>
+            </View>
           </View>
 
           <View style={[styles.securityInfoRow, styles.securityPickerRow, styles.securityPickerRowMiddle]}>
             <Text style={styles.settingLabel}>{text.lockMethod}</Text>
-            <Pressable
-              style={[styles.langBtn, showLockMethodMenu ? styles.langBtnActive : undefined]}
-              onPress={() => {
-                setShowAutoLockMenu(false);
-                setShowBiometricTypeMenu(false);
-                setShowLockMethodMenu((prev) => !prev);
-              }}
+            <View
+              ref={securityLockMethodTriggerRef}
+              onLayout={measureSecurityLockMethodTriggerAnchor}
+              style={showLockMethodMenu ? styles.dropdownTriggerMenuWrapOpen : styles.dropdownTriggerMenuWrap}
             >
-              <Text style={styles.langBtnText}>{lockMethodLabel}</Text>
-              <ThemedIonicons name={showLockMethodMenu ? 'chevron-up' : 'chevron-down'} size={14} color={palette.text} />
-            </Pressable>
-            {showLockMethodMenu ? (
-              <Animated.View style={[styles.langMenu, styles.securityDropdownMenu, lockMethodMenuAnimatedStyle]}>
-                <Pressable
-                  style={[styles.langItem, lockMethodKind === 'password' ? styles.langItemActive : undefined]}
-                  onPress={() => {
-                    setBiometric(false);
-                    setSendAuthMethod('password');
-                    setShowLockMethodMenu(false);
-                    setShowBiometricTypeMenu(false);
-                  }}
-                >
-                  <Text style={lockMethodKind === 'password' ? styles.langItemTextActive : styles.langItemText}>{flow.passwordMode}</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.langItem, lockMethodKind === 'biometric' ? styles.langItemActive : undefined]}
-                  onPress={() => {
-                    setBiometric(true);
-                    if (sendAuthMethod === 'password') setSendAuthMethod('fingerprint');
-                    setShowLockMethodMenu(false);
-                    setShowBiometricTypeMenu(true);
-                  }}
-                >
-                  <Text style={lockMethodKind === 'biometric' ? styles.langItemTextActive : styles.langItemText}>{text.biometric}</Text>
-                </Pressable>
-              </Animated.View>
-            ) : null}
+              <Pressable
+                style={[styles.langBtn, showLockMethodMenu ? styles.langBtnActive : undefined]}
+                onPress={() => {
+                  measureSecurityLockMethodTriggerAnchor();
+                  setShowAutoLockMenu(false);
+                  setShowBiometricTypeMenu(false);
+                  setShowLockMethodMenu((prev) => !prev);
+                }}
+              >
+                <Text style={[styles.langBtnText, showLockMethodMenu ? styles.langBtnTextActive : undefined]}>{lockMethodLabel}</Text>
+                <ThemedIonicons
+                  name={showLockMethodMenu ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={showLockMethodMenu ? '#16110a' : palette.text}
+                />
+              </Pressable>
+            </View>
           </View>
 
           {lockMethodKind === 'biometric' ? (
             <View style={[styles.securityInfoRow, styles.securityPickerRow, styles.securityPickerRowBottom]}>
               <Text style={styles.settingLabel}>{text.biometricType}</Text>
-              <Pressable
-                style={[styles.langBtn, showBiometricTypeMenu ? styles.langBtnActive : undefined]}
-                onPress={() => {
-                  setShowAutoLockMenu(false);
-                  setShowLockMethodMenu(false);
-                  setShowBiometricTypeMenu((prev) => !prev);
-                }}
+              <View
+                ref={securityBiometricTypeTriggerRef}
+                onLayout={measureSecurityBiometricTypeTriggerAnchor}
+                style={showBiometricTypeMenu ? styles.dropdownTriggerMenuWrapOpen : styles.dropdownTriggerMenuWrap}
               >
-                <Text style={styles.langBtnText}>{biometricTypeLabel}</Text>
-                <ThemedIonicons name={showBiometricTypeMenu ? 'chevron-up' : 'chevron-down'} size={14} color={palette.text} />
-              </Pressable>
-              {showBiometricTypeMenu ? (
-                <Animated.View style={[styles.langMenu, styles.securityDropdownMenu, biometricTypeMenuAnimatedStyle]}>
-                  <Pressable
-                    style={[styles.langItem, sendAuthMethod === 'fingerprint' ? styles.langItemActive : undefined]}
-                    onPress={() => {
-                      setBiometric(true);
-                      setSendAuthMethod('fingerprint');
-                      setShowBiometricTypeMenu(false);
-                    }}
-                  >
-                    <Text style={sendAuthMethod === 'fingerprint' ? styles.langItemTextActive : styles.langItemText}>{flow.fingerprintMode}</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.langItem, sendAuthMethod === 'face' ? styles.langItemActive : undefined]}
-                    onPress={() => {
-                      setBiometric(true);
-                      setSendAuthMethod('face');
-                      setShowBiometricTypeMenu(false);
-                    }}
-                  >
-                    <Text style={sendAuthMethod === 'face' ? styles.langItemTextActive : styles.langItemText}>{flow.faceMode}</Text>
-                  </Pressable>
-                </Animated.View>
-              ) : null}
+                <Pressable
+                  style={[styles.langBtn, showBiometricTypeMenu ? styles.langBtnActive : undefined]}
+                  onPress={() => {
+                    measureSecurityBiometricTypeTriggerAnchor();
+                    setShowAutoLockMenu(false);
+                    setShowLockMethodMenu(false);
+                    setShowBiometricTypeMenu((prev) => !prev);
+                  }}
+                >
+                  <Text style={[styles.langBtnText, showBiometricTypeMenu ? styles.langBtnTextActive : undefined]}>{biometricTypeLabel}</Text>
+                  <ThemedIonicons
+                    name={showBiometricTypeMenu ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={showBiometricTypeMenu ? '#16110a' : palette.text}
+                  />
+                </Pressable>
+              </View>
             </View>
           ) : null}
         </ScrollView>
       </View>
+    );
+  };
+
+  const renderSecurityDropdownOverlay = () => {
+    if (currentScreen !== 'settingsSecurity') return null;
+
+    const closeSecurityMenus = () => {
+      setShowAutoLockMenu(false);
+      setShowLockMethodMenu(false);
+      setShowBiometricTypeMenu(false);
+    };
+
+    const autoLockOptions: { value: AutoLockOption; label: string }[] = [
+      { value: 'IMMEDIATE', label: text.autoLockImmediate },
+      { value: '1M', label: text.autoLock1m },
+      { value: '5M', label: text.autoLock5m },
+      { value: '1H', label: text.autoLock1h },
+      { value: '5H', label: text.autoLock5h }
+    ];
+    const lockMethodKind: 'password' | 'biometric' = sendAuthMethod === 'password' ? 'password' : 'biometric';
+    const currentAutoLockLabel = autoLockOptions.find((item) => item.value === autoLockOption)?.label ?? text.autoLockImmediate;
+    const lockMethodLabel = lockMethodKind === 'password' ? flow.passwordMode : text.biometric;
+    const biometricTypeLabel = sendAuthMethod === 'face' ? flow.faceMode : flow.fingerprintMode;
+
+    let triggerRect: { x: number; y: number; width: number; height: number } | null = null;
+    let triggerLabel = '';
+    let animatedStyle = autoLockMenuAnimatedStyle;
+    let items: { key: string; label: string; active: boolean; onPress: () => void }[] = [];
+
+    if (showAutoLockMenu && securityAutoLockTriggerRect) {
+      triggerRect = securityAutoLockTriggerRect;
+      triggerLabel = currentAutoLockLabel;
+      animatedStyle = autoLockMenuAnimatedStyle;
+      items = autoLockOptions.map((item) => ({
+        key: `lock-${item.value}`,
+        label: item.label,
+        active: autoLockOption === item.value,
+        onPress: () => {
+          setAutoLockOption(item.value);
+          closeSecurityMenus();
+        }
+      }));
+    } else if (showLockMethodMenu && securityLockMethodTriggerRect) {
+      triggerRect = securityLockMethodTriggerRect;
+      triggerLabel = lockMethodLabel;
+      animatedStyle = lockMethodMenuAnimatedStyle;
+      items = [
+        {
+          key: 'lock-method-password',
+          label: flow.passwordMode,
+          active: lockMethodKind === 'password',
+          onPress: () => {
+            setBiometric(false);
+            setSendAuthMethod('password');
+            closeSecurityMenus();
+          }
+        },
+        {
+          key: 'lock-method-biometric',
+          label: text.biometric,
+          active: lockMethodKind === 'biometric',
+          onPress: () => {
+            void (async () => {
+              const targetMode: Exclude<SendAuthMethod, 'password'> =
+                sendAuthMethod === 'password'
+                  ? (fingerprintBiometricSupported ? 'fingerprint' : faceBiometricSupported ? 'face' : 'fingerprint')
+                  : sendAuthMethod;
+              const available = await ensureBiometricModeAvailable(targetMode);
+              if (!available) {
+                closeSecurityMenus();
+                return;
+              }
+              setBiometric(true);
+              if (sendAuthMethod === 'password') setSendAuthMethod(targetMode);
+              closeSecurityMenus();
+            })();
+          }
+        }
+      ];
+    } else if (showBiometricTypeMenu && securityBiometricTypeTriggerRect) {
+      triggerRect = securityBiometricTypeTriggerRect;
+      triggerLabel = biometricTypeLabel;
+      animatedStyle = biometricTypeMenuAnimatedStyle;
+      const biometricTypeItems: { key: string; label: string; active: boolean; onPress: () => void }[] = [];
+      if (fingerprintBiometricSupported) {
+        biometricTypeItems.push({
+          key: 'biometric-type-fingerprint',
+          label: flow.fingerprintMode,
+          active: sendAuthMethod === 'fingerprint',
+          onPress: () => {
+            void (async () => {
+              const available = await ensureBiometricModeAvailable('fingerprint');
+              if (!available) {
+                closeSecurityMenus();
+                return;
+              }
+              setBiometric(true);
+              setSendAuthMethod('fingerprint');
+              closeSecurityMenus();
+            })();
+          }
+        });
+      }
+      if (faceBiometricSupported) {
+        biometricTypeItems.push({
+          key: 'biometric-type-face',
+          label: flow.faceMode,
+          active: sendAuthMethod === 'face',
+          onPress: () => {
+            void (async () => {
+              const available = await ensureBiometricModeAvailable('face');
+              if (!available) {
+                closeSecurityMenus();
+                return;
+              }
+              setBiometric(true);
+              setSendAuthMethod('face');
+              closeSecurityMenus();
+            })();
+          }
+        });
+      }
+      items = biometricTypeItems;
+    }
+
+    if (!triggerRect || !items.length) return null;
+
+    const menuHeight = Math.max(96, Math.min(items.length * 39 + 2, 240));
+    const desiredTop = triggerRect.y + triggerRect.height + 8;
+    const minTop = headerOverlayHeightValue + 8;
+    const maxTop = Math.max(minTop, viewportHeight - effectiveBottomInset - menuHeight - 10);
+    const menuTop = Math.min(desiredTop, maxTop);
+
+    return (
+      <>
+        <Pressable style={styles.globalDropdownScrim} onPress={closeSecurityMenus} />
+        <View pointerEvents="box-none" style={styles.globalDropdownLayer}>
+          <Pressable
+            style={[
+              styles.langBtn,
+              styles.langBtnActive,
+              styles.globalRecentOverlayTrigger,
+              {
+                top: triggerRect.y,
+                left: triggerRect.x,
+                width: triggerRect.width,
+                height: triggerRect.height,
+                borderRadius: triggerRect.height / 2
+              }
+            ]}
+            onPress={closeSecurityMenus}
+          >
+            <Text style={[styles.langBtnText, styles.langBtnTextActive]}>{triggerLabel}</Text>
+            <ThemedIonicons name="chevron-up" size={14} color="#16110a" />
+          </Pressable>
+          <Animated.View
+            style={[
+              styles.langMenuFloating,
+              styles.globalRecentOverlayTrigger,
+              animatedStyle,
+              {
+                top: menuTop,
+                left: triggerRect.x,
+                width: triggerRect.width
+              }
+            ]}
+          >
+            {items.map((item, index) => {
+              const isLast = index === items.length - 1;
+              return (
+                <Pressable
+                  key={item.key}
+                  style={[
+                    styles.langItem,
+                    !isLast ? styles.langItemDivider : undefined,
+                    isLast ? styles.langItemLast : undefined,
+                    item.active ? styles.langItemActive : undefined
+                  ]}
+                  onPress={item.onPress}
+                >
+                  <Text style={item.active ? styles.langItemTextActive : styles.langItemText}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+        </View>
+      </>
     );
   };
 
@@ -14198,7 +16556,7 @@ function AppInner() {
 
   const renderWalletSettingsAuth = () => (
     <View style={styles.screen}>
-      {renderSubHeader(settingsAuthTarget === 'security' ? text.security : text.wallets)}
+      {renderSubHeader(settingsAuthTarget === 'security' ? text.security : settingsAuthTarget === 'addressBook' ? extra.addressBookManage : text.wallets)}
       <View style={styles.formWrap}>
         {renderPasscodePad({
           value: walletSettingsAuthInput,
@@ -14229,7 +16587,7 @@ function AppInner() {
           return (
             <View key={wallet.id} style={[styles.settingRow, active ? styles.settingRowActive : undefined]}>
               <Pressable style={styles.walletSelectArea} onPress={() => setWalletId(wallet.id)}>
-                <Text style={styles.settingLabel}>{wallet.name}</Text>
+                <Text style={styles.settingLabel}>{getWalletDisplayName(wallet)}</Text>
               </Pressable>
               <View style={styles.rowActions}>
                 {active ? <ThemedIonicons name="checkmark-circle" size={20} color={palette.accent} /> : null}
@@ -14257,6 +16615,14 @@ function AppInner() {
         >
           <Text style={styles.primaryBtnText}>{walletUi.addWallet}</Text>
         </Pressable>
+        <Pressable
+          style={[styles.secondaryBtn, styles.walletRecoveryAddBtn]}
+          onPress={() => {
+            startAddExistingWalletFlow();
+          }}
+        >
+          <Text style={[styles.secondaryBtnText, styles.walletRecoveryAddBtnText]}>{walletUi.addWalletFromRecovery}</Text>
+        </Pressable>
 
       </ScrollView>
     </View>
@@ -14269,7 +16635,7 @@ function AppInner() {
         {deleteTargetWallet ? (
           <View style={styles.walletDeleteTargetCard}>
             <Text style={styles.walletDeleteTargetLabel}>{walletUi.deleteTarget}</Text>
-            <Text style={styles.walletDeleteTargetName}>{deleteTargetWallet.name}</Text>
+            <Text style={styles.walletDeleteTargetName}>{getWalletDisplayName(deleteTargetWallet)}</Text>
           </View>
         ) : null}
         <View style={styles.walletDeleteWarningCard}>
@@ -14288,7 +16654,7 @@ function AppInner() {
               onPress={onToggle as () => void}
             >
               <View style={[styles.onboardingChecklistBadge, checked ? styles.onboardingChecklistBadgeActive : undefined]}>
-                <ThemedIonicons name={checked ? 'checkmark' : 'add'} size={12} color={checked ? '#17120a' : palette.muted} />
+                <ThemedIonicons name={checked ? 'checkmark' : 'add'} size={12} color={checked ? '#16110a' : palette.muted} />
               </View>
               <Text style={[styles.onboardingChecklistText, checked ? styles.onboardingChecklistTextActive : undefined]}>{label as string}</Text>
             </Pressable>
@@ -14311,7 +16677,7 @@ function AppInner() {
       <View style={styles.formWrap}>
         {deleteTargetWallet ? (
           <View style={styles.walletDeleteTargetCardCompact}>
-            <Text style={styles.walletDeleteTargetName}>{deleteTargetWallet.name}</Text>
+            <Text style={styles.walletDeleteTargetName}>{getWalletDisplayName(deleteTargetWallet)}</Text>
           </View>
         ) : null}
         <Text style={styles.seedPreviewGuide}>{walletUi.deleteWalletSeedBody}</Text>
@@ -14356,7 +16722,7 @@ function AppInner() {
         <View style={styles.formWrap}>
           {deleteTargetWallet ? (
             <View style={styles.walletDeleteTargetCardCompact}>
-              <Text style={styles.walletDeleteTargetName}>{deleteTargetWallet.name}</Text>
+              <Text style={styles.walletDeleteTargetName}>{getWalletDisplayName(deleteTargetWallet)}</Text>
             </View>
           ) : null}
           {sendAuthMethod !== 'password' ? (
@@ -14400,12 +16766,13 @@ function AppInner() {
     );
   };
 
-  const renderSimpleInfoScreen = (title: string, body: string) => (
+  const renderSimpleInfoScreen = (title: string, body: string, footer?: string) => (
     <View style={styles.screen}>
       {renderSubHeader(title)}
       <View style={styles.singleWrap}>
         <View style={styles.infoCard}>
           <Text style={styles.infoBody}>{body}</Text>
+          {footer ? <Text style={styles.infoSubBody}>{footer}</Text> : null}
         </View>
       </View>
     </View>
@@ -14417,9 +16784,10 @@ function AppInner() {
       <View style={styles.screen}>
         {renderSubHeader(text.support)}
         <KeyboardAvoidingView
-          style={styles.supportChatWrap}
+          style={[styles.supportChatWrap, { paddingBottom: supportComposerBottomPad }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
+          keyboardVerticalOffset={0}
+          enabled
         >
           <ScrollView
             ref={(ref) => {
@@ -14428,6 +16796,7 @@ function AppInner() {
             style={styles.scroll}
             contentContainerStyle={styles.supportChatListPad}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => supportChatScrollRef.current?.scrollToEnd({ animated: true })}
           >
             {supportMessages.map((message) => {
@@ -14590,13 +16959,10 @@ function AppInner() {
   const renderSend = () => {
     const typedAmount = parseAmount();
     const activeSendToken = selectedSendToken;
-    const sendAddressPlaceholder = sendChainFilter === 'TRX' ? 'T...' : sendChainFilter === 'ETH' || sendChainFilter === 'BSC' ? '0x...' : '';
     const amountUsd =
       Number.isFinite(typedAmount) && typedAmount > 0 && activeSendToken ? typedAmount * activeSendToken.priceUsd : 0;
     const amountUsdLabel = `≈ ${formatCurrency(amountUsd, text.locale)}`;
-    const sendFeeNative = activeSendToken
-      ? estimateNativeFee(activeSendToken.chainCode, sendGasSettings.gasPrice, sendGasSettings.gasLimit)
-      : 0;
+    const sendFeeNative = activeSendToken ? estimateRuntimeNativeFee(activeSendToken.chainCode, sendGasSettings) : 0;
     const sendFeeUsd = activeSendToken ? calculateFeeUsd(activeSendToken.chainCode, sendFeeNative) : 0;
     const sendAvailableBalanceText =
       isSendSelectionComplete && activeSendToken
@@ -14606,19 +16972,54 @@ function AppInner() {
           )})`
         : ' ';
 
-    const canOpenRecentSendDropdown = isSendSelectionComplete && recentSendTargets.length > 0;
+    const canOpenRecentSendDropdown = recentSendTargets.length > 0;
+    const isAssetScanModalOpen = showScanMethodModal && scanEntryPoint === 'send';
+    const isAssetBookModalOpen = showRecipientBookModal && recipientBookScope === 'asset';
+    const isAssetSaveModalOpen = showSaveRecipientModal && saveRecipientScope === 'asset';
+    const activeAssetRecipientAction: 'scan' | 'book' | 'save' | null = isAssetScanModalOpen
+      ? 'scan'
+      : isAssetBookModalOpen
+        ? 'book'
+        : isAssetSaveModalOpen
+          ? 'save'
+          : null;
+    const isAssetRecipientActionOpen = activeAssetRecipientAction !== null;
 
-	    return (
-	      <View style={styles.screen}>
-	        {renderSubHeader(text.send)}
-          {showRecentSendDropdown ? <Pressable style={styles.sendHeaderScrim} onPress={() => setShowRecentSendDropdown(false)} /> : null}
+		    return (
+		      <View style={styles.screen}>
+		        {renderSubHeader(text.send)}
+          {isAssetRecipientActionOpen ? (
+            <Pressable
+              style={styles.walletMenuScrim}
+              onPress={() => {
+                setShowScanMethodModal(false);
+                setShowRecipientBookModal(false);
+                setShowSaveRecipientModal(false);
+              }}
+            />
+          ) : null}
+          {renderRecipientActionTriggerOverlay('asset', activeAssetRecipientAction)}
           <View style={styles.sendScreenBody}>
 	        <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollPad}
-            showsVerticalScrollIndicator={false}
-            onScrollBeginDrag={() => setShowRecentSendDropdown(false)}
-          >
+	            style={styles.scroll}
+	            contentContainerStyle={styles.scrollPad}
+	            showsVerticalScrollIndicator={false}
+		            scrollEnabled={
+                  !(
+                    showRecentSendDropdown ||
+                    isAssetScanModalOpen ||
+                    isAssetBookModalOpen ||
+                    isAssetSaveModalOpen
+                  )
+                }
+	            scrollEventThrottle={16}
+	            onScroll={(event) => {
+                if (showRecentSendDropdown) {
+                  measureRecentAnchor('asset');
+                }
+              }}
+	            onScrollBeginDrag={() => setShowRecentSendDropdown(false)}
+	          >
           <View style={styles.sendScrollContentWrap}>
 	          <View style={styles.historyFilterSection}>
 	            <Text style={styles.historyFilterTitle}>{text.historyFilterType}</Text>
@@ -14703,18 +17104,66 @@ function AppInner() {
 	            </ScrollView>
 	          </View>
 
-	          <View style={styles.sendFieldBlock}>
-	          <View style={styles.fieldHeaderRow}>
-	            <Text style={[styles.fieldLabel, styles.fieldLabelTight]}>{text.recipient}</Text>
-	            <Pressable
-                style={styles.saveAddressIconBtn}
-                onPress={() => {
-                  if (!ensureSendSelectionOrToast()) return;
-                  saveCurrentRecipientToBook();
-                }}
+		          <View
+                style={styles.sendFieldBlock}
               >
-	              <ThemedIonicons name="bookmark-outline" size={15} color={palette.text} />
-            </Pressable>
+          <View style={styles.fieldHeaderRow}>
+		            <Text style={[styles.fieldLabel, styles.fieldLabelTight]}>{text.recipient}</Text>
+              <View style={styles.fieldHeaderActions}>
+                <Pressable
+                  ref={assetSaveActionRef}
+                  style={[
+                    styles.saveAddressIconBtn,
+                    styles.fieldHeaderActionStart,
+                    activeAssetRecipientAction === 'save' ? styles.iconCircleBtnActive : undefined,
+                    activeAssetRecipientAction === 'save' ? styles.scanTriggerBtnOpen : undefined,
+                    isAssetRecipientActionOpen && activeAssetRecipientAction !== 'save' ? styles.scanNonTriggerDimmed : undefined
+                  ]}
+                  onLayout={() => measureRecipientActionAnchor('asset', 'save')}
+                  disabled={isAssetRecipientActionOpen && activeAssetRecipientAction !== 'save'}
+                  onPress={() => {
+                    if (isAssetSaveModalOpen) {
+                      setShowSaveRecipientModal(false);
+                      return;
+                    }
+                    if (!ensureSendSelectionOrToast()) return;
+                    measureRecipientActionAnchor('asset', 'save');
+                    saveCurrentRecipientToBook();
+                  }}
+                >
+                  <ThemedIonicons
+                    name="bookmark-outline"
+                    size={16}
+                    color={showSaveRecipientModal && saveRecipientScope === 'asset' ? '#16110a' : palette.text}
+                  />
+                </Pressable>
+                <Pressable
+                  ref={assetBookActionRef}
+                  style={[
+                    styles.saveAddressIconBtn,
+                    styles.fieldHeaderActionGap,
+                    activeAssetRecipientAction === 'book' ? styles.iconCircleBtnActive : undefined,
+                    activeAssetRecipientAction === 'book' ? styles.scanTriggerBtnOpen : undefined,
+                    isAssetRecipientActionOpen && activeAssetRecipientAction !== 'book' ? styles.scanNonTriggerDimmed : undefined
+                  ]}
+                  onLayout={() => measureRecipientActionAnchor('asset', 'book')}
+                  disabled={isAssetRecipientActionOpen && activeAssetRecipientAction !== 'book'}
+                  onPress={() => {
+                    if (isAssetBookModalOpen) {
+                      setShowRecipientBookModal(false);
+                      return;
+                    }
+                    measureRecipientActionAnchor('asset', 'book');
+                    openRecipientBookModal();
+                  }}
+                >
+                  <ThemedIonicons
+                    name="book-outline"
+                    size={16}
+                    color={showRecipientBookModal && recipientBookScope === 'asset' ? '#16110a' : palette.text}
+                  />
+                </Pressable>
+              </View>
           </View>
           <View style={styles.fieldOverlayHost}>
             <View
@@ -14724,56 +17173,58 @@ function AppInner() {
                 recipientError && !recipientFocused ? styles.fieldBoxError : undefined
               ]}
             >
-	              <TextInput
-	                value={recipientInput}
-	                onChangeText={setRecipientInput}
-	                placeholder={sendAddressPlaceholder}
-	                placeholderTextColor={palette.muted}
-	                style={styles.recipientInputField}
-                  editable={isSendSelectionComplete}
-	                autoCapitalize="none"
-	                selectionColor={palette.accent}
-                  onPressIn={() => {
-                    if (!isSendSelectionComplete) setBannerMessage(text.selectChainAssetFirst);
-                  }}
-	                onFocus={() => setRecipientFocused(true)}
-	                onBlur={() => {
-	                  setRecipientFocused(false);
-	                  setRecipientTouched(true);
-	                }}
-	              />
+		              <TextInput
+		                value={recipientInput}
+		                onChangeText={handleSendRecipientInputChange}
+		                placeholder={text.recipientPlaceholder}
+		                placeholderTextColor={palette.muted}
+		                style={styles.recipientInputField}
+	                  editable
+		                autoCapitalize="none"
+		                selectionColor={palette.accent}
+		                onFocus={() => setRecipientFocused(true)}
+		                onBlur={() => {
+		                  setRecipientFocused(false);
+		                  setRecipientTouched(true);
+		                }}
+		              />
 	              <View style={styles.recipientActions}>
-	                <Pressable
-                    style={styles.recipientActionBtn}
+                <Pressable
+                    style={[styles.recipientActionBtn, isAssetRecipientActionOpen ? styles.scanNonTriggerDimmed : undefined]}
                     onPress={() => {
-                      if (!ensureSendSelectionOrToast()) return;
                       pasteRecipientFromClipboard();
                     }}
+                  disabled={isAssetRecipientActionOpen}
                   >
-	                  <ThemedIonicons name="clipboard-outline" size={16} color={palette.text} />
-	                </Pressable>
-	                <Pressable
-                    style={styles.recipientActionBtn}
+		                  <ThemedIonicons name="clipboard-outline" size={16} color={palette.text} />
+		                </Pressable>
+                <Pressable
+                    ref={assetScanActionRef}
+                    style={[
+                      styles.recipientActionBtn,
+                      activeAssetRecipientAction === 'scan' ? styles.iconCircleBtnActive : undefined,
+                      activeAssetRecipientAction === 'scan' ? styles.scanTriggerBtnOpen : undefined,
+                      isAssetRecipientActionOpen && activeAssetRecipientAction !== 'scan' ? styles.scanNonTriggerDimmed : undefined
+                    ]}
+                    onLayout={() => measureRecipientActionAnchor('asset', 'scan')}
+                    disabled={isAssetRecipientActionOpen && activeAssetRecipientAction !== 'scan'}
                     onPress={() => {
-                      openRecipientBookModal();
-                    }}
-                  >
-	                  <ThemedIonicons name="book-outline" size={16} color={palette.text} />
-	                </Pressable>
-	                <Pressable
-                    style={styles.recipientActionBtn}
-                    onPress={() => {
-                      if (!ensureSendSelectionOrToast()) return;
+                      if (isAssetScanModalOpen) {
+                        setShowScanMethodModal(false);
+                        return;
+                      }
+                      measureRecipientActionAnchor('asset', 'scan');
                       openScanMethodPicker('send');
                     }}
                   >
-	                  <ThemedIonicons name="scan-outline" size={16} color={palette.text} />
-	                </Pressable>
-	              </View>
-	            </View>
-            {!isSendSelectionComplete ? (
-              <Pressable style={styles.fieldDisabledOverlayInputOnly} onPress={() => setBannerMessage(text.selectChainAssetFirst)} />
-            ) : null}
+		                  <ThemedIonicons
+                      name="scan-outline"
+                      size={16}
+                      color={activeAssetRecipientAction === 'scan' ? '#16110a' : palette.text}
+                    />
+		                </Pressable>
+		              </View>
+            </View>
           </View>
           <View style={[styles.fieldErrorSlot, styles.sendFieldErrorSlot]}>
             <Text numberOfLines={1} style={[styles.fieldErrorText, !recipientError ? styles.fieldErrorTextHidden : undefined]}>
@@ -14784,69 +17235,57 @@ function AppInner() {
 
         <View style={[styles.sendFieldBlock, showRecentSendDropdown ? styles.sendRecentFieldBlockOpen : undefined]}>
           <Text style={styles.fieldLabel}>{text.recentSends}</Text>
-          <View style={[styles.sendRecentAnchor, showRecentSendDropdown ? styles.sendRecentAnchorOpen : undefined]}>
+          <View
+            ref={sendRecentAnchorRef}
+            style={[styles.sendRecentAnchor, showRecentSendDropdown ? styles.sendRecentAnchorOpen : undefined]}
+            onLayout={() => {
+              measureRecentAnchor('asset');
+            }}
+          >
             <Pressable
-              style={[
-                styles.recentSummaryBtn,
-                styles.sendRecentSummaryBtn,
-                showRecentSendDropdown ? styles.recentSummaryBtnActive : undefined
-              ]}
+              style={[styles.recentSummaryBtn, styles.sendRecentSummaryBtn, showRecentSendDropdown ? styles.recentSummaryBtnActive : undefined]}
+              disabled={isAssetRecipientActionOpen}
               onPress={() => {
-                if (!isSendSelectionComplete) {
-                  setBannerMessage(text.selectChainAssetFirst);
-                  return;
-                }
                 if (!recentSendTargets.length) {
                   setBannerMessage(text.noRecentSends);
                   return;
                 }
-                setShowRecentSendDropdown((prev) => !prev);
+                setShowRecentSendDropdown((prev) => {
+                  if (prev) {
+                    return false;
+                  }
+                  measureRecentAnchor('asset');
+                  return true;
+                });
               }}
             >
-              <View style={styles.recentSummaryMeta}>
-                <Text style={styles.recipientPrimary} numberOfLines={1}>
-                  {latestRecentSend ? shortAddressCenter(latestRecentSend.address, 8, 6) : '-'}
-                </Text>
-                <Text style={styles.recipientSecondary} numberOfLines={1}>
-                  {latestRecentSend ? `${formatAmount(latestRecentSend.amount, text.locale)} ${latestRecentSend.symbol}` : ' '}
-                  {latestRecentSend?.label ? <Text style={styles.recipientSecondaryAccent}> / {latestRecentSend.label}</Text> : null}
-                  {latestRecentSend ? ` / ${latestRecentSend.memo ?? '-'} / ${latestRecentSend.date}` : ''}
-                </Text>
-              </View>
-              <ThemedIonicons
-                name={showRecentSendDropdown ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={canOpenRecentSendDropdown ? palette.text : palette.muted}
-              />
-            </Pressable>
+	              <View style={styles.recentSummaryMeta}>
+	                <Text style={[styles.recipientPrimary, showRecentSendDropdown ? styles.recentSummaryPrimaryActive : undefined]} numberOfLines={1}>
+	                  {latestRecentSend ? shortAddressCenter(latestRecentSend.address, 8, 6) : '-'}
+	                </Text>
+	                <Text style={[styles.recipientSecondary, showRecentSendDropdown ? styles.recentSummarySecondaryActive : undefined]} numberOfLines={1}>
+	                  {latestRecentSend ? `${formatAmount(latestRecentSend.amount, text.locale)} ${latestRecentSend.symbol}` : ' '}
+	                  {latestRecentSend?.label ? (
+                      <Text
+                        style={[
+                          styles.recipientSecondaryAccent,
+                          showRecentSendDropdown ? styles.recentSummarySecondaryAccentActive : undefined
+                        ]}
+                      >
+                        {' '}
+                        / {latestRecentSend.label}
+                      </Text>
+                    ) : null}
+	                  {latestRecentSend ? ` / ${latestRecentSend.memo ?? '-'} / ${latestRecentSend.date}` : ''}
+	                </Text>
+	              </View>
+	              <ThemedIonicons
+	                name={showRecentSendDropdown ? 'chevron-up' : 'chevron-down'}
+	                size={16}
+	                color={showRecentSendDropdown ? '#16110a' : canOpenRecentSendDropdown ? palette.text : palette.muted}
+	              />
+	            </Pressable>
 
-            {showRecentSendDropdown && canOpenRecentSendDropdown ? (
-              <Animated.View
-                style={[styles.recipientList, styles.sendRecentList, styles.sendRecentListActive, recentSendDropdownAnimatedStyle]}
-              >
-                {recentSendTargets.map((item) => (
-                  <Pressable
-                    key={`recent-${item.address}-${item.date}`}
-                    style={styles.recipientRow}
-                    onPress={() => {
-                      setRecipientInput(item.address);
-                      setShowRecentSendDropdown(false);
-                    }}
-                  >
-                    <View style={styles.recipientMeta}>
-                      <Text style={styles.recipientPrimary} numberOfLines={1}>
-                        {shortAddressCenter(item.address, 8, 6)}
-                      </Text>
-                      <Text style={styles.recipientSecondary} numberOfLines={1}>
-                        {formatAmount(item.amount, text.locale)} {item.symbol}
-                        {item.label ? <Text style={styles.recipientSecondaryAccent}> / {item.label}</Text> : null}
-                        {` / ${item.memo ?? '-'} / ${item.date}`}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </Animated.View>
-            ) : null}
           </View>
         </View>
 
@@ -14907,7 +17346,7 @@ function AppInner() {
           </View>
 
         <View style={styles.sendFieldBlock}>
-          <Text style={styles.fieldLabel}>{text.memo}</Text>
+          <Text style={styles.fieldLabel}>{extra.memoOptional}</Text>
           <View style={styles.fieldOverlayHost}>
             <TextInput
               value={sendMemoInput}
@@ -14936,13 +17375,12 @@ function AppInner() {
               : '--'}
           </Text>
 
-	          <Pressable style={styles.primaryBtn} onPress={openSendConfirm}>
-	            <Text style={styles.primaryBtnText}>{text.continue}</Text>
-	          </Pressable>
-            {showRecentSendDropdown ? <Pressable style={styles.sendDropdownScrim} onPress={() => setShowRecentSendDropdown(false)} /> : null}
-            </View>
-	        </ScrollView>
-          </View>
+	              <Pressable style={styles.primaryBtn} onPress={openSendConfirm}>
+	                <Text style={styles.primaryBtnText}>{text.send}</Text>
+	              </Pressable>
+	            </View>
+		        </ScrollView>
+	          </View>
 	      </View>
 	    );
   };
@@ -14951,7 +17389,7 @@ function AppInner() {
     if (!ownedCollectibles.length) {
       return (
         <View style={styles.screen}>
-          {renderSubHeader(nftUi.sendTitle)}
+          {renderSubHeader(text.send)}
           <View style={styles.singleWrap}>
             <View style={styles.infoCard}>
               <Text style={styles.infoBody}>{nftUi.noNftOwned}</Text>
@@ -14965,22 +17403,54 @@ function AppInner() {
     const activeChain = activeNft ? getCollectibleChainCode(activeNft) : 'ETH';
     const chainLabel = activeNft ? activeNft.network : '';
     const canOpenNftRecentSendDropdown = recentNftSendTargets.length > 0;
-    const nftSendFeeNative = activeNft
-      ? estimateNativeFee(activeChain, DEFAULT_SEND_GAS_SETTINGS.gasPrice, DEFAULT_SEND_GAS_SETTINGS.gasLimit)
-      : 0;
+    const isNftScanModalOpen = showScanMethodModal && scanEntryPoint === 'nftSend';
+    const isNftBookModalOpen = showRecipientBookModal && recipientBookScope === 'nft';
+    const isNftSaveModalOpen = showSaveRecipientModal && saveRecipientScope === 'nft';
+    const activeNftRecipientAction: 'scan' | 'book' | 'save' | null = isNftScanModalOpen
+      ? 'scan'
+      : isNftBookModalOpen
+        ? 'book'
+        : isNftSaveModalOpen
+          ? 'save'
+          : null;
+    const isNftRecipientActionOpen = activeNftRecipientAction !== null;
+    const nftSendFeeNative = activeNft ? estimateRuntimeNativeFee(activeChain, DEFAULT_SEND_GAS_SETTINGS) : 0;
     const nftSendFeeUsd = activeNft ? calculateFeeUsd(activeChain, nftSendFeeNative) : 0;
 
-    return (
-      <View style={styles.screen}>
-        {renderSubHeader(nftUi.sendTitle)}
-        {showNftRecentSendDropdown ? <Pressable style={styles.sendHeaderScrim} onPress={() => setShowNftRecentSendDropdown(false)} /> : null}
-        <View style={styles.sendScreenBody}>
+		    return (
+		      <View style={styles.screen}>
+		        {renderSubHeader(text.send)}
+          {isNftRecipientActionOpen ? (
+            <Pressable
+              style={styles.walletMenuScrim}
+              onPress={() => {
+                setShowScanMethodModal(false);
+                setShowRecipientBookModal(false);
+                setShowSaveRecipientModal(false);
+              }}
+            />
+          ) : null}
+	        {renderRecipientActionTriggerOverlay('nft', activeNftRecipientAction)}
+	        <View style={styles.sendScreenBody}>
           <ScrollView
             ref={nftSendScrollRef}
             style={styles.scroll}
             contentContainerStyle={styles.scrollPad}
             showsVerticalScrollIndicator={false}
-            onScrollBeginDrag={() => setShowNftRecentSendDropdown(false)}
+			            scrollEnabled={
+                !(
+                  showNftRecentSendDropdown ||
+                  isNftScanModalOpen ||
+                  isNftBookModalOpen ||
+                  isNftSaveModalOpen
+                )
+              }
+            scrollEventThrottle={16}
+            onScroll={(event) => {
+              if (showNftRecentSendDropdown) {
+                measureRecentAnchor('nft');
+              }
+            }}
           >
             <View style={styles.sendScrollContentWrap}>
               <View style={styles.historyFilterSection}>
@@ -15012,17 +17482,17 @@ function AppInner() {
                         onPress={() => setNftSendCollectibleId(item.id)}
                       >
                         <Image source={{ uri: item.imageUrl }} style={styles.nftSelectImage} resizeMode="cover" />
-                        <View style={styles.nftSelectMeta}>
-                          <Text style={styles.nftSelectName} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          <Text style={styles.nftSelectSub} numberOfLines={1}>
-                            {item.network} / x{item.owned}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
+	                        <View style={styles.nftSelectMeta}>
+	                          <Text style={styles.nftSelectName} numberOfLines={1}>
+	                            {item.name}
+	                          </Text>
+	                          <Text style={[styles.nftSelectName, styles.nftSelectTokenId]} numberOfLines={1}>
+	                            #{item.tokenId}
+	                          </Text>
+	                        </View>
+	                      </Pressable>
+	                    );
+	                  })}
                 </ScrollView>
               </View>
 
@@ -15044,21 +17514,67 @@ function AppInner() {
                 </View>
               ) : null}
 
-              <View style={[styles.sendFieldBlock, styles.nftRecipientBlock]}>
+	              <View style={[styles.sendFieldBlock, styles.nftRecipientBlock]}>
                 <View style={styles.fieldHeaderRow}>
                   <Text style={[styles.fieldLabel, styles.fieldLabelTight]}>{text.recipient}</Text>
-                  <Pressable
-                    style={styles.saveAddressIconBtn}
-                    onPress={() => {
-                      if (!selectedNftForSend) {
-                        setBannerMessage(nftUi.noNftOwned);
-                        return;
-                      }
-                      saveCurrentRecipientToBook('nft');
-                    }}
-                  >
-                    <ThemedIonicons name="bookmark-outline" size={15} color={palette.text} />
-                  </Pressable>
+                  <View style={styles.fieldHeaderActions}>
+                    <Pressable
+                      ref={nftSaveActionRef}
+                      style={[
+                        styles.saveAddressIconBtn,
+                        styles.fieldHeaderActionStart,
+                        activeNftRecipientAction === 'save' ? styles.iconCircleBtnActive : undefined,
+                        activeNftRecipientAction === 'save' ? styles.scanTriggerBtnOpen : undefined,
+                        isNftRecipientActionOpen && activeNftRecipientAction !== 'save' ? styles.scanNonTriggerDimmed : undefined
+                      ]}
+                      onLayout={() => measureRecipientActionAnchor('nft', 'save')}
+                      disabled={isNftRecipientActionOpen && activeNftRecipientAction !== 'save'}
+                      onPress={() => {
+                        if (isNftSaveModalOpen) {
+                          setShowSaveRecipientModal(false);
+                          return;
+                        }
+                        if (!selectedNftForSend) {
+                          setBannerMessage(nftUi.noNftOwned);
+                          return;
+                        }
+                        measureRecipientActionAnchor('nft', 'save');
+                        saveCurrentRecipientToBook('nft');
+                      }}
+                    >
+                      <ThemedIonicons
+                        name="bookmark-outline"
+                        size={16}
+                        color={showSaveRecipientModal && saveRecipientScope === 'nft' ? '#16110a' : palette.text}
+                      />
+                    </Pressable>
+                    <Pressable
+                      ref={nftBookActionRef}
+                      style={[
+                        styles.saveAddressIconBtn,
+                        styles.fieldHeaderActionGap,
+                        activeNftRecipientAction === 'book' ? styles.iconCircleBtnActive : undefined,
+                        activeNftRecipientAction === 'book' ? styles.scanTriggerBtnOpen : undefined,
+                        isNftRecipientActionOpen && activeNftRecipientAction !== 'book' ? styles.scanNonTriggerDimmed : undefined
+                      ]}
+                      onLayout={() => measureRecipientActionAnchor('nft', 'book')}
+                      disabled={isNftRecipientActionOpen && activeNftRecipientAction !== 'book'}
+                      onPress={() => {
+                        if (isNftBookModalOpen) {
+                          setShowRecipientBookModal(false);
+                          return;
+                        }
+                        measureRecipientActionAnchor('nft', 'book');
+                        openRecipientBookModal('nft');
+                      }}
+                    >
+                      <ThemedIonicons
+                        name="book-outline"
+                        size={16}
+                        color={showRecipientBookModal && recipientBookScope === 'nft' ? '#16110a' : palette.text}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
                 <View style={[styles.fieldOverlayHost, styles.nftRecipientFieldGap]}>
                   <View
@@ -15083,14 +17599,37 @@ function AppInner() {
                       }}
                     />
                     <View style={styles.recipientActions}>
-                      <Pressable style={styles.recipientActionBtn} onPress={() => void pasteNftRecipientFromClipboard()}>
-                        <ThemedIonicons name="clipboard-outline" size={16} color={palette.text} />
-                      </Pressable>
-                      <Pressable style={styles.recipientActionBtn} onPress={() => openRecipientBookModal('nft')}>
-                        <ThemedIonicons name="book-outline" size={16} color={palette.text} />
-                      </Pressable>
-                      <Pressable style={styles.recipientActionBtn} onPress={() => openScanMethodPicker('nftSend')}>
-                        <ThemedIonicons name="scan-outline" size={16} color={palette.text} />
+	                      <Pressable
+                        style={[styles.recipientActionBtn, isNftRecipientActionOpen ? styles.scanNonTriggerDimmed : undefined]}
+                        onPress={() => void pasteNftRecipientFromClipboard()}
+                        disabled={isNftRecipientActionOpen}
+                      >
+	                        <ThemedIonicons name="clipboard-outline" size={16} color={palette.text} />
+	                      </Pressable>
+		                      <Pressable
+                        ref={nftScanActionRef}
+                        style={[
+                          styles.recipientActionBtn,
+                          activeNftRecipientAction === 'scan' ? styles.iconCircleBtnActive : undefined,
+                          activeNftRecipientAction === 'scan' ? styles.scanTriggerBtnOpen : undefined,
+                          isNftRecipientActionOpen && activeNftRecipientAction !== 'scan' ? styles.scanNonTriggerDimmed : undefined
+                        ]}
+                        onLayout={() => measureRecipientActionAnchor('nft', 'scan')}
+                        disabled={isNftRecipientActionOpen && activeNftRecipientAction !== 'scan'}
+                        onPress={() => {
+                          if (isNftScanModalOpen) {
+                            setShowScanMethodModal(false);
+                            return;
+                          }
+                          measureRecipientActionAnchor('nft', 'scan');
+                          openScanMethodPicker('nftSend');
+                        }}
+                      >
+                        <ThemedIonicons
+                          name="scan-outline"
+                          size={16}
+                          color={activeNftRecipientAction === 'scan' ? '#16110a' : palette.text}
+                        />
                       </Pressable>
                     </View>
                   </View>
@@ -15104,73 +17643,68 @@ function AppInner() {
 
               <View style={[styles.sendFieldBlock, showNftRecentSendDropdown ? styles.sendRecentFieldBlockOpen : undefined]}>
                 <Text style={styles.fieldLabel}>{nftRecentSendTitle}</Text>
-                <View style={[styles.sendRecentAnchor, showNftRecentSendDropdown ? styles.sendRecentAnchorOpen : undefined]}>
+                <View
+                  ref={nftRecentAnchorRef}
+                  style={[styles.sendRecentAnchor, showNftRecentSendDropdown ? styles.sendRecentAnchorOpen : undefined]}
+                  onLayout={() => {
+                    measureRecentAnchor('nft');
+                  }}
+                >
                   <Pressable
-                    style={[
-                      styles.recentSummaryBtn,
-                      styles.sendRecentSummaryBtn,
-                      showNftRecentSendDropdown ? styles.recentSummaryBtnActive : undefined
-                    ]}
+                    style={[styles.recentSummaryBtn, styles.sendRecentSummaryBtn, showNftRecentSendDropdown ? styles.recentSummaryBtnActive : undefined]}
+                    disabled={isNftRecipientActionOpen}
                     onPress={() => {
                       if (!recentNftSendTargets.length) {
                         setBannerMessage(nftRecentSendEmptyText);
                         return;
                       }
-                      setShowNftRecentSendDropdown((prev) => !prev);
+                      setShowNftRecentSendDropdown((prev) => {
+                        if (prev) {
+                          return false;
+                        }
+                        measureRecentAnchor('nft');
+                        return true;
+                      });
                     }}
                   >
-                    <View style={styles.recentSummaryMeta}>
-                      <Text style={styles.recipientPrimary} numberOfLines={1}>
-                        {latestRecentNftSend ? shortAddressCenter(latestRecentNftSend.address, 8, 6) : '-'}
-                      </Text>
-                      <Text style={styles.recipientSecondary} numberOfLines={1}>
-                        {latestRecentNftSend ? `${latestRecentNftSend.nftTitle} #${latestRecentNftSend.tokenId}` : ' '}
-                        {latestRecentNftSend?.label ? (
-                          <Text style={styles.recipientSecondaryAccent}> / {latestRecentNftSend.label}</Text>
-                        ) : null}
-                        {latestRecentNftSend ? ` / ${latestRecentNftSend.memo ?? '-'} / ${latestRecentNftSend.date}` : ''}
-                      </Text>
-                    </View>
-                    <ThemedIonicons
-                      name={showNftRecentSendDropdown ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                      color={canOpenNftRecentSendDropdown ? palette.text : palette.muted}
-                    />
-                  </Pressable>
-
-                  {showNftRecentSendDropdown && canOpenNftRecentSendDropdown ? (
-                    <Animated.View
-                      style={[styles.recipientList, styles.sendRecentList, styles.sendRecentListActive, nftRecentSendDropdownAnimatedStyle]}
-                    >
-                      {recentNftSendTargets.map((item) => (
-                        <Pressable
-                          key={`nft-recent-${item.address}-${item.tokenId}-${item.date}`}
-                          style={styles.recipientRow}
-                          onPress={() => {
-                            setNftSendRecipientInput(item.address);
-                            setNftSendRecipientTouched(false);
-                            setShowNftRecentSendDropdown(false);
-                          }}
+	                    <View style={styles.recentSummaryMeta}>
+	                      <Text
+                          style={[styles.recipientPrimary, showNftRecentSendDropdown ? styles.recentSummaryPrimaryActive : undefined]}
+                          numberOfLines={1}
                         >
-                          <View style={styles.recipientMeta}>
-                            <Text style={styles.recipientPrimary} numberOfLines={1}>
-                              {shortAddressCenter(item.address, 8, 6)}
+	                        {latestRecentNftSend ? shortAddressCenter(latestRecentNftSend.address, 8, 6) : '-'}
+	                      </Text>
+	                      <Text
+                          style={[styles.recipientSecondary, showNftRecentSendDropdown ? styles.recentSummarySecondaryActive : undefined]}
+                          numberOfLines={1}
+                        >
+	                        {latestRecentNftSend ? `${latestRecentNftSend.nftTitle} #${latestRecentNftSend.tokenId}` : ' '}
+	                        {latestRecentNftSend?.label ? (
+	                          <Text
+                              style={[
+                                styles.recipientSecondaryAccent,
+                                showNftRecentSendDropdown ? styles.recentSummarySecondaryAccentActive : undefined
+                              ]}
+                            >
+                              {' '}
+                              / {latestRecentNftSend.label}
                             </Text>
-                            <Text style={styles.recipientSecondary} numberOfLines={1}>
-                              {item.nftTitle} #{item.tokenId}
-                              {item.label ? <Text style={styles.recipientSecondaryAccent}> / {item.label}</Text> : null}
-                              {` / ${item.memo ?? '-'} / ${item.date}`}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))}
-                    </Animated.View>
-                  ) : null}
+	                        ) : null}
+	                        {latestRecentNftSend ? ` / ${latestRecentNftSend.memo ?? '-'} / ${latestRecentNftSend.date}` : ''}
+	                      </Text>
+	                    </View>
+	                    <ThemedIonicons
+	                      name={showNftRecentSendDropdown ? 'chevron-up' : 'chevron-down'}
+	                      size={16}
+	                      color={showNftRecentSendDropdown ? '#16110a' : canOpenNftRecentSendDropdown ? palette.text : palette.muted}
+	                    />
+	                  </Pressable>
+
                 </View>
               </View>
 
               <View style={styles.sendFieldBlock}>
-                <Text style={styles.fieldLabel}>{text.memo}</Text>
+                <Text style={styles.fieldLabel}>{extra.memoOptional}</Text>
                 <TextInput
                   value={nftSendMemoInput}
                   onChangeText={setNftSendMemoInput}
@@ -15188,15 +17722,12 @@ function AppInner() {
                   : '--'}
               </Text>
 
-              <Pressable style={styles.primaryBtn} onPress={submitNftSend}>
-                <Text style={styles.primaryBtnText}>{nftUi.sendButton}</Text>
-              </Pressable>
-              {showNftRecentSendDropdown ? (
-                <Pressable style={styles.sendDropdownScrim} onPress={() => setShowNftRecentSendDropdown(false)} />
-              ) : null}
-            </View>
-          </ScrollView>
-        </View>
+	              <Pressable style={styles.primaryBtn} onPress={submitNftSend}>
+	                <Text style={styles.primaryBtnText}>{text.send}</Text>
+	              </Pressable>
+		            </View>
+	          </ScrollView>
+	        </View>
       </View>
     );
   };
@@ -15273,7 +17804,7 @@ function AppInner() {
     if (!sendDraft) {
       return (
         <View style={styles.screen}>
-          {renderSubHeader(flow.sendConfirmTitle)}
+          {renderSubHeader(flow.confirm)}
           <View style={styles.singleWrap}>
             <View style={styles.infoCard}>
               <Text style={styles.infoBody}>{text.recipientRequired}</Text>
@@ -15288,12 +17819,18 @@ function AppInner() {
       ? tokens.find((item) => item.id === sendDraft.tokenId) ?? tokenCatalog.find((item) => item.id === sendDraft.tokenId) ?? sendToken
       : null;
     const nftItem = isNftDraft ? collectibles.find((item) => item.id === sendDraft.nftId) ?? null : null;
-    const confirmTitle = isNftDraft ? nftUi.sendConfirmTitle : flow.sendConfirmTitle;
+    const nftConfirmTitle =
+      nftItem == null
+        ? 'NFT'
+        : nftItem.name.includes(`#${nftItem.tokenId}`)
+          ? nftItem.name
+          : `${nftItem.name} #${nftItem.tokenId}`;
+    const confirmTitle = flow.confirm;
     const totalCost = sendDraft.usdValue + sendDraft.feeUsd;
 
     return (
       <View style={styles.screen}>
-        {renderTopHeader(confirmTitle, 'close-outline', goBack, [{ icon: 'settings-outline', action: () => navigate('sendAdvanced') }])}
+        {renderTopHeader(confirmTitle, 'chevron-back', goBack, [{ icon: 'settings-outline', action: () => navigate('sendAdvanced') }])}
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
           <View style={styles.sendConfirmAmountCard}>
             {isNftDraft ? (
@@ -15308,7 +17845,7 @@ function AppInner() {
                 <View style={styles.sendConfirmTokenMeta}>
                   <Text style={styles.sendConfirmUsd}>{formatCurrency(sendDraft.usdValue, text.locale)}</Text>
                   <Text style={styles.sendConfirmAmount} numberOfLines={1}>
-                    {nftItem ? `${nftItem.name} #${nftItem.tokenId}` : 'NFT'}
+                    {nftConfirmTitle}
                   </Text>
                 </View>
               </View>
@@ -15432,7 +17969,7 @@ function AppInner() {
   const renderSendAuth = () => {
     const authTitle = sendAuthMethod === 'password' ? flow.passwordLabel : sendAuthMethod === 'fingerprint' ? flow.fingerprintTitle : flow.faceTitle;
     const authIcon: keyof typeof Ionicons.glyphMap = sendAuthMethod === 'fingerprint' ? 'shield-checkmark-outline' : 'scan-outline';
-    const authHeaderTitle = sendDraft?.assetType === 'nft' ? nftUi.sendTitle : text.send;
+    const authHeaderTitle = text.send;
 
     return (
       <View style={styles.screen}>
@@ -15488,8 +18025,8 @@ function AppInner() {
         <View style={styles.processingHeader}>
           <View style={styles.subHeaderSpacer} />
           <Text style={styles.subHeaderTitle}>{waiting ? flow.processingTitle : flow.processingDoneTitle}</Text>
-          <Pressable style={styles.backBtn} onPress={() => openRoot('home')}>
-            <ThemedIonicons name="close" size={20} color={palette.text} />
+          <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => openRoot('home')}>
+            <ThemedIonicons name="close" size={20} color={palette.text} style={styles.backBtnIconGlyph} />
           </Pressable>
         </View>
         <View style={styles.processingWrap}>
@@ -15516,15 +18053,17 @@ function AppInner() {
       txDetailHeaderMode === 'postSend' ? (
         <View style={styles.subHeader}>
           {renderHeaderBackdrop()}
+          <View pointerEvents="none" style={styles.topHeaderTitleLayer}>
+            <Text numberOfLines={1} style={styles.subHeaderTitle}>
+              {txDetailTitle}
+            </Text>
+          </View>
           <View style={styles.topHeaderSide}>
             <View style={styles.subHeaderSpacer} />
           </View>
-          <Text pointerEvents="none" numberOfLines={1} style={[styles.subHeaderTitle, styles.topHeaderTitleAbsolute]}>
-            {txDetailTitle}
-          </Text>
           <View style={[styles.topHeaderSide, styles.topHeaderSideRight]}>
-            <Pressable style={styles.backBtn} onPress={() => openRoot('home')}>
-              <ThemedIonicons name="close" size={20} color={palette.text} />
+            <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => openRoot('home')}>
+              <ThemedIonicons name="close" size={20} color={palette.text} style={styles.backBtnIconGlyph} />
             </Pressable>
           </View>
         </View>
@@ -15586,7 +18125,7 @@ function AppInner() {
 
           <View style={styles.txDetailCard}>
             <View style={styles.sendConfirmDetailRow}>
-              <Text style={styles.sendConfirmLabel}>{flow.networkFee}</Text>
+              <Text style={styles.sendConfirmLabel}>{txDetailData.feeStatus === 'confirmed' ? flow.networkFee : text.feeEstimate}</Text>
               <Text style={styles.sendConfirmValue}>
                 {formatNativeFee(txDetailData.feeNative)} {chainTickerMap[txDetailData.chainCode]} ({formatCurrency(txDetailData.feeUsd, text.locale)})
               </Text>
@@ -15811,12 +18350,18 @@ function AppInner() {
     );
   };
 
-  const renderAddressBookSelect = () => renderAddressBook();
+const renderAddressBookSelect = () => renderAddressBook();
 
   const renderAddressBook = () => (
     <View style={styles.screen}>
       {renderSubHeader(extra.addressBookManage)}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
+      {showAddressBookEditModal ? <Pressable style={styles.walletMenuScrim} onPress={resetAddressBookEditState} /> : null}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollPad}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!showAddressBookEditModal}
+      >
         <View style={styles.historyFilterSection}>
           <Text style={styles.historyFilterTitle}>{extra.addressBookTypeSelect}</Text>
           <View style={[styles.historyDateRow, styles.addressBookScopeRow]}>
@@ -15913,7 +18458,7 @@ function AppInner() {
         <TextInput
           value={addressLabelInput}
           onChangeText={setAddressLabelInput}
-          placeholder={extra.label}
+          placeholder={lang === 'ko' ? '라벨을 입력하세요' : lang === 'zh' ? '请输入标签' : 'Enter label'}
           placeholderTextColor={palette.muted}
           style={styles.fieldInput}
         />
@@ -15922,7 +18467,7 @@ function AppInner() {
         <TextInput
           value={addressValueInput}
           onChangeText={setAddressValueInput}
-          placeholder={addressFormChain === 'TRX' ? 'T...' : addressFormChain === 'ETH' || addressFormChain === 'BSC' ? '0x...' : ''}
+          placeholder={text.recipientPlaceholder}
           placeholderTextColor={palette.muted}
           style={styles.fieldInput}
           autoCapitalize="none"
@@ -15956,10 +18501,28 @@ function AppInner() {
                   </Text>
                 </Pressable>
                 <View style={styles.rowActions}>
-                  <Pressable style={styles.rowActionBtn} onPress={() => startEditAddressEntry(entry)}>
-                    <ThemedIonicons name="create-outline" size={14} color={palette.text} />
+                  <Pressable
+                    style={[
+                      styles.rowActionBtn,
+                      showAddressBookEditModal && addressEditTargetId === entry.id ? styles.iconCircleBtnActive : undefined,
+                      showAddressBookEditModal && addressEditTargetId === entry.id ? styles.dropdownTriggerRaised : undefined
+                    ]}
+                    onPress={() => startEditAddressEntry(entry)}
+                  >
+                    <ThemedIonicons
+                      name="create-outline"
+                      size={14}
+                      color={showAddressBookEditModal && addressEditTargetId === entry.id ? '#16110a' : palette.text}
+                    />
                   </Pressable>
-                  <Pressable style={styles.rowActionBtn} onPress={() => deleteAddressEntry(entry.id)}>
+                  <Pressable
+                    style={[
+                      styles.rowActionBtn,
+                      showAddressBookEditModal && addressEditTargetId === entry.id ? styles.scanNonTriggerDimmed : undefined
+                    ]}
+                    disabled={showAddressBookEditModal && addressEditTargetId === entry.id}
+                    onPress={() => deleteAddressEntry(entry.id)}
+                  >
                     <ThemedIonicons name="trash-outline" size={14} color={palette.negative} />
                   </Pressable>
                 </View>
@@ -15996,11 +18559,26 @@ function AppInner() {
     </View>
   );
 
-  const renderHistory = () => (
+const renderHistory = () => (
     <View style={styles.screen}>
       {renderSubHeader(text.history)}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-        <View style={styles.historyFilterSection}>
+      {showHistoryDateRangeModal || showHistoryDateCalendarModal ? (
+        <Pressable
+          style={styles.walletMenuScrim}
+          onPress={() => {
+            setShowHistoryDateCalendarModal(false);
+            setShowHistoryDateRangeModal(false);
+          }}
+        />
+      ) : null}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollPad}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!(showHistoryDateRangeModal || showHistoryDateCalendarModal)}
+      >
+        <View style={styles.sendScrollContentWrap}>
+          <View style={styles.historyFilterSection}>
           <Text style={styles.historyFilterTitle}>{text.historyFilterType}</Text>
           <View style={[styles.historyDateRow, styles.historyScopeRow]}>
             {([
@@ -16097,10 +18675,25 @@ function AppInner() {
               ))}
             </View>
             <Pressable
-              style={[styles.historyDateChip, styles.historyDateRangeChip, historyDateFilter === 'RANGE' ? styles.historyDateChipActive : undefined]}
-              onPress={openHistoryDateRangeModal}
+              ref={historyRangeTriggerRef}
+              onLayout={measureHistoryRangeTriggerAnchor}
+              style={[
+                styles.historyDateChip,
+                styles.historyDateRangeChip,
+                historyDateFilter === 'RANGE' || showHistoryDateRangeModal || showHistoryDateCalendarModal ? styles.historyDateChipActive : undefined
+              ]}
+              onPress={() => {
+                measureHistoryRangeTriggerAnchor();
+                openHistoryDateRangeModal();
+              }}
             >
-              <Text style={historyDateFilter === 'RANGE' ? styles.historyDateChipTextActive : styles.historyDateChipText}>
+              <Text
+                style={
+                  historyDateFilter === 'RANGE' || showHistoryDateRangeModal || showHistoryDateCalendarModal
+                    ? styles.historyDateChipTextActive
+                    : styles.historyDateChipText
+                }
+              >
                 {text.historyDateRange}
               </Text>
             </Pressable>
@@ -16197,6 +18790,7 @@ function AppInner() {
             </Pressable>
           </View>
         ) : null}
+        </View>
       </ScrollView>
     </View>
   );
@@ -16218,11 +18812,8 @@ function AppInner() {
   const renderOnboardingWelcome = () => (
     <View style={styles.screen}>
       <View style={styles.onboardingWrap}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoText}>W</Text>
-        </View>
+        <Image source={onboardingSymbolSource} style={styles.onboardingSymbolImage} resizeMode="contain" />
         <Text style={styles.onboardingTitle}>{text.onboardingTitle}</Text>
-        <Text style={styles.onboardingBody}>{text.onboardingBody}</Text>
         <Pressable
           style={styles.primaryBtn}
           onPress={() => {
@@ -16234,30 +18825,10 @@ function AppInner() {
         <Pressable
           style={styles.secondaryBtn}
           onPress={() => {
-            setOnboardingWalletName('');
-            setPhraseInput('');
-            setPendingInitialCreateAfterPassword(false);
-            setOnboardingDoneGoHomeOnly(false);
-            setRecoveryWordCount(DEFAULT_RECOVERY_WORD_COUNT);
-            setSeedPassphraseInput('');
-            setSeedAccountIndexInput('0');
-            setSelectedNetwork('Ethereum');
-            setRecoveryIndexScanResult(null);
-            setRecoveryIndexScanLoading(false);
-            clearSeedWords(DEFAULT_RECOVERY_WORD_COUNT);
-            navigate('onboardingAddExisting');
+            startAddExistingWalletFlow();
           }}
         >
           <Text style={styles.secondaryBtnText}>{text.addExisting}</Text>
-        </Pressable>
-        <Pressable
-          style={styles.secondaryBtn}
-          onPress={() => {
-            setHasWallet(true);
-            openRoot('home');
-          }}
-        >
-          <Text style={styles.secondaryBtnText}>{text.exploreDemo}</Text>
         </Pressable>
       </View>
     </View>
@@ -16277,7 +18848,7 @@ function AppInner() {
           <View style={styles.onboardingCheckCard}>
             <View style={styles.onboardingCheckHeader}>
               <View style={styles.onboardingCheckIcon}>
-                <ThemedIonicons name="shield-checkmark-outline" size={20} color="#17120a" />
+                <ThemedIonicons name="shield-checkmark-outline" size={20} color="#16110a" />
               </View>
               <View style={styles.onboardingCheckTitleWrap}>
                 <Text style={styles.onboardingCheckTitle}>{text.backupTitle}</Text>
@@ -16292,7 +18863,7 @@ function AppInner() {
                   onPress={item.toggle}
                 >
                   <View style={[styles.onboardingChecklistBadge, item.checked ? styles.onboardingChecklistBadgeActive : undefined]}>
-                    <ThemedIonicons name={item.checked ? 'checkmark' : 'add'} size={12} color={item.checked ? '#17120a' : palette.muted} />
+                    <ThemedIonicons name={item.checked ? 'checkmark' : 'add'} size={12} color={item.checked ? '#16110a' : palette.muted} />
                   </View>
                   <Text style={[styles.onboardingChecklistText, item.checked ? styles.onboardingChecklistTextActive : undefined]}>{item.label}</Text>
                 </Pressable>
@@ -16318,7 +18889,7 @@ function AppInner() {
         <View style={styles.onboardingBackupHeroCard}>
           <View style={styles.onboardingBackupHeroTop}>
             <View style={styles.onboardingBackupHeroIconWrap}>
-              <ThemedIonicons name="key-outline" size={18} color="#17120a" />
+              <ThemedIonicons name="key-outline" size={18} color="#16110a" />
             </View>
             <Text style={styles.onboardingBackupHeroTitle}>{text.backupTitle}</Text>
           </View>
@@ -16329,7 +18900,7 @@ function AppInner() {
           {[text.securityChecklistBackup, text.securityChecklistNoShare, text.securityChecklistNoRecovery].map((item, index) => (
             <View key={`backup-tip-${index}`} style={styles.onboardingBackupTipRow}>
               <View style={styles.onboardingBackupTipIconWrap}>
-                <ThemedIonicons name="checkmark" size={12} color="#17120a" />
+                <ThemedIonicons name="checkmark" size={12} color="#16110a" />
               </View>
               <Text style={styles.onboardingBackupTipText}>{item}</Text>
             </View>
@@ -16380,7 +18951,7 @@ function AppInner() {
         <TextInput
           value={onboardingWalletName}
           onChangeText={setOnboardingWalletName}
-          placeholder={walletUi.walletNamePlaceholder}
+          placeholder={walletNamePlaceholder}
           placeholderTextColor={palette.muted}
           style={styles.fieldInput}
         />
@@ -16461,76 +19032,165 @@ function AppInner() {
     <View style={styles.screen}>
       {renderSubHeader(flow.appPasswordSetupTitle)}
       <View style={styles.formWrap}>
-        <Text style={styles.onboardingBody}>{flow.appPasswordSetupBody}</Text>
+        <View style={styles.onboardingSetPasswordTop}>
+          <Text style={styles.onboardingBody}>{flow.appPasswordSetupBody}</Text>
 
-        <View style={styles.onboardingPasscodeBlock}>
-          <Text style={styles.fieldLabel}>{flow.sendPasswordLabel}</Text>
-          {renderPasscodeBoxes(onboardingPasswordInput, {
-            active: onboardingPasswordTarget === 'password',
-            error: Boolean(onboardingPasswordError),
-            onPress: () => setOnboardingPasswordTarget('password')
-          })}
+          <View style={styles.onboardingPasscodeBlock}>
+            <Text style={[styles.fieldLabel, styles.onboardingPasscodeLabel]}>{flow.sendPasswordLabel}</Text>
+            {renderPasscodeBoxes(onboardingPasswordInput, {
+              active: onboardingPasswordTarget === 'password',
+              error: Boolean(onboardingPasswordError),
+              onPress: () => setOnboardingPasswordTarget('password')
+            })}
+          </View>
+
+          <View style={styles.onboardingPasscodeBlock}>
+            <Text style={[styles.fieldLabel, styles.onboardingPasscodeLabel]}>{flow.appPasswordConfirmLabel}</Text>
+            {renderPasscodeBoxes(onboardingPasswordConfirmInput, {
+              active: onboardingPasswordTarget === 'confirm',
+              error: Boolean(onboardingPasswordError),
+              onPress: () => setOnboardingPasswordTarget('confirm')
+            })}
+          </View>
+
+          <View style={[styles.fieldErrorSlot, styles.onboardingPasscodeErrorSlot]}>
+            <Text numberOfLines={1} style={[styles.fieldErrorText, !onboardingPasswordError ? styles.fieldErrorTextHidden : undefined]}>
+              {onboardingPasswordError ?? ' '}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.onboardingPasscodeBlock}>
-          <Text style={styles.fieldLabel}>{flow.appPasswordConfirmLabel}</Text>
-          {renderPasscodeBoxes(onboardingPasswordConfirmInput, {
-            active: onboardingPasswordTarget === 'confirm',
-            error: Boolean(onboardingPasswordError),
-            onPress: () => setOnboardingPasswordTarget('confirm')
-          })}
-        </View>
-
-        <View style={styles.fieldErrorSlot}>
-          <Text numberOfLines={1} style={[styles.fieldErrorText, !onboardingPasswordError ? styles.fieldErrorTextHidden : undefined]}>
-            {onboardingPasswordError ?? ' '}
-          </Text>
-        </View>
-
-        {renderPasscodeKeypad({
-          biometricEnabled: false,
-          onDigitPress: (digit) => {
-            if (onboardingPasswordTarget === 'password') {
-              appendPasscodeDigit(onboardingPasswordInput, setOnboardingPasswordInput, digit, {
+        <View style={styles.onboardingSetPasswordBottom}>
+          {renderPasscodeKeypad({
+            biometricEnabled: false,
+            onDigitPress: (digit) => {
+              if (onboardingPasswordTarget === 'password') {
+                appendPasscodeDigit(onboardingPasswordInput, setOnboardingPasswordInput, digit, {
+                  onClearError: () => setOnboardingPasswordError(''),
+                  onComplete: () => setOnboardingPasswordTarget('confirm')
+                });
+                return;
+              }
+              appendPasscodeDigit(onboardingPasswordConfirmInput, setOnboardingPasswordConfirmInput, digit, {
                 onClearError: () => setOnboardingPasswordError(''),
-                onComplete: () => setOnboardingPasswordTarget('confirm')
+                onComplete: (value) => {
+                  void submitOnboardingPasswordSetup({ confirmPassword: value });
+                }
               });
-              return;
-            }
-            appendPasscodeDigit(onboardingPasswordConfirmInput, setOnboardingPasswordConfirmInput, digit, {
-              onClearError: () => setOnboardingPasswordError('')
-            });
-          },
-          onDeletePress: () => {
-            if (onboardingPasswordTarget === 'confirm') {
-              const confirmCurrent = normalizePassword(onboardingPasswordConfirmInput);
-              if (confirmCurrent.length > 0) {
-                deletePasscodeDigit(onboardingPasswordConfirmInput, setOnboardingPasswordConfirmInput, {
+            },
+            onDeletePress: () => {
+              if (onboardingPasswordTarget === 'confirm') {
+                const confirmCurrent = normalizePassword(onboardingPasswordConfirmInput);
+                if (confirmCurrent.length > 0) {
+                  deletePasscodeDigit(onboardingPasswordConfirmInput, setOnboardingPasswordConfirmInput, {
+                    onClearError: () => setOnboardingPasswordError('')
+                  });
+                  return;
+                }
+                setOnboardingPasswordTarget('password');
+                deletePasscodeDigit(onboardingPasswordInput, setOnboardingPasswordInput, {
                   onClearError: () => setOnboardingPasswordError('')
                 });
                 return;
               }
-              setOnboardingPasswordTarget('password');
               deletePasscodeDigit(onboardingPasswordInput, setOnboardingPasswordInput, {
                 onClearError: () => setOnboardingPasswordError('')
               });
-              return;
             }
-            deletePasscodeDigit(onboardingPasswordInput, setOnboardingPasswordInput, {
-              onClearError: () => setOnboardingPasswordError('')
-            });
-          }
-        })}
-
-        <Pressable style={styles.primaryBtn} onPress={() => void submitOnboardingPasswordSetup()}>
-          <Text style={styles.primaryBtnText}>{text.continue}</Text>
-        </Pressable>
+          })}
+        </View>
       </View>
     </View>
   );
 
   const renderOnboardingAddExisting = () => {
     const recoveryWordCountTitle = lang === 'ko' ? '복구 단어 수' : lang === 'zh' ? '助记词数量' : 'Recovery word count';
+
+    return (
+      <View style={styles.screen}>
+        {renderSubHeader(walletUi.addWalletFromRecovery, [
+          { icon: 'settings-outline', action: () => navigate('onboardingAddAdvanced'), testId: 'onboarding-advanced-btn' }
+        ])}
+        <KeyboardAvoidingView style={styles.passcodeLayout} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.onboardingFormScrollPad, { paddingBottom: onboardingKeyboardPad }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            <View style={styles.onboardingFieldBlock}>
+            <Text style={styles.fieldLabel}>{walletUi.walletName}</Text>
+            <TextInput
+              value={onboardingWalletName}
+              onChangeText={setOnboardingWalletName}
+              placeholder={walletNamePlaceholder}
+              placeholderTextColor={palette.muted}
+              style={[styles.fieldInput, styles.onboardingFieldInput]}
+            />
+          </View>
+
+            <View style={styles.onboardingFieldBlock}>
+            <Text style={styles.fieldLabel}>{recoveryWordCountTitle}</Text>
+            <View style={[styles.historyDateRow, styles.onboardingWordCountRow]}>
+              {([12, 24] as RecoveryWordCount[]).map((count) => (
+                <Pressable
+                  key={`recovery-word-count-${count}`}
+                  style={[
+                    styles.historyDateChip,
+                    styles.onboardingWordCountChip,
+                    recoveryWordCount === count ? styles.historyDateChipActive : undefined
+                  ]}
+                  onPress={() => updateRecoveryWordCount(count)}
+                >
+                  <Text style={recoveryWordCount === count ? styles.historyDateChipTextActive : styles.historyDateChipText}>
+                    {count}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+            <View style={[styles.onboardingFieldBlock, styles.onboardingSeedFieldBlock]}>
+            <Text style={styles.fieldLabel}>{text.secretPhrase}</Text>
+            <View style={styles.seedGrid}>
+              {Array.from({ length: currentSeedWordCount }).map((_, index) => (
+                <View key={`existing-seed-${index + 1}`} style={styles.seedCell}>
+                  <Text style={styles.seedCellIndex}>{index + 1}</Text>
+                  <TextInput
+                    value={seedWords[index]}
+                    onChangeText={(value) => updateSeedWordAt(index, value)}
+                    style={[styles.seedCellInput, seedWords[index].trim() ? styles.seedCellInputFilled : undefined, seedInputWebStyle]}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+            <Pressable
+              style={[styles.primaryBtn, !isSeedWordsComplete ? styles.btnDisabled : undefined]}
+              disabled={!isSeedWordsComplete}
+              onPress={() => {
+                if (!isSeedWordsBip39Valid) {
+                  setBannerMessage(invalidSeedPhraseMessage);
+                  return;
+                }
+                setSeedAccountIndexInput(String(normalizedSeedAccountIndex));
+                setPhraseInput(seedPhraseJoined);
+                setRecoveryIndexScanResult(null);
+                navigate('onboardingAddDone');
+              }}
+            >
+              <Text style={styles.primaryBtnText}>{text.continue}</Text>
+            </Pressable>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    );
+  };
+
+  const renderOnboardingAddAdvanced = () => {
     const passphraseTitle = lang === 'ko' ? '패스프레이즈 (선택)' : lang === 'zh' ? '密码短语（可选）' : 'Passphrase (optional)';
     const passphrasePlaceholder = lang === 'ko' ? '비워두면 기본(없음)' : lang === 'zh' ? '留空表示不使用' : 'Leave blank for none';
     const accountIndexTitle = lang === 'ko' ? '계정 인덱스' : lang === 'zh' ? '账户索引' : 'Account index';
@@ -16538,91 +19198,47 @@ function AppInner() {
 
     return (
       <View style={styles.screen}>
-        {renderSubHeader(walletUi.addWalletFromRecovery)}
-        <View style={styles.formWrap}>
-          <Text style={styles.fieldLabel}>{walletUi.walletName}</Text>
-          <TextInput
-            value={onboardingWalletName}
-            onChangeText={setOnboardingWalletName}
-            placeholder={walletUi.walletNamePlaceholder}
-            placeholderTextColor={palette.muted}
-            style={styles.fieldInput}
-          />
-
-          <Text style={styles.fieldLabel}>{recoveryWordCountTitle}</Text>
-          <View style={styles.historyDateRow}>
-            {([12, 24] as RecoveryWordCount[]).map((count) => (
-              <Pressable
-                key={`recovery-word-count-${count}`}
-                style={[styles.historyDateChip, recoveryWordCount === count ? styles.historyDateChipActive : undefined]}
-                onPress={() => updateRecoveryWordCount(count)}
-              >
-                <Text style={recoveryWordCount === count ? styles.historyDateChipTextActive : styles.historyDateChipText}>
-                  {count}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.fieldLabel}>{passphraseTitle}</Text>
-          <TextInput
-            value={seedPassphraseInput}
-            onChangeText={(value) => {
-              setSeedPassphraseInput(value);
-              setRecoveryIndexScanResult(null);
-            }}
-            placeholder={passphrasePlaceholder}
-            placeholderTextColor={palette.muted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.fieldInput}
-          />
-
-          <Text style={styles.fieldLabel}>{accountIndexTitle}</Text>
-          <TextInput
-            value={seedAccountIndexInput}
-            onChangeText={(value) => {
-              setSeedAccountIndexInput(normalizeAccountIndexInput(value));
-              setRecoveryIndexScanResult(null);
-            }}
-            placeholder={accountIndexPlaceholder}
-            placeholderTextColor={palette.muted}
-            keyboardType="numeric"
-            style={styles.fieldInput}
-          />
-
-          <Text style={styles.fieldLabel}>{text.secretPhrase}</Text>
-          <View style={styles.seedGrid}>
-            {Array.from({ length: currentSeedWordCount }).map((_, index) => (
-              <View key={`existing-seed-${index + 1}`} style={styles.seedCell}>
-                <Text style={styles.seedCellIndex}>{index + 1}</Text>
-                <TextInput
-                  value={seedWords[index]}
-                  onChangeText={(value) => updateSeedWordAt(index, value)}
-                  style={[styles.seedCellInput, seedWords[index].trim() ? styles.seedCellInputFilled : undefined, seedInputWebStyle]}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            ))}
-          </View>
-          <Pressable
-            style={[styles.primaryBtn, !isSeedWordsComplete ? styles.btnDisabled : undefined]}
-            disabled={!isSeedWordsComplete}
-            onPress={() => {
-              if (!isSeedWordsBip39Valid) {
-                setBannerMessage(invalidSeedPhraseMessage);
-                return;
-              }
-              setSeedAccountIndexInput(String(normalizedSeedAccountIndex));
-              setPhraseInput(seedPhraseJoined);
-              setRecoveryIndexScanResult(null);
-              navigate('onboardingAddNetwork');
-            }}
+        {renderSubHeader(flow.advancedTitle)}
+        <KeyboardAvoidingView style={styles.passcodeLayout} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.onboardingFormScrollPad, { paddingBottom: onboardingKeyboardPad }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
-            <Text style={styles.primaryBtnText}>{text.continue}</Text>
-          </Pressable>
-        </View>
+          <View style={styles.onboardingFieldBlock}>
+            <Text style={styles.fieldLabel}>{passphraseTitle}</Text>
+            <TextInput
+              value={seedPassphraseInput}
+              onChangeText={(value) => {
+                setSeedPassphraseInput(value);
+                setRecoveryIndexScanResult(null);
+              }}
+              placeholder={passphrasePlaceholder}
+              placeholderTextColor={palette.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.fieldInput, styles.onboardingFieldInput]}
+            />
+          </View>
+
+          <View style={styles.onboardingFieldBlock}>
+            <Text style={styles.fieldLabel}>{accountIndexTitle}</Text>
+            <TextInput
+              value={seedAccountIndexInput}
+              onChangeText={(value) => {
+                setSeedAccountIndexInput(normalizeAccountIndexInput(value));
+                setRecoveryIndexScanResult(null);
+              }}
+              placeholder={accountIndexPlaceholder}
+              placeholderTextColor={palette.muted}
+              keyboardType="numeric"
+              style={[styles.fieldInput, styles.onboardingFieldInput]}
+            />
+          </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     );
   };
@@ -16710,13 +19326,20 @@ function AppInner() {
           <ThemedIonicons name="wallet-outline" size={36} color={themeMode === 'dark' ? '#000000' : '#ffffff'} />
         </View>
         <Text style={styles.doneTitle}>{text.doneTitle}</Text>
-        <Text style={styles.doneBody}>
-          {selectedNetwork} · {text.doneBody}
-        </Text>
+        <Text style={styles.doneBody}>{text.doneBody}</Text>
         <Pressable
           style={styles.primaryBtn}
           onPress={() => {
-            completeWalletCreateFlow({ requirePasswordSetup: !hasWallet && !hasAppPassword });
+            if (!hasWallet && !hasAppPassword) {
+              setPendingInitialCreateAfterPassword(true);
+              setOnboardingPasswordInput('');
+              setOnboardingPasswordConfirmInput('');
+              setOnboardingPasswordTarget('password');
+              setOnboardingPasswordError('');
+              navigate('onboardingSetPassword');
+              return;
+            }
+            completeWalletCreateFlow({ target: 'onboardingCreateDone', doneGoHomeOnly: true });
           }}
         >
           <Text style={styles.primaryBtnText}>{text.goToWallet}</Text>
@@ -16727,10 +19350,9 @@ function AppInner() {
 
   const renderNoWalletHome = () => (
     <View style={styles.screen}>
-      {renderTopHeader(text.noWalletTitle, 'settings-outline', () => navigate('noWalletSettings'))}
       <View style={styles.onboardingWrap}>
-        <Text style={styles.onboardingTitle}>{text.noWalletTitle}</Text>
-        <Text style={styles.onboardingBody}>{text.noWalletBody}</Text>
+        <Image source={onboardingSymbolSource} style={styles.onboardingSymbolImage} resizeMode="contain" />
+        <Text style={styles.onboardingTitle}>{text.onboardingTitle}</Text>
         <Pressable
           style={styles.primaryBtn}
           onPress={() => {
@@ -16742,28 +19364,10 @@ function AppInner() {
         <Pressable
           style={styles.secondaryBtn}
           onPress={() => {
-            setOnboardingWalletName('');
-            setPhraseInput('');
-            setRecoveryWordCount(DEFAULT_RECOVERY_WORD_COUNT);
-            setSeedPassphraseInput('');
-            setSeedAccountIndexInput('0');
-            setSelectedNetwork('Ethereum');
-            setRecoveryIndexScanResult(null);
-            setRecoveryIndexScanLoading(false);
-            clearSeedWords(DEFAULT_RECOVERY_WORD_COUNT);
-            openRoot('onboardingAddExisting');
+            startAddExistingWalletFlow({ root: true });
           }}
         >
           <Text style={styles.secondaryBtnText}>{text.addExisting}</Text>
-        </Pressable>
-        <Pressable
-          style={styles.secondaryBtn}
-          onPress={() => {
-            setHasWallet(true);
-            openRoot('home');
-          }}
-        >
-          <Text style={styles.secondaryBtnText}>{text.exploreDemo}</Text>
         </Pressable>
       </View>
     </View>
@@ -16773,10 +19377,6 @@ function AppInner() {
     <View style={styles.screen}>
       {renderSubHeader(text.settings)}
       <View style={styles.formWrap}>
-        <Pressable style={styles.settingRow} onPress={() => openRoot('onboardingWelcome')}>
-          <Text style={styles.settingLabel}>{text.previewOnboarding}</Text>
-          <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
-        </Pressable>
         <Pressable style={styles.settingRow} onPress={() => openRoot('home')}>
           <Text style={styles.settingLabel}>{text.backToWallet}</Text>
           <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
@@ -16786,62 +19386,56 @@ function AppInner() {
   );
 
   const renderAppLockOverlay = () => {
-    if (!appLocked || !hasWallet || !hasAppPassword || !passwordLockEnabled) return null;
+    const shouldShowLockOverlay = isLockPreviewMode
+      ? appLocked
+      : appLocked && hasWallet && hasAppPassword && passwordLockEnabled;
+    if (!shouldShowLockOverlay) return null;
 
-    const allowBiometricUnlock = biometric && sendAuthMethod !== 'password';
-    const isPasswordMode = !allowBiometricUnlock || appUnlockUsePassword;
-    const biometricLabel = sendAuthMethod === 'face' ? flow.faceMode : flow.fingerprintMode;
+    const effectiveAuthMethod: SendAuthMethod =
+      isLockPreviewMode && lockPreviewMode ? lockPreviewMode : sendAuthMethod;
+    const allowBiometricUnlock = effectiveAuthMethod !== 'password' && (isLockPreviewMode || biometric);
+    const isPasswordMode = effectiveAuthMethod === 'password' || !allowBiometricUnlock;
 
     return (
       <Modal visible transparent animationType="none" onRequestClose={() => undefined}>
-        <View style={styles.appLockBackdrop}>
-          <View style={styles.appLockCard}>
-            <View style={styles.appLockIconWrap}>
-              <ThemedIonicons
-                name={isPasswordMode ? 'lock-closed-outline' : sendAuthMethod === 'face' ? 'scan-outline' : 'shield-checkmark-outline'}
-                size={26}
-                color={palette.accent}
-              />
-            </View>
-            <Text style={styles.appLockTitle}>{flow.appUnlockTitle}</Text>
-
-            {isPasswordMode ? (
-              <>
-                {renderPasscodePad({
-                  value: appUnlockInput,
-                  setValue: setAppUnlockInput,
-                  error: appUnlockError,
-                  onClearError: () => setAppUnlockError(''),
-                  onSubmit: unlockWithPassword,
-                  onComplete: (value) => unlockWithPassword(value),
-                  submitLabel: flow.appUnlockButton,
-                  showErrorText: false,
-                  showSubmitButton: false,
-                  biometricEnabled: allowBiometricUnlock,
-                  onBiometricPress: () => {
-                    void unlockWithBiometricMode();
-                  }
-                })}
-              </>
-            ) : (
-              <>
-                <Pressable style={[styles.primaryBtn, styles.appLockBtn]} onPress={() => void unlockWithBiometricMode()}>
-                  <Text style={styles.primaryBtnText}>
-                    {flow.appUnlockWithBiometric} ({biometricLabel})
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.secondaryBtn, styles.appLockBtn]}
-                  onPress={() => {
-                    setAppUnlockUsePassword(true);
-                    setAppUnlockError('');
-                  }}
-                >
-                  <Text style={styles.secondaryBtnText}>{flow.appUnlockUsePassword}</Text>
-                </Pressable>
-              </>
-            )}
+        <View style={styles.appLockLayer}>
+          <View style={styles.appLockSplashStage}>
+            <Image source={launchIntroLogoSource} style={styles.appLockSplashLogo} resizeMode="contain" />
           </View>
+          <View style={styles.appLockDimLayer} />
+          {isPasswordMode ? (
+            <View style={styles.appLockBackdrop}>
+              <View style={styles.appLockCard}>
+                <View style={styles.appLockIconWrap}>
+                  <ThemedIonicons name="lock-closed-outline" size={26} color={palette.accent} />
+                </View>
+                <Text style={styles.appLockTitle}>{flow.appUnlockTitle}</Text>
+                <Text style={styles.appLockBody}>{flow.appUnlockBody}</Text>
+                <View style={styles.appLockPasscodeBlock}>
+                  {renderPasscodeBoxes(appUnlockInput, { active: true, error: Boolean(appUnlockError) })}
+                  <View style={[styles.fieldErrorSlot, styles.appLockPasscodeErrorSlot]}>
+                    <Text numberOfLines={1} style={[styles.fieldErrorText, !appUnlockError ? styles.fieldErrorTextHidden : undefined]}>
+                      {appUnlockError ?? ' '}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.appLockPasscodePad}>
+                  {renderPasscodeKeypad({
+                    biometricEnabled: false,
+                    onDigitPress: (digit) =>
+                      appendPasscodeDigit(appUnlockInput, setAppUnlockInput, digit, {
+                        onClearError: () => setAppUnlockError(''),
+                        onComplete: (value) => unlockWithPassword(value)
+                      }),
+                    onDeletePress: () =>
+                      deletePasscodeDigit(appUnlockInput, setAppUnlockInput, {
+                        onClearError: () => setAppUnlockError('')
+                      })
+                  })}
+                </View>
+              </View>
+            </View>
+          ) : null}
         </View>
       </Modal>
     );
@@ -16876,7 +19470,7 @@ function AppInner() {
     if (currentScreen === 'settingsWallets') return renderWalletSettings();
     if (currentScreen === 'settingsHelp') return renderSimpleInfoScreen(text.helpCenter, 'https://support.imwallet.com');
     if (currentScreen === 'settingsSupport') return renderSupportChat();
-    if (currentScreen === 'settingsAbout') return renderSimpleInfoScreen(text.about, text.appVersion);
+    if (currentScreen === 'settingsAbout') return renderSimpleInfoScreen(text.about, appInfoVersionLabel, 'Powered by Hepta Labs');
 
     if (currentScreen === 'send') return renderSend();
     if (currentScreen === 'sendConfirm') return renderSendConfirm();
@@ -16901,6 +19495,7 @@ function AppInner() {
     if (currentScreen === 'onboardingCreateDone') return renderOnboardingDone();
     if (currentScreen === 'onboardingSetPassword') return renderOnboardingSetPassword();
     if (currentScreen === 'onboardingAddExisting') return renderOnboardingAddExisting();
+    if (currentScreen === 'onboardingAddAdvanced') return renderOnboardingAddAdvanced();
     if (currentScreen === 'onboardingAddNetwork') return renderOnboardingAddNetwork();
     if (currentScreen === 'onboardingAddDone') return renderOnboardingAddDone();
     if (currentScreen === 'walletDeleteCheck') return renderWalletDeleteCheck();
@@ -16916,14 +19511,11 @@ function AppInner() {
   try {
     currentScreenNode = renderCurrentScreen();
   } catch (error) {
-    const crashMessage = error instanceof Error ? error.message : 'Unknown render error';
     trackError('app.render_crash', error, { screen: currentScreen });
     currentScreenNode = (
       <View style={styles.crashFallbackWrap}>
-        <Text style={styles.crashFallbackTitle}>Render Error</Text>
-        <Text style={styles.crashFallbackBody} numberOfLines={6}>
-          {crashMessage}
-        </Text>
+        <Text style={styles.crashFallbackTitle}>IMWallet Error</Text>
+        <Text style={styles.crashFallbackBody}>{USER_SAFE_FATAL_ERROR_MESSAGE}</Text>
       </View>
     );
   }
@@ -16932,13 +19524,20 @@ function AppInner() {
     <SafeAreaView edges={['left', 'right']} style={styles.safe}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} translucent backgroundColor="transparent" />
       <View style={styles.viewport}>
-        <View style={styles.phoneShell}>
+        <View ref={phoneShellRef} style={styles.phoneShell}>
           {toastMessage ? (
-            <Animated.View style={[styles.banner, { opacity: toastOpacity, transform: [{ translateY: toastTranslateY }] }]}>
+            <Animated.View pointerEvents="none" style={[styles.banner, { opacity: toastOpacity, transform: [{ translateY: toastTranslateY }] }]}>
               <Text style={styles.bannerText}>{toastMessage}</Text>
             </Animated.View>
           ) : null}
           {currentScreenNode}
+          {renderRecentSendOverlay()}
+          {renderHistoryRangeTriggerOverlay()}
+          {renderSettingsLangOverlay()}
+          {renderSecurityDropdownOverlay()}
+          {renderDiscoverBriefingWeekOverlay()}
+          {renderHomeScanTriggerOverlay()}
+          {renderHomeLayoutTriggerOverlay()}
           {renderBottomDock()}
 
           <Modal visible={Boolean(discoverSecurityPrompt)} transparent animationType="none" onRequestClose={closeDiscoverSecurityPrompt}>
@@ -16984,12 +19583,12 @@ function AppInner() {
           </Modal>
 
           <Modal visible={showRecipientBookModal} transparent animationType="none" onRequestClose={() => setShowRecipientBookModal(false)}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={() => setShowRecipientBookModal(false)} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{recipientBookScope === 'nft' ? extra.nftAddressBook : text.addressBook}</Text>
+                  <Text style={styles.modalTitle}>{recipientBookScope === 'nft' ? extra.nftAddressBook : extra.assetAddressBook}</Text>
                   <Pressable style={styles.modalCloseBtn} onPress={() => setShowRecipientBookModal(false)}>
                     <ThemedIonicons name="close" size={18} color={palette.text} />
                   </Pressable>
@@ -17105,7 +19704,7 @@ function AppInner() {
                   onPress={() => openAddressBookManager(recipientBookScope)}
                 >
                   <View style={[styles.modalActionIcon, styles.modalActionIconInline]}>
-                    <ThemedIonicons name="create-outline" size={16} color="#17120a" />
+                    <ThemedIonicons name="create-outline" size={16} color="#16110a" />
                   </View>
                   <Text numberOfLines={1} style={styles.modalActionBtnPrimaryLabelInline}>
                     {extra.addressBookManage}
@@ -17116,7 +19715,7 @@ function AppInner() {
           </Modal>
 
           <Modal visible={showSaveRecipientModal} transparent animationType="none" onRequestClose={() => setShowSaveRecipientModal(false)}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={() => setShowSaveRecipientModal(false)} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17164,7 +19763,7 @@ function AppInner() {
           </Modal>
 
           <Modal visible={showAddressBookEditModal} transparent animationType="none" onRequestClose={resetAddressBookEditState}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={resetAddressBookEditState} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17195,7 +19794,7 @@ function AppInner() {
                 <TextInput
                   value={addressEditLabelInput}
                   onChangeText={setAddressEditLabelInput}
-                  placeholder={extra.label}
+                  placeholder={lang === 'ko' ? '라벨을 입력하세요' : lang === 'zh' ? '请输入标签' : 'Enter label'}
                   placeholderTextColor={palette.muted}
                   selectionColor={palette.accent}
                   style={[styles.fieldInput, styles.saveRecipientModalInput]}
@@ -17206,7 +19805,7 @@ function AppInner() {
                 <TextInput
                   value={addressEditValueInput}
                   onChangeText={setAddressEditValueInput}
-                  placeholder={addressEditChain === 'TRX' ? 'T...' : addressEditChain === 'ETH' || addressEditChain === 'BSC' ? '0x...' : ''}
+                  placeholder={text.recipientPlaceholder}
                   placeholderTextColor={palette.muted}
                   selectionColor={palette.accent}
                   style={[styles.fieldInput, styles.saveRecipientModalInputLast]}
@@ -17232,7 +19831,7 @@ function AppInner() {
           </Modal>
 
           <Modal visible={showScanMethodModal} transparent animationType="none" onRequestClose={() => setShowScanMethodModal(false)}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={() => setShowScanMethodModal(false)} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17253,15 +19852,12 @@ function AppInner() {
                     <ThemedIonicons name="chevron-forward" size={16} color={palette.muted} />
                   </Pressable>
                 </View>
-                <Pressable style={[styles.modalActionBtn, styles.modalActionBtnGhost]} onPress={() => setShowScanMethodModal(false)}>
-                  <Text style={[styles.modalActionBtnText, styles.modalActionBtnGhostText]}>{extra.cancel}</Text>
-                </Pressable>
               </Animated.View>
             </View>
           </Modal>
 
           <Modal visible={showHomeAssetLayoutModal} transparent animationType="none" onRequestClose={closeHomeAssetLayoutModal}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={closeHomeAssetLayoutModal} />
               <Animated.View style={[styles.modalCard, styles.assetLayoutModalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17327,7 +19923,7 @@ function AppInner() {
           </Modal>
 
           <Modal visible={showHistoryDateRangeModal} transparent animationType="none" onRequestClose={() => setShowHistoryDateRangeModal(false)}>
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={() => setShowHistoryDateRangeModal(false)} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17415,7 +20011,7 @@ function AppInner() {
             animationType="none"
             onRequestClose={() => setShowHistoryDateCalendarModal(false)}
           >
-            <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBackdrop, styles.dropdownModalBackdrop]}>
               <Pressable style={styles.modalScrimTap} onPress={() => setShowHistoryDateCalendarModal(false)} />
               <Animated.View style={[styles.modalCard, modalCardAnimatedStyle]}>
                 <View style={styles.modalHandle} />
@@ -17474,8 +20070,8 @@ function AppInner() {
             <SafeAreaView style={styles.cameraScreen}>
               <View style={styles.cameraFrame}>
                 <View style={styles.cameraHeader}>
-                  <Pressable style={styles.backBtn} onPress={() => setShowCameraScanner(false)}>
-                    <ThemedIonicons name="close" size={20} color={palette.text} />
+                  <Pressable style={styles.backBtn} hitSlop={HEADER_BUTTON_HIT_SLOP} onPress={() => setShowCameraScanner(false)}>
+                    <ThemedIonicons name="close" size={20} color={palette.text} style={styles.backBtnIconGlyph} />
                   </Pressable>
                   <Text style={styles.subHeaderTitle}>{extra.scan}</Text>
                   <View style={styles.subHeaderSpacer} />
@@ -17495,7 +20091,11 @@ function AppInner() {
           {renderAppLockOverlay()}
           {showLaunchIntro ? (
             <View style={styles.launchIntroOverlay} pointerEvents="auto">
-              <Image source={launchIntroLogoSource} style={styles.launchIntroLogo} resizeMode="contain" />
+              <Animated.Image
+                source={launchIntroLogoSource}
+                style={[styles.launchIntroLogo, { opacity: launchIntroLogoOpacity }]}
+                resizeMode="contain"
+              />
             </View>
           ) : null}
         </View>
@@ -17504,19 +20104,22 @@ function AppInner() {
   );
 }
 
-const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeInsets) => {
+const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeInsets, viewportWidth: number) => {
   const iconContrastShadow = themeMode === 'dark' ? 'rgba(255,255,255,0.34)' : 'rgba(12,18,28,0.28)';
-  const topSafeInset = Platform.OS === 'android' ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0) : insets.top;
+  const topSafeInset = Platform.OS === 'android' ? Math.max(insets.top, NativeStatusBar.currentHeight ?? 0, 24) : insets.top;
   const bottomSafeInset = Platform.OS === 'android' ? Math.max(insets.bottom, 24) : insets.bottom;
   const headerOverlayHeight = HEADER_OVERLAY_HEIGHT + topSafeInset;
   const headerTitleTop = topSafeInset + 17;
   const headerContentTopPad = headerOverlayHeight + 4;
   const formContentTopPad = headerOverlayHeight + 10;
+  const screenHorizontalPad = 16;
   const bottomSafePad = bottomSafeInset + 12;
   const bottomDockHeight = 56;
   const bottomDockBottomOffset = Math.max(10, bottomSafeInset + 10);
   const scrollBottomPad = bottomDockHeight + bottomDockBottomOffset + 12;
   const modalBottomPad = bottomSafeInset + 12;
+  const modalHorizontalPad = 12;
+  const phoneShellMaxWidth = 430;
   return StyleSheet.create({
     safe: {
       flex: 1,
@@ -17530,7 +20133,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     phoneShell: {
       flex: 1,
       width: '100%',
-      maxWidth: 430,
+      maxWidth: phoneShellMaxWidth,
       backgroundColor: palette.bg,
       position: 'relative'
     },
@@ -17567,16 +20170,37 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center'
     },
     launchIntroLogo: {
-      width: '22%',
-      maxWidth: 108,
-      aspectRatio: 1
+      width: '22.7%',
+      maxWidth: 107,
+      minWidth: 64,
+      aspectRatio: 291 / 370
+    },
+    appLockLayer: {
+      flex: 1,
+      backgroundColor: '#000000'
+    },
+    appLockSplashStage: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#000000'
+    },
+    appLockSplashLogo: {
+      width: '22.7%',
+      maxWidth: 107,
+      minWidth: 64,
+      aspectRatio: 291 / 370
+    },
+    appLockDimLayer: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.56)'
     },
     appLockBackdrop: {
       flex: 1,
-      backgroundColor: palette.overlay,
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 20
+      justifyContent: 'flex-end',
+      paddingHorizontal: 20,
+      paddingBottom: Math.max(64, bottomSafeInset + 44)
     },
     appLockCard: {
       width: '100%',
@@ -17584,7 +20208,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       borderRadius: 22,
       borderWidth: 1,
       borderColor: palette.accent,
-      backgroundColor: palette.panel,
+      backgroundColor: themeMode === 'dark' ? 'rgba(23, 25, 28, 0.94)' : 'rgba(255, 255, 255, 0.96)',
       paddingHorizontal: 16,
       paddingVertical: 18
     },
@@ -17608,11 +20232,36 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     appLockBody: {
       marginTop: 6,
-      marginBottom: 12,
+      marginBottom: 0,
       color: palette.muted,
       fontSize: 13,
       fontWeight: '600',
       textAlign: 'center'
+    },
+    appLockPasscodeBlock: {
+      marginTop: 12,
+      width: '100%',
+      maxWidth: 336,
+      alignSelf: 'center'
+    },
+    appLockPasscodeErrorSlot: {
+      marginTop: 8,
+      minHeight: 14
+    },
+    appLockPasscodePad: {
+      marginTop: 2,
+      width: '100%'
+    },
+    appLockBiometricArea: {
+      marginTop: 12,
+      minHeight: 54,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.line,
+      backgroundColor: palette.chip,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12
     },
     appLockInput: {
       marginBottom: 4
@@ -17624,6 +20273,14 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     screen: {
       flex: 1,
       backgroundColor: palette.bg
+    },
+    screenAboveBottomDock: {
+      position: 'relative',
+      zIndex: 45,
+      elevation: 45
+    },
+    screenOverlayTransparent: {
+      backgroundColor: 'transparent'
     },
     crashFallbackWrap: {
       flex: 1,
@@ -17671,7 +20328,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       right: 0,
       zIndex: 20,
       backgroundColor: 'transparent',
-      overflow: 'hidden'
+      overflow: 'visible'
     },
     subHeader: {
       height: headerOverlayHeight,
@@ -17686,7 +20343,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       right: 0,
       zIndex: 20,
       backgroundColor: 'transparent',
-      overflow: 'hidden'
+      overflow: 'visible'
     },
     headerBackdrop: {
       ...StyleSheet.absoluteFillObject,
@@ -17707,6 +20364,10 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       zIndex: 20,
       backgroundColor: 'transparent'
     },
+    homeHeaderOverlayOpen: {
+      zIndex: 31,
+      elevation: 14
+    },
     subHeaderTitle: {
       color: palette.text,
       fontSize: 19,
@@ -17715,29 +20376,46 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       lineHeight: 22,
       includeFontPadding: false
     },
-    topHeaderTitleAbsolute: {
+    topHeaderTitleLayer: {
       position: 'absolute',
       top: headerTitleTop,
       left: 0,
-      right: 0
+      right: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1
     },
     topHeaderSide: {
       width: 116,
       flexDirection: 'row',
-      alignItems: 'center'
+      alignItems: 'center',
+      zIndex: 2
     },
     topHeaderSideRight: {
       justifyContent: 'flex-end'
     },
     backBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
       backgroundColor: palette.chip,
       borderWidth: 1,
       borderColor: palette.line,
       alignItems: 'center',
       justifyContent: 'center'
+    },
+    backBtnIconGlyph: {
+      textAlign: 'center'
+    },
+    backBtnChevronGlyph: {},
+    iconCircleBtnActive: {
+      borderColor: palette.accent,
+      backgroundColor: palette.accentSoft,
+      shadowColor: palette.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4
     },
     iconGlyphContrast: {
       textShadowColor: iconContrastShadow,
@@ -17745,8 +20423,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       textShadowRadius: 1.4
     },
     subHeaderSpacer: {
-      width: 34,
-      height: 34
+      width: 38,
+      height: 38
     },
     headerBtnGap: {
       marginLeft: 6
@@ -17826,6 +20504,9 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center',
       paddingTop: topSafeInset
     },
+    homeWalletAnchor: {
+      alignSelf: 'center'
+    },
     homeWalletPillCenter: {
       height: 36,
       borderRadius: 18,
@@ -17842,6 +20523,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     homeWalletPillCenterActive: {
       borderColor: palette.accent,
+      backgroundColor: palette.accentSoft,
       shadowColor: palette.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.3,
@@ -17853,10 +20535,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.text,
       fontSize: 15,
       fontWeight: '700',
-      lineHeight: 18,
-      includeFontPadding: false,
+      lineHeight: 20,
+      includeFontPadding: true,
       textAlign: 'center',
       paddingRight: 16
+    },
+    homeWalletPillTextActive: {
+      color: '#16110a'
     },
     homeWalletPillChevron: {
       position: 'absolute',
@@ -17875,7 +20560,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       position: 'absolute',
       left: 16,
       right: 16,
-      top: 60,
+      top: headerOverlayHeight + 4,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: palette.accent,
@@ -17922,11 +20607,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.text,
       fontSize: 13,
       fontWeight: '700',
-      lineHeight: 16,
-      includeFontPadding: false
+      lineHeight: 18,
+      includeFontPadding: true
     },
     walletMenuNameActive: {
-      color: '#17120a'
+      color: '#16110a'
     },
     walletMenuAddBtn: {
       alignSelf: 'center',
@@ -17998,8 +20683,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 14,
       fontWeight: '700',
       lineHeight: 18,
-      includeFontPadding: false,
-      height: 18
+      includeFontPadding: true
     },
     balanceRow: {
       flexDirection: 'row',
@@ -18063,8 +20747,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 13,
       fontWeight: '600',
       lineHeight: 16,
-      includeFontPadding: false,
-      height: 16
+      includeFontPadding: true
     },
     actionRow: {
       marginTop: 14
@@ -18091,6 +20774,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       borderRadius: 0,
       borderWidth: 0,
       overflow: 'visible'
+    },
+    homeAssetPanelOpen: {
+      position: 'relative',
+      zIndex: 46,
+      elevation: 14
     },
     assetControlRow: {
       marginTop: 10,
@@ -18172,6 +20860,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end'
+    },
+    homeAssetToolsRowOpen: {
+      position: 'relative',
+      zIndex: 46,
+      elevation: 14
     },
     assetPanelToolBtn: {
       width: 32,
@@ -18297,7 +20990,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '700'
     },
     assetRangeChipTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800'
     },
@@ -18341,7 +21034,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center'
     },
     assetMarketBtnText: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800'
     },
@@ -18600,8 +21293,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 14,
       marginTop: 2,
       lineHeight: 18,
-      height: 18,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     tokenChangeInline: {
       fontSize: 14,
@@ -18758,13 +21450,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '700'
     },
     nftSelectCard: {
-      width: 172,
-      borderRadius: 14,
+      width: 115,
+      borderRadius: 9,
       borderWidth: 1,
       borderColor: palette.line,
       backgroundColor: palette.chip,
-      padding: 10,
-      marginRight: 10
+      padding: 7,
+      marginRight: 7
     },
     nftSelectCardActive: {
       borderColor: palette.accent,
@@ -18775,19 +21467,22 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     nftSelectImage: {
       width: '100%',
-      height: 94,
-      borderRadius: 10,
+      height: 63,
+      borderRadius: 7,
       borderWidth: 1,
       borderColor: palette.line,
       backgroundColor: palette.panel
     },
     nftSelectMeta: {
-      marginTop: 8
+      marginTop: 5
     },
     nftSelectName: {
       color: palette.text,
       fontSize: 13,
       fontWeight: '700'
+    },
+    nftSelectTokenId: {
+      marginTop: 2
     },
     nftSelectSub: {
       marginTop: 3,
@@ -18903,8 +21598,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: themeTextColor(palette),
       fontSize: 16,
       fontWeight: '800',
-      lineHeight: 18,
-      includeFontPadding: false
+      lineHeight: 20,
+      includeFontPadding: true
     },
     hotList: {
       marginTop: 14,
@@ -19233,11 +21928,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center'
     },
     discoverFeatureBtnText: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800',
       lineHeight: 14,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     discoverSectionHead: {
       marginTop: 18,
@@ -19600,7 +22295,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 13,
       fontWeight: '700',
       lineHeight: 16,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     discoverPopularPageBtnTextDisabled: {
       color: palette.muted
@@ -19655,6 +22350,15 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     discoverBriefingWeekWrapOpen: {
       zIndex: 26
     },
+    discoverBriefingMenuScrim: {
+      position: 'absolute',
+      left: -16,
+      right: -16,
+      top: 0,
+      bottom: -scrollBottomPad,
+      zIndex: 21,
+      backgroundColor: palette.overlay
+    },
     discoverBriefingWeekLabel: {
       color: palette.muted,
       fontSize: 12,
@@ -19682,6 +22386,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     discoverBriefingWeekBtnActive: {
       borderColor: palette.accent,
+      backgroundColor: palette.accentSoft,
       shadowColor: palette.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.3,
@@ -19694,9 +22399,12 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 15,
       fontWeight: '700',
       lineHeight: 18,
-      includeFontPadding: false,
+      includeFontPadding: true,
       textAlign: 'center',
       paddingRight: 16
+    },
+    discoverBriefingWeekBtnTextActive: {
+      color: '#16110a'
     },
     discoverBriefingWeekBtnChevron: {
       position: 'absolute',
@@ -19718,6 +22426,10 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       shadowOffset: { width: 0, height: 8 },
       elevation: 10
     },
+    discoverBriefingWeekMenuFloating: {
+      zIndex: 50,
+      elevation: 14
+    },
     discoverBriefingWeekItem: {
       minHeight: 39,
       borderBottomWidth: 1,
@@ -19736,7 +22448,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       includeFontPadding: false
     },
     discoverBriefingWeekItemTextActive: {
-      color: '#17120a'
+      color: '#16110a'
     },
     discoverBriefingWeekChip: {
       height: 32,
@@ -19870,7 +22582,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       marginRight: 4
     },
     discoverBriefingToggleTextActive: {
-      color: '#17120a'
+      color: '#16110a'
     },
     discoverBriefingTitle: {
       marginTop: 8,
@@ -19908,6 +22620,27 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '600',
       lineHeight: 17,
+      includeFontPadding: false
+    },
+    discoverBriefingSourcesWrap: {
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: palette.line
+    },
+    discoverBriefingSourcesLabel: {
+      color: palette.muted,
+      fontSize: 11,
+      fontWeight: '800',
+      lineHeight: 14,
+      includeFontPadding: false
+    },
+    discoverBriefingSourceLink: {
+      marginTop: 6,
+      color: palette.accent,
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 16,
       includeFontPadding: false
     },
     discoverTickerIcon: {
@@ -20056,7 +22789,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 13,
       fontWeight: '800',
       lineHeight: 16,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     discoverBrowserTabRow: {
       marginTop: 10,
@@ -20360,7 +23093,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 18,
       fontWeight: '700',
       lineHeight: 22,
-      includeFontPadding: false,
+      includeFontPadding: true,
       marginTop: 16,
       marginBottom: 8
     },
@@ -20422,11 +23155,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       paddingHorizontal: 12
     },
     discoverTrustedAddBtnText: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800',
       lineHeight: 14,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     discoverTrustedRowMeta: {
       flex: 1,
@@ -20575,8 +23308,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.text,
       fontSize: 15,
       fontWeight: '600',
-      lineHeight: 18,
-      includeFontPadding: false,
+      lineHeight: 20,
+      includeFontPadding: true,
       maxWidth: 190,
       flexShrink: 1
     },
@@ -20584,8 +23317,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.muted,
       fontSize: 14,
       fontWeight: '600',
-      lineHeight: 18,
-      includeFontPadding: false,
+      lineHeight: 20,
+      includeFontPadding: true,
       width: 84,
       textAlign: 'right'
     },
@@ -20630,18 +23363,32 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '700',
       lineHeight: 14,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     settingThemeBtnTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800',
       lineHeight: 14,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     settingRowLang: {
       overflow: 'visible',
       zIndex: 10
+    },
+    dropdownTriggerMenuWrap: {
+      position: 'relative',
+      overflow: 'visible'
+    },
+    dropdownTriggerMenuWrapOpen: {
+      position: 'relative',
+      overflow: 'visible',
+      zIndex: 32,
+      elevation: 14
+    },
+    settingsScrollContent: {
+      position: 'relative',
+      flexGrow: 1
     },
     langBtn: {
       width: 124,
@@ -20655,15 +23402,24 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center'
     },
     langBtnActive: {
-      borderColor: palette.accent
+      borderColor: palette.accent,
+      backgroundColor: palette.accentSoft,
+      shadowColor: palette.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.24,
+      shadowRadius: 6,
+      elevation: 3
     },
     langBtnText: {
       color: palette.text,
       fontSize: 14,
       fontWeight: '700',
       lineHeight: 18,
-      includeFontPadding: false,
+      includeFontPadding: true,
       marginRight: 4
+    },
+    langBtnTextActive: {
+      color: '#16110a'
     },
     langMenu: {
       position: 'absolute',
@@ -20682,12 +23438,31 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       shadowRadius: 14,
       elevation: 10
     },
+    langMenuFloating: {
+      position: 'absolute',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.accent,
+      backgroundColor: palette.panel,
+      overflow: 'hidden',
+      zIndex: 50,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.2,
+      shadowRadius: 14,
+      elevation: 14
+    },
     langItem: {
       height: 38,
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'center'
+    },
+    langItemDivider: {
       borderBottomWidth: 1,
       borderBottomColor: palette.line
+    },
+    langItemLast: {
+      borderBottomWidth: 0
     },
     langItemActive: {
       backgroundColor: palette.accent
@@ -20698,7 +23473,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '600'
     },
     langItemTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 14,
       fontWeight: '800'
     },
@@ -20756,18 +23531,26 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       position: 'relative'
     },
     securityPickerRowTop: {
-      zIndex: 32
+      zIndex: 10
     },
     securityPickerRowMiddle: {
-      zIndex: 24
+      zIndex: 9
     },
     securityPickerRowBottom: {
-      zIndex: 16
+      zIndex: 8
+    },
+    dropdownTriggerRaised: {
+      position: 'relative',
+      zIndex: 32,
+      elevation: 14
     },
     securityDropdownMenu: {
-      right: 14,
-      top: 48,
+      right: 0,
+      top: 42,
       width: 124
+    },
+    securityDropdownScrim: {
+      backgroundColor: 'transparent'
     },
     securityInfoRight: {
       flexDirection: 'row',
@@ -20879,6 +23662,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.muted,
       fontSize: 14,
       lineHeight: 20
+    },
+    infoSubBody: {
+      marginTop: 8,
+      color: palette.muted,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: '600'
     },
     rowBtnWrap: {
       marginTop: 10,
@@ -21021,7 +23811,12 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     formWrap: {
       flex: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: screenHorizontalPad,
+      paddingTop: formContentTopPad,
+      paddingBottom: bottomSafePad
+    },
+    onboardingFormScrollPad: {
+      paddingHorizontal: screenHorizontalPad,
       paddingTop: formContentTopPad,
       paddingBottom: bottomSafePad
     },
@@ -21030,8 +23825,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '700',
       lineHeight: 14,
-      includeFontPadding: false,
-      height: 14,
+      includeFontPadding: true,
       marginBottom: 8
     },
     fieldLabelTight: {
@@ -21043,30 +23837,102 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     sendFieldBlock: {
       marginBottom: 10
     },
+    onboardingFieldBlock: {
+      marginBottom: 10
+    },
+    onboardingSeedFieldBlock: {
+      marginBottom: 0
+    },
     sendScreenBody: {
       flex: 1,
       position: 'relative'
+    },
+    homeHeaderDropdownScrim: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: headerContentTopPad,
+      zIndex: 21
+    },
+    homeScrollContentWrap: {
+      position: 'relative',
+      minHeight: '100%'
+    },
+    homeAssetLayoutDropdownScrim: {
+      position: 'absolute',
+      left: -16,
+      right: -16,
+      top: 0,
+      bottom: -scrollBottomPad,
+      zIndex: 38
     },
     sendHeaderScrim: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
-      height: 60,
-      backgroundColor: palette.overlay,
-      zIndex: 38
+      height: headerContentTopPad,
+      zIndex: 42,
+      overflow: 'hidden'
     },
     sendScrollContentWrap: {
-      position: 'relative'
+      position: 'relative',
+      minHeight: '100%'
     },
     sendDropdownScrim: {
       position: 'absolute',
       left: -16,
       right: -16,
       top: 0,
-      bottom: 0,
-      backgroundColor: palette.overlay,
-      zIndex: 38
+      bottom: -scrollBottomPad,
+      zIndex: 38,
+      overflow: 'hidden'
+    },
+    sendScrimOverlay: {
+      backgroundColor: palette.overlay
+    },
+    globalDropdownScrim: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 48,
+      backgroundColor: palette.overlay
+    },
+    globalDropdownScrimTransparent: {
+      backgroundColor: 'transparent'
+    },
+    globalDropdownLayer: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 49
+    },
+    globalWalletMenuWrap: {
+      zIndex: 50,
+      elevation: 120
+    },
+    globalRecentOverlayTrigger: {
+      position: 'absolute',
+      zIndex: 50
+    },
+    globalRecentOverlayList: {
+      position: 'absolute',
+      marginTop: 0,
+      marginBottom: 0,
+      borderColor: palette.line,
+      maxHeight: Math.max(148, 300 - bottomSafeInset - (bottomDockHeight + bottomDockBottomOffset)),
+      zIndex: 50,
+      elevation: 120
+    },
+    globalBottomRecentOverlayList: {
+      maxHeight: Math.max(200, 380 - bottomSafeInset),
+      marginBottom: 0
+    },
+    globalBottomRecentOverlayWrap: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 50,
+      elevation: 120,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      paddingHorizontal: modalHorizontalPad,
+      paddingBottom: modalBottomPad
     },
     sendRecentFieldBlockOpen: {
       position: 'relative',
@@ -21078,13 +23944,24 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'space-between',
       marginBottom: 8
     },
+    fieldHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: 10.8
+    },
+    fieldHeaderActionGap: {
+      marginLeft: 6
+    },
+    fieldHeaderActionStart: {
+      marginLeft: 6
+    },
     saveAddressIconBtn: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
       borderWidth: 1,
       borderColor: palette.line,
-      backgroundColor: palette.chip,
+      backgroundColor: palette.panel,
       alignItems: 'center',
       justifyContent: 'center'
     },
@@ -21108,6 +23985,9 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       outlineStyle: 'solid',
       outlineWidth: 0,
       outlineColor: 'transparent'
+    },
+    onboardingFieldInput: {
+      marginBottom: 0
     },
     fieldInputReadonly: {
       color: palette.muted
@@ -21171,7 +24051,26 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       opacity: 0
     },
     onboardingPasscodeBlock: {
+      width: '100%',
+      maxWidth: 336,
+      alignSelf: 'center',
       marginBottom: 10
+    },
+    onboardingSetPasswordTop: {
+      flex: 1,
+      justifyContent: 'center'
+    },
+    onboardingSetPasswordBottom: {
+      marginTop: 'auto'
+    },
+    onboardingPasscodeLabel: {
+      width: '100%',
+      maxWidth: 336
+    },
+    onboardingPasscodeErrorSlot: {
+      width: '100%',
+      maxWidth: 336,
+      alignSelf: 'center'
     },
     passcodeLayout: {
       flex: 1
@@ -21310,7 +24209,14 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       marginBottom: 0
     },
     iconOptionChipActive: {
-      backgroundColor: palette.accentSoft
+      borderColor: palette.accent,
+      borderWidth: 1.8,
+      backgroundColor: palette.accentSoft,
+      shadowColor: palette.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.24,
+      shadowRadius: 5,
+      elevation: 3
     },
     iconOptionImage: {
       width: 24,
@@ -21348,6 +24254,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       marginBottom: 10
     },
     optionChipActive: {
+      borderColor: palette.accent,
+      borderWidth: 1.3,
       backgroundColor: palette.accentSoft
     },
     optionChipText: {
@@ -21383,6 +24291,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     recentSummaryBtnActive: {
       borderColor: palette.accent,
+      backgroundColor: palette.accentSoft,
       shadowColor: palette.accent,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.3,
@@ -21424,6 +24333,15 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 11,
       fontWeight: '700'
     },
+    recentSummaryPrimaryActive: {
+      color: '#16110a'
+    },
+    recentSummarySecondaryActive: {
+      color: 'rgba(22, 17, 10, 0.88)'
+    },
+    recentSummarySecondaryAccentActive: {
+      color: '#9f4f1d'
+    },
     recipientDate: {
       color: palette.muted,
       fontSize: 11,
@@ -21443,7 +24361,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 10,
-      marginBottom: 0
+      marginBottom: 0,
+      overflow: 'hidden'
     },
     recipientInputField: {
       flex: 1,
@@ -21496,10 +24415,19 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     sendRecentAnchor: {
       position: 'relative',
-      zIndex: 44
+      zIndex: 1
     },
     sendRecentAnchorOpen: {
-      zIndex: 46
+      zIndex: 120,
+      elevation: 120
+    },
+    scanTriggerBtnOpen: {
+      position: 'relative',
+      zIndex: 120,
+      elevation: 120
+    },
+    scanNonTriggerDimmed: {
+      opacity: themeMode === 'dark' ? 0.38 : 0.46
     },
     sendRecentList: {
       position: 'absolute',
@@ -21509,9 +24437,9 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       marginTop: 0,
       borderColor: palette.line,
       marginBottom: 0,
-      maxHeight: Math.max(188, 288 - bottomSafeInset),
-      zIndex: 46,
-      elevation: 12
+      maxHeight: Math.max(148, 300 - bottomSafeInset - (bottomDockHeight + bottomDockBottomOffset)),
+      zIndex: 120,
+      elevation: 120
     },
     sendRecentListActive: {
       borderColor: palette.accent,
@@ -21572,6 +24500,8 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       marginRight: 8
     },
     authModeChipActive: {
+      borderColor: palette.accent,
+      borderWidth: 1.3,
       backgroundColor: palette.accentSoft
     },
     authModeText: {
@@ -21914,7 +24844,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 14,
       fontWeight: '700',
       lineHeight: 16,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     rowActions: {
       flexDirection: 'row',
@@ -21936,15 +24866,18 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       backgroundColor: palette.overlay,
       justifyContent: 'flex-end',
       alignItems: 'center',
-      paddingHorizontal: 12,
+      paddingHorizontal: modalHorizontalPad,
       paddingBottom: modalBottomPad
+    },
+    dropdownModalBackdrop: {
+      backgroundColor: 'transparent'
     },
     modalScrimTap: {
       ...StyleSheet.absoluteFillObject
     },
     modalCard: {
       width: '100%',
-      maxWidth: 430,
+      maxWidth: phoneShellMaxWidth,
       borderRadius: 24,
       borderWidth: 1,
       borderColor: palette.accent,
@@ -22076,7 +25009,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     modalActionBtnPrimaryText: {
       flex: 1,
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 14,
       fontWeight: '800'
     },
@@ -22086,11 +25019,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     modalActionBtnPrimaryLabelInline: {
       flexShrink: 0,
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 14,
       fontWeight: '800',
-      lineHeight: 18,
-      includeFontPadding: false,
+      lineHeight: 20,
+      includeFontPadding: true,
       textAlign: 'left'
     },
     modalActionBtnGhost: {
@@ -22183,7 +25116,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.muted
     },
     discoverSecurityPromptActionTextPrimary: {
-      color: '#17120a'
+      color: '#16110a'
     },
     assetLayoutModalCard: {
       borderColor: palette.accent
@@ -22338,8 +25271,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '700',
       lineHeight: 14,
-      includeFontPadding: false,
-      height: 14,
+      includeFontPadding: true,
       marginBottom: 4
     },
     historyAssetRow: {
@@ -22351,8 +25283,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '600',
       lineHeight: 14,
-      includeFontPadding: false,
-      height: 14,
+      includeFontPadding: true,
       marginLeft: 2
     },
     historyDateFilterRow: {
@@ -22392,7 +25323,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontSize: 12,
       fontWeight: '700',
       lineHeight: 14,
-      includeFontPadding: false
+      includeFontPadding: true
     },
     historyFilterChip: {
       height: 32,
@@ -22407,7 +25338,13 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     },
     historyFilterChipActive: {
       borderColor: palette.accent,
-      backgroundColor: palette.accentSoft
+      borderWidth: 1.6,
+      backgroundColor: palette.accentSoft,
+      shadowColor: palette.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: themeMode === 'dark' ? 0.2 : 0.14,
+      shadowRadius: 3,
+      elevation: 2
     },
     historyFilterChipText: {
       color: palette.muted,
@@ -22417,7 +25354,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       includeFontPadding: false
     },
     historyFilterChipTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800'
     },
@@ -22427,6 +25364,9 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'space-between',
       width: '100%',
       paddingRight: 0
+    },
+    onboardingWordCountRow: {
+      justifyContent: 'flex-start'
     },
     historyScopeRow: {
       justifyContent: 'flex-start'
@@ -22457,9 +25397,21 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       justifyContent: 'center',
       marginRight: 0
     },
+    onboardingWordCountChip: {
+      width: 'auto',
+      minWidth: 56,
+      paddingHorizontal: 12,
+      marginRight: 8
+    },
     historyDateChipActive: {
       borderColor: palette.accent,
-      backgroundColor: palette.accentSoft
+      borderWidth: 1.6,
+      backgroundColor: palette.accentSoft,
+      shadowColor: palette.accent,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: themeMode === 'dark' ? 0.2 : 0.14,
+      shadowRadius: 3,
+      elevation: 2
     },
     historyDateChipText: {
       color: palette.muted,
@@ -22469,7 +25421,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       includeFontPadding: false
     },
     historyDateChipTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 12,
       fontWeight: '800'
     },
@@ -22514,7 +25466,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '700'
     },
     historyRangePresetTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 13,
       fontWeight: '800'
     },
@@ -22538,7 +25490,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '600'
     },
     historyRangeLabelActive: {
-      color: '#17120a'
+      color: '#16110a'
     },
     historyRangeValue: {
       marginTop: 3,
@@ -22547,7 +25499,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '700'
     },
     historyRangeValueActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontWeight: '800'
     },
     historyRangeActionRow: {
@@ -22578,7 +25530,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       backgroundColor: palette.accent
     },
     historyRangeActionBtnPrimaryText: {
-      color: '#17120a',
+      color: '#16110a',
       fontSize: 13,
       fontWeight: '800'
     },
@@ -22641,7 +25593,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '800'
     },
     historyCalendarDayTextSelected: {
-      color: '#17120a',
+      color: '#16110a',
       fontWeight: '800'
     },
     txRow: {
@@ -22710,21 +25662,14 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
     onboardingWrap: {
       flex: 1,
       paddingHorizontal: 16,
-      paddingTop: 60
+      paddingTop: 60,
+      paddingBottom: 60,
+      justifyContent: 'center'
     },
-    logoCircle: {
-      width: 110,
-      height: 110,
-      borderRadius: 55,
-      backgroundColor: palette.accent,
-      alignItems: 'center',
-      justifyContent: 'center',
+    onboardingSymbolImage: {
+      width: 118,
+      height: 118,
       alignSelf: 'center'
-    },
-    logoText: {
-      color: '#111111',
-      fontSize: 64,
-      fontWeight: '900'
     },
     onboardingTitle: {
       marginTop: 18,
@@ -22767,8 +25712,18 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.text,
       fontSize: 15,
       fontWeight: '700',
-      lineHeight: 18,
-      includeFontPadding: false
+      lineHeight: 20,
+      includeFontPadding: true
+    },
+    walletRecoveryAddBtn: {
+      height: 58,
+      paddingHorizontal: 12
+    },
+    walletRecoveryAddBtnText: {
+      fontSize: 14,
+      lineHeight: 20,
+      textAlign: 'center',
+      includeFontPadding: true
     },
     onboardingCheckCard: {
       borderRadius: 18,
@@ -22846,7 +25801,7 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       fontWeight: '600'
     },
     onboardingChecklistTextActive: {
-      color: '#17120a',
+      color: '#16110a',
       fontWeight: '700'
     },
     onboardingBackupHeroCard: {
@@ -23095,7 +26050,18 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       left: 0,
       right: 0,
       bottom: 10,
-      alignItems: 'center'
+      alignItems: 'center',
+      zIndex: 10
+    },
+    bottomSystemGradient: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 4
+    },
+    bottomSystemGradientLayer: {
+      ...StyleSheet.absoluteFillObject
     },
     bottomDock: {
       width: 330,
@@ -23108,6 +26074,11 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 10
+    },
+    bottomDockDimLayer: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 28,
+      backgroundColor: palette.overlay
     },
     bottomBtn: {
       width: 40,
@@ -23132,12 +26103,12 @@ const createStyles = (palette: AppPalette, themeMode: ThemeMode, insets: EdgeIns
       color: palette.muted
     },
     bottomBtnLabelActive: {
-      color: '#111111'
+      color: '#16110a'
     }
   });
 };
 
-const themeTextColor = (_palette: AppPalette) => '#111111';
+const themeTextColor = (_palette: AppPalette) => '#16110a';
 
 export default function App() {
   return (

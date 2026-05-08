@@ -97,12 +97,12 @@ sudo mkdir -p "${DOWNLOAD_ROOT}"
 sudo rm -rf "${DOWNLOAD_ROOT}/download"
 sudo cp -a "${TMP_DIR}/download" "${DOWNLOAD_ROOT}/"
 
-# Keep existing APK artifacts and only sync static metadata files under downloads/.
+# Keep runtime download artifacts (APK + latest.json) managed by deploy-apk script.
 sudo mkdir -p "${DOWNLOAD_ROOT}/downloads"
 if command -v rsync >/dev/null 2>&1; then
-  sudo rsync -a --exclude='*.apk' "${TMP_DIR}/downloads/" "${DOWNLOAD_ROOT}/downloads/"
+  sudo rsync -a --exclude='*.apk' --exclude='latest.json' "${TMP_DIR}/downloads/" "${DOWNLOAD_ROOT}/downloads/"
 else
-  sudo find "${TMP_DIR}/downloads" -maxdepth 1 -type f ! -name '*.apk' -exec sudo cp -a {} "${DOWNLOAD_ROOT}/downloads/" \;
+  sudo find "${TMP_DIR}/downloads" -maxdepth 1 -type f ! -name '*.apk' ! -name 'latest.json' -exec sudo cp -a {} "${DOWNLOAD_ROOT}/downloads/" \;
 fi
 
 sudo chown -R www-data:www-data "${DOWNLOAD_ROOT}"
@@ -120,6 +120,16 @@ server {
         return 302 /download/;
     }
 
+    # Expose backend API through the same domain for production app/web builds.
+    location /api/v1/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_pass http://127.0.0.1:4000/api/v1/;
+    }
+
     location / {
         try_files \$uri \$uri/ =404;
     }
@@ -135,9 +145,23 @@ server {
         try_files \$uri =404;
     }
 
+    # Keep metadata uncached so landing can always resolve the freshest APK path.
+    location = /downloads/latest.json {
+        default_type application/json;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        expires -1;
+        etag off;
+        try_files \$uri =404;
+    }
+
     location ~* \\.apk$ {
         default_type application/vnd.android.package-archive;
         add_header Content-Disposition "attachment";
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        add_header Pragma "no-cache" always;
+        expires -1;
+        etag off;
         try_files \$uri =404;
     }
 }

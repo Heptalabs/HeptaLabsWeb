@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-04T02:30:00.000Z",
+  "items": [
+    {
+      "id": "imwallet-weekly-briefing",
+      "kind": "manual",
+      "status": "published",
+      "category": "market",
+      "section": "latest",
+      "pinned": true,
+      "priority": 90,
+      "title": {
+        "ko": "IMWallet 주간 브리핑",
+        "en": "IMWallet Weekly Brief",
+        "zh": "IMWallet 每周简报"
+      },
+      "summary": {
+        "ko": "이번 주 브리핑은 비트코인 ETF 자금흐름 반전, 4월 해킹 급증, 스테이블코인 규제 절충안 진전을 중심으로 정리했습니다.",
+        "en": "This week focuses on the ETF flow reversal in bitcoin, April's surge in crypto hacks, and progress on the stablecoin policy compromise.",
+        "zh": "本周聚焦比特币 ETF 资金流反转、4 月黑客事件激增，以及稳定币监管折中方案的推进。"
+      },
+      "sourceName": "IMWallet Research",
+      "sourceUrl": "",
+      "imageUrl": "",
+      "ctaLabel": {
+        "ko": "브리핑 열기",
+        "en": "Open briefing",
+        "zh": "打开简报"
+      },
+      "ctaUrl": "",
+      "actionType": "internal",
+      "internalTarget": "discover:briefing",
+      "tags": [
+        "briefing",
+        "weekly",
+        "imwallet"
+      ],
+      "startsAt": null,
+      "endsAt": null,
+      "publishedAt": "2026-05-04T02:30:00.000Z",
+      "createdAt": "2026-04-17T17:50:53.679Z",
+      "updatedAt": "2026-05-04T02:30:00.000Z"
+    }
+  ]
+}

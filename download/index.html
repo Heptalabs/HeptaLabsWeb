@@ -3,497 +3,245 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IMWallet 다운로드</title>
+    <title>IMWallet 랜딩 - 소개</title>
     <meta
       name="description"
-      content="IMWallet 공식 다운로드 페이지입니다. Android APK, Google Play, App Store 링크를 제공합니다."
+      content="IMWallet 공식 랜딩페이지입니다. 메뉴별 상세 페이지를 확인하고 다운로드 메뉴에서 앱을 설치하세요."
     />
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #050505;
-        --bg-soft: #0d0e10;
-        --panel: rgba(18, 19, 22, 0.9);
-        --line: rgba(255, 255, 255, 0.14);
-        --text: #f5f6f8;
-        --muted: #a8adb6;
-        --accent: #ff7842;
-        --accent-strong: #ff9165;
-        --accent-deep: #ff5f1f;
-        --accent-text: #111111;
-        --shadow: 0 28px 66px rgba(0, 0, 0, 0.5);
-      }
-
-      body.light {
-        color-scheme: light;
-        --bg: #f4f5f7;
-        --bg-soft: #ffffff;
-        --panel: rgba(255, 255, 255, 0.96);
-        --line: rgba(19, 24, 33, 0.14);
-        --text: #171b22;
-        --muted: #687181;
-        --accent: #ff7842;
-        --accent-strong: #ff9165;
-        --accent-deep: #ff5f1f;
-        --accent-text: #18130a;
-        --shadow: 0 20px 50px rgba(17, 22, 31, 0.14);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        margin: 0;
-        min-height: 100%;
-        font-family: "Pretendard", "SF Pro Display", "Noto Sans KR", "PingFang SC", "Segoe UI", sans-serif;
-        color: var(--text);
-        background:
-          radial-gradient(880px 460px at 0% -15%, rgba(232, 166, 58, 0.22), transparent 62%),
-          radial-gradient(700px 380px at 100% 5%, rgba(255, 255, 255, 0.1), transparent 60%),
-          linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
-      }
-
-      .container {
-        width: min(1120px, 92vw);
-        margin: 0 auto;
-      }
-
-      .site-header {
-        position: sticky;
-        top: 0;
-        z-index: 30;
-        backdrop-filter: blur(12px);
-        background: color-mix(in srgb, var(--bg) 74%, transparent);
-        border-bottom: 1px solid var(--line);
-      }
-
-      .header-inner {
-        min-height: 74px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-      }
-
-      .brand {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .brand img {
-        width: 30px;
-        height: 30px;
-        display: block;
-        object-fit: contain;
-      }
-
-      .brand-title {
-        font-size: 1.03rem;
-        font-weight: 800;
-        letter-spacing: 0.01em;
-      }
-
-      .header-right {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .lang-group,
-      .theme-toggle {
-        display: inline-flex;
-        align-items: center;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--panel) 80%, transparent);
-        padding: 3px;
-      }
-
-      .lang-btn,
-      .theme-btn {
-        min-width: 46px;
-        height: 32px;
-        border: 0;
-        border-radius: 999px;
-        background: transparent;
-        color: var(--muted);
-        font-size: 0.78rem;
-        font-weight: 800;
-        cursor: pointer;
-        padding: 0 11px;
-      }
-
-      .lang-btn.active,
-      .theme-btn.active {
-        background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent-deep) 100%);
-        color: var(--accent-text);
-      }
-
-      main {
-        padding: 42px 0 52px;
-      }
-
-      .hero {
-        border: 1px solid var(--line);
-        border-radius: 30px;
-        background: color-mix(in srgb, var(--panel) 96%, transparent);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-      }
-
-      .hero-grid {
-        display: grid;
-        grid-template-columns: 1.05fr 0.95fr;
-      }
-
-      .hero-copy {
-        padding: clamp(22px, 4vw, 48px);
-      }
-
-      .hero-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0;
-        color: var(--muted);
-        letter-spacing: 0.12em;
-        font-size: 0.76rem;
-        font-weight: 800;
-        text-transform: uppercase;
-      }
-
-      .hero-kicker::before {
-        content: "";
-        width: 20px;
-        height: 2px;
-        border-radius: 1px;
-        background: var(--accent);
-      }
-
-      h1 {
-        margin: 13px 0 0;
-        font-size: clamp(1.8rem, 4vw, 2.9rem);
-        line-height: 1.15;
-        letter-spacing: -0.02em;
-      }
-
-      .hero-desc {
-        margin: 16px 0 0;
-        color: var(--muted);
-        font-size: 1rem;
-        line-height: 1.72;
-        max-width: 560px;
-      }
-
-      .feature-grid {
-        margin: 24px 0 0;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-      }
-
-      .feature {
-        border: 1px solid var(--line);
-        border-radius: 13px;
-        background: color-mix(in srgb, var(--bg-soft) 70%, transparent);
-        padding: 11px 12px;
-        color: var(--text);
-        font-size: 0.88rem;
-        line-height: 1.45;
-      }
-
-      .actions {
-        margin-top: 24px;
-        display: grid;
-        gap: 10px;
-      }
-
-      .btn {
-        min-height: 54px;
-        border-radius: 14px;
-        border: 1px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        font-weight: 800;
-        letter-spacing: 0.01em;
-      }
-
-      .btn-primary {
-        color: var(--accent-text);
-        background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent-deep) 100%);
-      }
-
-      .btn-ghost {
-        color: var(--accent-text);
-        border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
-        background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent-deep) 100%);
-      }
-
-      .btn-disabled {
-        opacity: 0.48;
-        pointer-events: none;
-        cursor: not-allowed;
-      }
-
-      .hint {
-        margin-top: 12px;
-        color: var(--muted);
-        font-size: 0.84rem;
-      }
-
-      .hint code {
-        background: color-mix(in srgb, var(--bg-soft) 74%, transparent);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 2px 7px;
-        color: var(--text);
-      }
-
-      .hero-visual {
-        position: relative;
-        min-height: 420px;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        background:
-          radial-gradient(280px 200px at 66% 34%, rgba(232, 166, 58, 0.34), transparent 72%),
-          radial-gradient(260px 220px at 32% 70%, rgba(255, 255, 255, 0.12), transparent 72%);
-      }
-
-      .visual-card {
-        width: min(96%, 450px);
-        border: 1px solid var(--line);
-        border-radius: 26px;
-        background: color-mix(in srgb, var(--bg-soft) 76%, transparent);
-        box-shadow: 0 22px 50px rgba(0, 0, 0, 0.35);
-        padding: 26px 20px;
-      }
-
-      .hero-logo {
-        width: min(86%, 300px);
-        max-width: 300px;
-        display: block;
-        margin: 0 auto;
-        object-fit: contain;
-      }
-
-      .visual-caption {
-        margin: 16px auto 0;
-        max-width: 300px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        line-height: 1.55;
-        text-align: center;
-      }
-
-      .site-footer {
-        border-top: 1px solid var(--line);
-        background: color-mix(in srgb, var(--bg) 82%, transparent);
-      }
-
-      .footer-inner {
-        min-height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        color: var(--muted);
-        font-size: 0.83rem;
-      }
-
-      @media (max-width: 960px) {
-        .hero-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .hero-visual {
-          min-height: 320px;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .header-inner,
-        .footer-inner {
-          flex-direction: column;
-          align-items: flex-start;
-          justify-content: center;
-          padding: 12px 0;
-        }
-
-        .header-right {
-          width: 100%;
-          justify-content: space-between;
-        }
-
-        .feature-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
+    <link rel="icon" type="image/png" sizes="289x289" href="./assets/imwallet-favicon.png?v=20260430b" />
+<link rel="shortcut icon" href="./assets/imwallet-favicon.png?v=20260430b" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/imwallet-favicon-180.png?v=20260430b" />
+    <link rel="stylesheet" href="./assets/site.css?v=20260504detail6" />
   </head>
-  <body class="dark">
+  <body class="dark" data-page="home" data-title-key="homeMetaTitle" data-desc-key="homeMetaDesc">
     <header class="site-header">
-      <div class="container header-inner">
-        <div class="brand">
-          <img src="./assets/imwallet-symbol.svg" alt="IMWallet Symbol" />
-          <div class="brand-title">IMWallet</div>
-        </div>
-        <div class="header-right">
-          <div class="lang-group" role="group" aria-label="Language">
-            <button class="lang-btn active" data-lang="ko">KO</button>
-            <button class="lang-btn" data-lang="en">EN</button>
-            <button class="lang-btn" data-lang="zh">中文</button>
+      <div class="container header-bar">
+        <a class="brand" href="./index.html" aria-label="IMWallet Home">
+          <img class="brand-symbol brand-symbol-light" src="./assets/imwallet-symbol-light.png" alt="IMWallet Symbol" />
+          <img class="brand-symbol brand-symbol-dark" src="./assets/imwallet-symbol-dark.png" alt="IMWallet Symbol" />
+          <img class="brand-logo brand-logo-light" src="./assets/imwallet-logo-light.png" alt="IMWallet Logo" />
+          <img class="brand-logo brand-logo-dark" src="./assets/imwallet-logo-dark.png" alt="IMWallet Logo" />
+        </a>
+
+        <nav class="header-menu" aria-label="Main menu">
+          <a class="menu-btn" data-page="home" href="./index.html" data-i18n="menuHome">소개</a>
+          <a class="menu-btn" data-page="features" href="./features.html" data-i18n="menuFeatures">기능</a>
+          <a class="menu-btn" data-page="security" href="./security.html" data-i18n="menuSecurity">보안</a>
+          <a class="menu-btn" data-page="discover" href="./discover.html" data-i18n="menuDiscover">둘러보기</a>
+          <a class="menu-btn" data-page="flow" href="./flow.html" data-i18n="menuFlow">사용 흐름</a>
+          <a class="menu-btn" data-page="faq" href="./faq.html" data-i18n="menuFaq">FAQ</a>
+          <a class="menu-btn" data-page="download" href="./download.html" data-i18n="menuDownload">다운로드</a>
+        </nav>
+
+        <div class="header-controls">
+          <div class="lang-dropdown" data-lang-dropdown>
+            <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-lang-trigger>
+              <span class="lang-current" data-lang-current>KO</span>
+              <span class="lang-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="lang-menu" role="listbox" aria-label="Language options">
+              <button class="lang-option" type="button" data-lang="ko">KO</button>
+              <button class="lang-option" type="button" data-lang="en">EN</button>
+              <button class="lang-option" type="button" data-lang="zh">中文</button>
+            </div>
           </div>
-          <div class="theme-toggle" role="group" aria-label="Theme">
-            <button class="theme-btn active" data-theme="dark">Dark</button>
-            <button class="theme-btn" data-theme="light">Light</button>
+          <div class="theme-group" role="group" aria-label="Theme">
+            <button class="theme-btn" data-theme="light" type="button">Light</button>
+            <button class="theme-btn" data-theme="dark" type="button">Dark</button>
           </div>
         </div>
       </div>
     </header>
 
-    <main>
-      <section class="container hero">
+    <main class="container page-main">
+      <section class="hero-section">
         <div class="hero-grid">
-          <div class="hero-copy">
-            <p class="hero-kicker" data-i18n="kicker">Official Download</p>
-            <h1 data-i18n="title">IMWallet 모바일 앱을 안전하게 다운로드하세요</h1>
-            <p class="hero-desc" data-i18n="description">
-              IMWallet은 멀티 체인 자산과 NFT를 하나로 연결하는 Web3 지갑입니다.
-              최신 Android APK를 바로 설치할 수 있고, 스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.
+          <div>
+            <div class="hero-heading-stack">
+              <p class="kicker" data-i18n="homeKicker">Official Landing</p>
+              <h1 class="hero-title-with-logo">
+                <img class="hero-brand-logo hero-brand-logo-light" src="./assets/imwallet-logo-light.png" alt="IMWallet Logo" />
+                <img class="hero-brand-logo hero-brand-logo-dark" src="./assets/imwallet-logo-dark.png" alt="IMWallet Logo" />
+                <span data-i18n="homeTitleSuffix">소개</span>
+              </h1>
+            </div>
+            <p class="lead" data-i18n="homeDesc">
+              상단 메뉴 버튼에서 기능, 보안, Discover, 사용 흐름, FAQ, 다운로드를 각각 분리된 페이지로 확인할 수 있습니다.
+            </p>
+            <p class="muted" data-i18n="homeHeroBody2">
+              IMWallet은 멀티지갑 운용, 자산/NFT 분리 관리, 전송/수신/기록 중심 UX를 핵심으로 설계된 모바일 Web3 지갑입니다.
+              릴리즈 상태와 설치 경로는 다운로드 메뉴에서 통합 관리합니다.
             </p>
 
-            <div class="feature-grid">
-              <div class="feature" data-i18n="feature1">멀티 지갑 · 자산 · NFT 통합 관리</div>
-              <div class="feature" data-i18n="feature2">시드/보안 잠금/생체인증 플로우 지원</div>
-              <div class="feature" data-i18n="feature3">전송 · 수신 · 기록 중심의 빠른 UX</div>
+            <div class="btn-row">
+              <a class="btn btn-primary" href="./download.html" data-i18n="btnGoDownload">다운로드 메뉴로 이동</a>
             </div>
-
-            <div class="actions">
-              <a id="apk-download-btn" class="btn btn-primary" href="/downloads/imwallet-latest.apk" download data-i18n="apkButton"
-                >Android APK 다운로드</a
-              >
-              <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true" data-i18n="playButton"
-                >Google Play (준비 중)</a
-              >
-              <a class="btn btn-ghost btn-disabled" href="" onclick="return false;" aria-disabled="true" data-i18n="appStoreButton"
-                >App Store (준비 중)</a
-              >
-            </div>
-
-            <p class="hint"><span data-i18n="hintLabel">APK 파일 경로</span>: <code>/downloads/imwallet-latest.apk</code></p>
           </div>
 
-          <div class="hero-visual">
-            <div class="visual-card">
-              <img class="hero-logo" src="./assets/imwallet-logo.svg" alt="IMWallet Symbol and Logo" />
-              <p class="visual-caption" data-i18n="caption">
-                Dark/Light 테마를 모두 지원하는 IMWallet으로,
-                일상적인 온체인 액션을 빠르고 안전하게 실행하세요.
-              </p>
-            </div>
+          <div class="hero-visual" aria-hidden="true">
+            <img class="hero-phone-composite" src="./assets/hero-phone-main.png" alt="" />
           </div>
         </div>
       </section>
+
+      <section class="panel">
+        <h2 data-i18n="homeOverviewTitle">서비스 개요</h2>
+        <div class="metrics-grid">
+          <article class="metric-card">
+            <h3 data-i18n="homeOverviewAssetTitle">멀티 체인 자산</h3>
+            <strong>Crypto + NFT</strong>
+            <p data-i18n="homeOverviewAssetDesc">자산과 NFT를 분리해 조회하고, 전송 시 타입별 플로우를 제공합니다.</p>
+          </article>
+          <article class="metric-card">
+            <h3 data-i18n="homeOverviewSecurityTitle">보안 인증</h3>
+            <strong>PIN + Biometric</strong>
+            <p data-i18n="homeOverviewSecurityDesc">확인 단계와 인증 단계를 분리해 오입력과 무단 전송을 줄입니다.</p>
+          </article>
+          <article class="metric-card">
+            <h3 data-i18n="homeOverviewUxTitle">사용자 환경</h3>
+            <strong>KO / EN / 中文</strong>
+            <p data-i18n="homeOverviewUxDesc">언어와 테마를 디바이스 환경에 맞게 즉시 전환할 수 있습니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 data-i18n="homeQuickTitle">메뉴별 바로가기</h2>
+        <div class="card-grid">
+          <a class="nav-card" href="./features.html">
+            <h3 data-i18n="menuFeatures">기능</h3>
+            <p data-i18n="quickFeaturesDesc">멀티 지갑, 자산/NFT, 전송/기록 중심 기능을 확인합니다.</p>
+          </a>
+          <a class="nav-card" href="./security.html">
+            <h3 data-i18n="menuSecurity">보안</h3>
+            <p data-i18n="quickSecurityDesc">PIN/생체인증, 시드 검증, 전송 확인 단계 설계를 확인합니다.</p>
+          </a>
+          <a class="nav-card" href="./discover.html">
+            <h3 data-i18n="menuDiscover">둘러보기</h3>
+            <p data-i18n="quickDiscoverDesc">DApps, 인기 토큰, 즐겨찾기, 브리핑 구성을 확인합니다.</p>
+          </a>
+          <a class="nav-card" href="./flow.html">
+            <h3 data-i18n="menuFlow">사용 흐름</h3>
+            <p data-i18n="quickFlowDesc">처음 설정부터 일상 사용까지의 동선을 확인합니다.</p>
+          </a>
+          <a class="nav-card" href="./faq.html">
+            <h3 data-i18n="menuFaq">FAQ</h3>
+            <p data-i18n="quickFaqDesc">설치/업데이트/복구 관련 자주 묻는 질문을 확인합니다.</p>
+          </a>
+          <a class="nav-card" href="./download.html">
+            <h3 data-i18n="menuDownload">다운로드</h3>
+            <p data-i18n="quickDownloadDesc">APK/스토어 다운로드 버튼과 지갑 프로토콜/호환 안내를 확인합니다.</p>
+          </a>
+        </div>
+      </section>
+
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <div>© 2026 IMWallet. All rights reserved.</div>
-        <div>download.imwallet.app</div>
+        <footer class="site-footer">
+      <div class="container footer-shell">
+        <section class="footer-card" aria-label="IMWallet footer">
+          <div class="footer-top">
+            <a class="footer-brand" href="./index.html" aria-label="IMWallet Home">
+              <img class="footer-symbol footer-symbol-light" src="./assets/imwallet-symbol-light.png" alt="IMWallet Symbol" />
+              <img class="footer-symbol footer-symbol-dark" src="./assets/imwallet-symbol-dark.png" alt="IMWallet Symbol" />
+              <img class="footer-logo footer-logo-light" src="./assets/imwallet-logo-light.png" alt="IMWallet Logo" />
+              <img class="footer-logo footer-logo-dark" src="./assets/imwallet-logo-dark.png" alt="IMWallet Logo" />
+            </a>
+            <div class="footer-badges">
+              <span class="footer-badge" data-i18n="footerBadge1">Security First</span>
+              <span class="footer-badge" data-i18n="footerBadge2">Multi-Chain</span>
+            </div>
+          </div>
+
+          <div class="footer-links-grid">
+            <div class="footer-col">
+              <h4 data-i18n="footerColProduct">제품</h4>
+              <a href="./index.html" data-i18n="menuHome">소개</a>
+              <a href="./features.html" data-i18n="menuFeatures">기능</a>
+              <a href="./security.html" data-i18n="menuSecurity">보안</a>
+              <a href="./download.html" data-i18n="menuDownload">다운로드</a>
+            </div>
+            <div class="footer-col">
+              <h4 data-i18n="footerColUse">사용</h4>
+              <a href="./discover.html" data-i18n="menuDiscover">둘러보기</a>
+              <a href="./flow.html" data-i18n="menuFlow">사용 흐름</a>
+              <a href="./faq.html" data-i18n="menuFaq">FAQ</a>
+              <a href="./download.html#protocol-compat" data-i18n="footerLinkProtocol">프로토콜 안내</a>
+            </div>
+            <div class="footer-col">
+              <h4 data-i18n="footerColSupport">지원</h4>
+              <a href="./download.html" data-i18n="footerLinkRelease">릴리즈 상태</a>
+              <a href="./download.html#platform-install" data-i18n="footerLinkInstall">설치 가이드</a>
+              <a href="./faq.html" data-i18n="menuFaq">FAQ</a>
+              <a href="mailto:support@imwallet.app" data-i18n="footerLinkContact">문의하기</a>
+            </div>
+            <div class="footer-col">
+              <h4 data-i18n="footerColChannels">채널</h4>
+              <div class="footer-socials" aria-label="Social channels">
+                <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-7.1L5.86 22H2.75l7.24-8.27L1.15 2h6.4l4.42 6.43L18.9 2Zm-1.1 18.08h1.73L6.56 3.82H4.7L17.8 20.08Z" />
+                  </svg>
+                </a>
+                <a href="https://t.me" target="_blank" rel="noopener noreferrer" aria-label="Telegram">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M21.2 4.2a1 1 0 0 0-1.05-.12L2.45 11.6a1 1 0 0 0 .1 1.88l4.1 1.3 1.58 4.87a1 1 0 0 0 1.8.22l2.28-3.1 4.25 3.14a1 1 0 0 0 1.57-.62l3.05-14.04a1 1 0 0 0-.38-1.05ZM9.2 17.1l-.8-2.48 7.15-6.4-6.35 7.54Zm7.08.18-3.74-2.76 6.46-7.66-2.72 10.42Z" />
+                  </svg>
+                </a>
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.2-3.37-1.2-.46-1.15-1.12-1.45-1.12-1.45-.91-.63.07-.62.07-.62 1 .07 1.52 1.03 1.52 1.03.9 1.53 2.36 1.09 2.94.84.09-.66.35-1.09.64-1.35-2.22-.25-4.56-1.1-4.56-4.93 0-1.1.39-2 1.03-2.71-.1-.25-.45-1.28.1-2.67 0 0 .84-.27 2.75 1.03a9.58 9.58 0 0 1 5 0c1.9-1.3 2.74-1.03 2.74-1.03.56 1.39.21 2.42.1 2.67.64.7 1.03 1.61 1.03 2.71 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.86v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
+                  </svg>
+                </a>
+                <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M23 12c0-2.1-.02-3.48-.28-4.2a3 3 0 0 0-2.12-2.12C19.88 5.42 18.5 5.4 12 5.4s-7.88.02-8.6.28A3 3 0 0 0 1.28 7.8C1.02 8.52 1 9.9 1 12s.02 3.48.28 4.2a3 3 0 0 0 2.12 2.12c.72.26 2.1.28 8.6.28s7.88-.02 8.6-.28a3 3 0 0 0 2.12-2.12c.26-.72.28-2.1.28-4.2Zm-13.2 3.6V8.4l6.4 3.6-6.4 3.6Z" />
+                  </svg>
+                </a>
+              </div>
+              <p class="footer-mini-download-title" data-i18n="menuDownload">다운로드</p>
+              <div class="footer-mini-download-row">
+                <a class="footer-mini-download-item is-apk" href="/downloads/imwallet-latest.apk" data-apk-download="/downloads/imwallet-latest.apk" aria-label="APK">
+                  <span class="footer-mini-download-btn is-apk">
+                    <img class="footer-mini-symbol footer-mini-symbol-light" src="./assets/imwallet-symbol-light.png" alt="" />
+                    <img class="footer-mini-symbol footer-mini-symbol-dark" src="./assets/imwallet-symbol-dark.png" alt="" />
+                  </span>
+                  <span class="footer-mini-download-label">APK</span>
+                </a>
+                <a class="footer-mini-download-item btn-disabled" href="#" aria-label="Android" aria-disabled="true" onclick="return false;">
+                  <span class="footer-mini-download-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M7 8h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z" />
+                      <circle cx="10" cy="12" r="1" />
+                      <circle cx="14" cy="12" r="1" />
+                      <path d="M9 5 7.7 3.4M15 5l1.3-1.6" />
+                    </svg>
+                  </span>
+                  <span class="footer-mini-download-label">Android</span>
+                </a>
+                <a class="footer-mini-download-item btn-disabled" href="#" aria-label="IOS" aria-disabled="true" onclick="return false;">
+                  <span class="footer-mini-download-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M16.365 13.22c.028 2.86 2.52 3.81 2.548 3.822-.02.067-.39 1.338-1.283 2.651-.772 1.135-1.574 2.266-2.836 2.289-1.24.022-1.64-.736-3.06-.736-1.418 0-1.86.713-3.037.758-1.22.045-2.152-1.226-2.93-2.358-1.59-2.302-2.806-6.505-1.175-9.338.808-1.407 2.252-2.3 3.82-2.324 1.195-.022 2.324.802 3.06.802.736 0 2.115-.992 3.565-.846.607.026 2.31.245 3.404 1.847-.088.055-2.033 1.187-2.076 3.433zM14.877 4.368c.647-.785 1.084-1.88.964-2.968-.93.038-2.055.621-2.722 1.405-.598.69-1.124 1.8-.982 2.862 1.04.08 2.092-.53 2.74-1.299z" />
+                    </svg>
+                  </span>
+                  <span class="footer-mini-download-label">IOS</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-bottom">
+            <div class="footer-legal">
+              <span>© 2026 IMWallet. All rights reserved.</span>
+              <span class="footer-powered">Powered by Hepta Labs.</span>
+            </div>
+          </div>
+        </section>
       </div>
     </footer>
 
-    <script>
-      const translations = {
-        ko: {
-          kicker: "Official Download",
-          title: "IMWallet 모바일 앱을 안전하게 다운로드하세요",
-          description:
-            "IMWallet은 멀티 체인 자산과 NFT를 하나로 연결하는 Web3 지갑입니다. 최신 Android APK를 바로 설치할 수 있고, 스토어 링크는 검수 완료 후 순차적으로 오픈됩니다.",
-          feature1: "멀티 지갑 · 자산 · NFT 통합 관리",
-          feature2: "시드/보안 잠금/생체인증 플로우 지원",
-          feature3: "전송 · 수신 · 기록 중심의 빠른 UX",
-          apkButton: "Android APK 다운로드",
-          playButton: "Google Play (준비 중)",
-          appStoreButton: "App Store (준비 중)",
-          hintLabel: "APK 파일 경로",
-          caption: "Dark/Light 테마를 모두 지원하는 IMWallet으로, 일상적인 온체인 액션을 빠르고 안전하게 실행하세요."
-        },
-        en: {
-          kicker: "Official Download",
-          title: "Download IMWallet Mobile App Safely",
-          description:
-            "IMWallet is a Web3 wallet that unifies multi-chain assets and NFTs in one flow. Install the latest Android APK now, and store links will open after final review.",
-          feature1: "Unified multi-wallet, asset, and NFT management",
-          feature2: "Seed backup, security lock, and biometric flow",
-          feature3: "Fast UX focused on send, receive, and history",
-          apkButton: "Download Android APK",
-          playButton: "Google Play (Coming Soon)",
-          appStoreButton: "App Store (Coming Soon)",
-          hintLabel: "APK path",
-          caption: "Run daily on-chain actions faster and safer with IMWallet across both Dark and Light themes."
-        },
-        zh: {
-          kicker: "Official Download",
-          title: "安全下载 IMWallet 移动应用",
-          description:
-            "IMWallet 是一款整合多链资产与 NFT 的 Web3 钱包。你可以立即安装最新 Android APK，商店链接将在审核完成后开放。",
-          feature1: "多钱包、资产与 NFT 一体化管理",
-          feature2: "助记词备份、安全锁与生物识别流程",
-          feature3: "围绕发送、接收与记录的高效体验",
-          apkButton: "下载 Android APK",
-          playButton: "Google Play（即将上线）",
-          appStoreButton: "App Store（即将上线）",
-          hintLabel: "APK 路径",
-          caption: "IMWallet 同时支持深色与浅色主题，让你的链上操作更快、更安全。"
-        }
-      };
 
-      const langButtons = document.querySelectorAll(".lang-btn");
-      const themeButtons = document.querySelectorAll(".theme-btn");
-      const apkDownloadBtn = document.getElementById("apk-download-btn");
-
-      function applyLanguage(lang) {
-        const dict = translations[lang] || translations.ko;
-        document.documentElement.lang = lang;
-        document.querySelectorAll("[data-i18n]").forEach((node) => {
-          const key = node.getAttribute("data-i18n");
-          if (key && dict[key]) node.textContent = dict[key];
-        });
-        langButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.lang === lang));
-      }
-
-      function applyTheme(theme) {
-        const isLight = theme === "light";
-        document.body.classList.toggle("light", isLight);
-        document.body.classList.toggle("dark", !isLight);
-        themeButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.theme === theme));
-      }
-
-      langButtons.forEach((btn) => {
-        btn.addEventListener("click", () => applyLanguage(btn.dataset.lang));
-      });
-
-      themeButtons.forEach((btn) => {
-        btn.addEventListener("click", () => applyTheme(btn.dataset.theme));
-      });
-
-      if (apkDownloadBtn) {
-        apkDownloadBtn.addEventListener("click", () => {
-          apkDownloadBtn.setAttribute("href", `/downloads/imwallet-latest.apk?t=${Date.now()}`);
-        });
-      }
-
-      const browserLang = (navigator.language || "ko").toLowerCase();
-      const initialLang = browserLang.startsWith("zh") ? "zh" : browserLang.startsWith("en") ? "en" : "ko";
-      applyLanguage(initialLang);
-      applyTheme(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-    </script>
+    <script src="./assets/site.js?v=20260504detail6"></script>
   </body>
 </html>
