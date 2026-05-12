@@ -1,5 +1,6 @@
 import { ChainCode, chainRegexMap } from '../domain/wallet-domain';
 import { resolveBackendBaseUrl } from './backendBaseUrl';
+import { withRpcProxyAuthHeaders } from './rpcProxyAuth';
 
 type EthLikeChain = 'ETH' | 'BSC';
 type UsdtBalanceMap = Partial<Record<EthLikeChain | 'TRX', number>>;
@@ -43,7 +44,11 @@ const createAbortableSignal = (signal?: AbortSignal, timeoutMs = 8000) => {
 const fetchJson = async <T>(url: string, init: RequestInit = {}, signal?: AbortSignal): Promise<T> => {
   const guard = createAbortableSignal(signal);
   try {
-    const response = await fetch(url, { ...init, signal: guard.signal });
+    const response = await fetch(url, {
+      ...init,
+      headers: withRpcProxyAuthHeaders(init.headers),
+      signal: guard.signal
+    });
     if (!response.ok) throw new Error(`request failed: ${response.status}`);
     return (await response.json()) as T;
   } finally {

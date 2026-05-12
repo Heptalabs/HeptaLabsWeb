@@ -1,617 +1,622 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-12T07:47:09.790Z",
+  "updatedAt": "2026-05-12T10:03:03.830Z",
   "sections": {
     "tokens": {
       "usdt": {
         "relativePath": "icons-cache/tokens/usdt.png",
         "updatedAt": "2026-05-11T11:48:59.078Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/825"
+        "sourceUrl": "/api/v1/market/token-icon/825"
       },
       "usdc": {
         "relativePath": "icons-cache/tokens/usdc.png",
         "updatedAt": "2026-05-11T11:48:59.122Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3408"
+        "sourceUrl": "/api/v1/market/token-icon/3408"
       },
       "btc": {
         "relativePath": "icons-cache/tokens/btc.png",
         "updatedAt": "2026-05-11T11:48:59.079Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1"
+        "sourceUrl": "/api/v1/market/token-icon/1"
       },
       "eth": {
         "relativePath": "icons-cache/tokens/eth.png",
         "updatedAt": "2026-05-11T11:48:59.080Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1027"
+        "sourceUrl": "/api/v1/market/token-icon/1027"
       },
       "sol": {
         "relativePath": "icons-cache/tokens/sol.png",
         "updatedAt": "2026-05-11T11:48:59.083Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5426"
+        "sourceUrl": "/api/v1/market/token-icon/5426"
       },
       "xrp": {
         "relativePath": "icons-cache/tokens/xrp.png",
         "updatedAt": "2026-05-11T11:48:59.083Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/52"
+        "sourceUrl": "/api/v1/market/token-icon/52"
       },
       "doge": {
         "relativePath": "icons-cache/tokens/doge.png",
         "updatedAt": "2026-05-11T11:48:59.081Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/74"
+        "sourceUrl": "/api/v1/market/token-icon/74"
       },
       "ju": {
         "relativePath": "icons-cache/tokens/ju.png",
         "updatedAt": "2026-05-11T11:48:59.091Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/37275"
+        "sourceUrl": "/api/v1/market/token-icon/37275"
       },
       "bnb": {
         "relativePath": "icons-cache/tokens/bnb.png",
         "updatedAt": "2026-05-11T11:48:59.086Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1839"
+        "sourceUrl": "/api/v1/market/token-icon/1839"
       },
       "genius": {
         "relativePath": "icons-cache/tokens/genius.png",
         "updatedAt": "2026-05-05T10:10:24.222Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39841"
+        "sourceUrl": "/api/v1/market/token-icon/39841"
       },
       "usd1": {
         "relativePath": "icons-cache/tokens/usd1.png",
         "updatedAt": "2026-05-11T11:48:59.090Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36148"
+        "sourceUrl": "/api/v1/market/token-icon/36148"
       },
       "weth": {
         "relativePath": "icons-cache/tokens/weth.png",
         "updatedAt": "2026-05-11T11:48:59.092Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2396"
+        "sourceUrl": "/api/v1/market/token-icon/2396"
       },
       "trx": {
         "relativePath": "icons-cache/tokens/trx.png",
         "updatedAt": "2026-05-11T11:48:59.098Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1958"
+        "sourceUrl": "/api/v1/market/token-icon/1958"
       },
       "chip": {
         "relativePath": "icons-cache/tokens/chip.png",
-        "updatedAt": "2026-05-11T10:01:55.992Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39870"
+        "updatedAt": "2026-05-12T10:03:03.830Z",
+        "sourceUrl": "/api/v1/market/token-icon/39870"
       },
       "zec": {
         "relativePath": "icons-cache/tokens/zec.png",
         "updatedAt": "2026-05-11T11:48:59.093Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1437"
+        "sourceUrl": "/api/v1/market/token-icon/1437"
       },
       "quq": {
         "relativePath": "icons-cache/tokens/quq.png",
         "updatedAt": "2026-05-11T11:48:59.107Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36101"
+        "sourceUrl": "/api/v1/market/token-icon/36101"
       },
       "ton": {
         "relativePath": "icons-cache/tokens/ton.png",
         "updatedAt": "2026-05-11T19:19:09.296Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11419"
+        "sourceUrl": "/api/v1/market/token-icon/11419"
       },
       "pengu": {
         "relativePath": "icons-cache/tokens/pengu.png",
         "updatedAt": "2026-05-11T06:28:29.424Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34466"
+        "sourceUrl": "/api/v1/market/token-icon/34466"
       },
       "vbnb": {
         "relativePath": "icons-cache/tokens/vbnb.png",
         "updatedAt": "2026-05-11T17:12:38.471Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7961"
+        "sourceUrl": "/api/v1/market/token-icon/7961"
       },
       "pieverse": {
         "relativePath": "icons-cache/tokens/pieverse.png",
         "updatedAt": "2026-04-29T06:53:50.837Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38849"
+        "sourceUrl": "/api/v1/market/token-icon/38849"
       },
       "ada": {
         "relativePath": "icons-cache/tokens/ada.png",
         "updatedAt": "2026-05-11T11:48:59.096Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2010"
+        "sourceUrl": "/api/v1/market/token-icon/2010"
       },
       "fdusd": {
         "relativePath": "icons-cache/tokens/fdusd.png",
         "updatedAt": "2026-05-11T11:48:59.103Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/26081"
+        "sourceUrl": "/api/v1/market/token-icon/26081"
       },
       "ape": {
         "relativePath": "icons-cache/tokens/ape.png",
         "updatedAt": "2026-05-02T17:19:49.984Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/18876"
+        "sourceUrl": "/api/v1/market/token-icon/18876"
       },
       "pepe": {
         "relativePath": "icons-cache/tokens/pepe.png",
         "updatedAt": "2026-05-11T11:48:59.110Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/24478"
+        "sourceUrl": "/api/v1/market/token-icon/24478"
       },
       "aave": {
         "relativePath": "icons-cache/tokens/aave.png",
         "updatedAt": "2026-05-11T11:48:59.103Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7278"
+        "sourceUrl": "/api/v1/market/token-icon/7278"
       },
       "orca": {
         "relativePath": "icons-cache/tokens/orca.png",
         "updatedAt": "2026-05-03T09:54:10.175Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11165"
+        "sourceUrl": "/api/v1/market/token-icon/11165"
       },
       "tao": {
         "relativePath": "icons-cache/tokens/tao.png",
         "updatedAt": "2026-05-11T11:48:59.104Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/22974"
+        "sourceUrl": "/api/v1/market/token-icon/22974"
       },
       "cbbtc": {
         "relativePath": "icons-cache/tokens/cbbtc.png",
         "updatedAt": "2026-05-11T11:48:59.105Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32994"
+        "sourceUrl": "/api/v1/market/token-icon/32994"
       },
       "sui": {
         "relativePath": "icons-cache/tokens/sui.png",
         "updatedAt": "2026-05-11T11:48:59.084Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/20947"
+        "sourceUrl": "/api/v1/market/token-icon/20947"
       },
       "hype": {
         "relativePath": "icons-cache/tokens/hype.png",
         "updatedAt": "2026-05-11T11:48:59.115Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32196"
+        "sourceUrl": "/api/v1/market/token-icon/32196"
       },
       "sc": {
         "relativePath": "icons-cache/tokens/sc.png",
         "updatedAt": "2026-05-11T11:48:59.115Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7760"
+        "sourceUrl": "/api/v1/market/token-icon/7760"
       },
       "xaut": {
         "relativePath": "icons-cache/tokens/xaut.png",
         "updatedAt": "2026-05-11T22:00:32.185Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5176"
+        "sourceUrl": "/api/v1/market/token-icon/5176"
       },
       "ltc": {
         "relativePath": "icons-cache/tokens/ltc.png",
         "updatedAt": "2026-05-11T11:48:59.111Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2"
+        "sourceUrl": "/api/v1/market/token-icon/2"
       },
       "bio": {
         "relativePath": "icons-cache/tokens/bio.png",
         "updatedAt": "2026-05-09T21:16:40.758Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34812"
+        "sourceUrl": "/api/v1/market/token-icon/34812"
       },
       "paxg": {
         "relativePath": "icons-cache/tokens/paxg.png",
         "updatedAt": "2026-05-11T13:55:26.022Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/4705"
+        "sourceUrl": "/api/v1/market/token-icon/4705"
       },
       "pump": {
         "relativePath": "icons-cache/tokens/pump.png",
         "updatedAt": "2026-04-29T06:53:50.860Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36507"
+        "sourceUrl": "/api/v1/market/token-icon/36507"
       },
       "link": {
         "relativePath": "icons-cache/tokens/link.png",
         "updatedAt": "2026-05-11T11:48:59.096Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1975"
+        "sourceUrl": "/api/v1/market/token-icon/1975"
       },
       "wbnb": {
         "relativePath": "icons-cache/tokens/wbnb.png",
         "updatedAt": "2026-05-11T11:48:59.117Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7192"
+        "sourceUrl": "/api/v1/market/token-icon/7192"
       },
       "prl": {
         "relativePath": "icons-cache/tokens/prl.png",
-        "updatedAt": "2026-05-06T08:44:51.720Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39797"
+        "updatedAt": "2026-05-12T09:34:07.688Z",
+        "sourceUrl": "/api/v1/market/token-icon/39797"
       },
       "bch": {
         "relativePath": "icons-cache/tokens/bch.png",
         "updatedAt": "2026-05-11T11:48:59.127Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1831"
+        "sourceUrl": "/api/v1/market/token-icon/1831"
       },
       "trump": {
         "relativePath": "icons-cache/tokens/trump.png",
         "updatedAt": "2026-05-11T11:48:59.117Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35336"
+        "sourceUrl": "/api/v1/market/token-icon/35336"
       },
       "u": {
         "relativePath": "icons-cache/tokens/u.png",
         "updatedAt": "2026-05-08T09:49:58.791Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39120"
+        "sourceUrl": "/api/v1/market/token-icon/39120"
       },
       "gmt": {
         "relativePath": "icons-cache/tokens/gmt.png",
         "updatedAt": "2026-04-30T18:55:33.234Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/18069"
+        "sourceUrl": "/api/v1/market/token-icon/18069"
       },
       "fet": {
         "relativePath": "icons-cache/tokens/fet.png",
         "updatedAt": "2026-05-12T01:25:37.055Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3773"
+        "sourceUrl": "/api/v1/market/token-icon/3773"
       },
       "avax": {
         "relativePath": "icons-cache/tokens/avax.png",
         "updatedAt": "2026-05-11T11:48:59.115Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5805"
+        "sourceUrl": "/api/v1/market/token-icon/5805"
       },
       "zbt": {
         "relativePath": "icons-cache/tokens/zbt.png",
         "updatedAt": "2026-04-29T06:53:50.864Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38427"
+        "sourceUrl": "/api/v1/market/token-icon/38427"
       },
       "api3": {
         "relativePath": "icons-cache/tokens/api3.png",
         "updatedAt": "2026-04-29T06:53:50.864Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7737"
+        "sourceUrl": "/api/v1/market/token-icon/7737"
       },
       "arkm": {
         "relativePath": "icons-cache/tokens/arkm.png",
         "updatedAt": "2026-05-04T09:59:30.655Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/27565"
+        "sourceUrl": "/api/v1/market/token-icon/27565"
       },
       "rusd": {
         "relativePath": "icons-cache/tokens/rusd.png",
         "updatedAt": "2026-05-10T07:05:49.523Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39893"
+        "sourceUrl": "/api/v1/market/token-icon/39893"
       },
       "wbtc": {
         "relativePath": "icons-cache/tokens/wbtc.png",
         "updatedAt": "2026-05-11T17:12:38.471Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3717"
+        "sourceUrl": "/api/v1/market/token-icon/3717"
       },
       "xlm": {
         "relativePath": "icons-cache/tokens/xlm.png",
         "updatedAt": "2026-05-11T17:12:38.471Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/512"
+        "sourceUrl": "/api/v1/market/token-icon/512"
       },
       "blend": {
         "relativePath": "icons-cache/tokens/blend.png",
         "updatedAt": "2026-05-02T10:25:47.454Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39666"
+        "sourceUrl": "/api/v1/market/token-icon/39666"
       },
       "aster": {
         "relativePath": "icons-cache/tokens/aster.png",
         "updatedAt": "2026-05-11T07:44:50.493Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36341"
+        "sourceUrl": "/api/v1/market/token-icon/36341"
       },
       "tria": {
         "relativePath": "icons-cache/tokens/tria.png",
         "updatedAt": "2026-04-30T09:28:49.656Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39382"
+        "sourceUrl": "/api/v1/market/token-icon/39382"
       },
       "jct": {
         "relativePath": "icons-cache/tokens/jct.png",
         "updatedAt": "2026-04-30T09:35:01.241Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38909"
+        "sourceUrl": "/api/v1/market/token-icon/38909"
       },
       "shib": {
         "relativePath": "icons-cache/tokens/shib.png",
         "updatedAt": "2026-05-10T22:52:45.294Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5994"
+        "sourceUrl": "/api/v1/market/token-icon/5994"
       },
       "rlusd": {
         "relativePath": "icons-cache/tokens/rlusd.png",
         "updatedAt": "2026-05-12T07:47:09.781Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34387"
+        "sourceUrl": "/api/v1/market/token-icon/34387"
       },
       "uni": {
         "relativePath": "icons-cache/tokens/uni.png",
         "updatedAt": "2026-05-12T07:47:09.790Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7083"
+        "sourceUrl": "/api/v1/market/token-icon/7083"
       },
       "me": {
         "relativePath": "icons-cache/tokens/me.png",
         "updatedAt": "2026-05-10T01:19:38.023Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32197"
+        "sourceUrl": "/api/v1/market/token-icon/32197"
       },
       "fil": {
         "relativePath": "icons-cache/tokens/fil.png",
         "updatedAt": "2026-05-11T10:01:55.996Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2280"
+        "sourceUrl": "/api/v1/market/token-icon/2280"
       },
       "wld": {
         "relativePath": "icons-cache/tokens/wld.png",
         "updatedAt": "2026-05-11T01:20:29.228Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/13502"
+        "sourceUrl": "/api/v1/market/token-icon/13502"
       },
       "plume": {
         "relativePath": "icons-cache/tokens/plume.png",
         "updatedAt": "2026-04-30T09:28:49.661Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35364"
+        "sourceUrl": "/api/v1/market/token-icon/35364"
       },
       "bsb": {
         "relativePath": "icons-cache/tokens/bsb.png",
         "updatedAt": "2026-04-30T09:28:49.663Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38889"
+        "sourceUrl": "/api/v1/market/token-icon/38889"
       },
       "dot": {
         "relativePath": "icons-cache/tokens/dot.png",
         "updatedAt": "2026-05-11T15:01:07.100Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6636"
+        "sourceUrl": "/api/v1/market/token-icon/6636"
       },
       "wlfi": {
         "relativePath": "icons-cache/tokens/wlfi.png",
         "updatedAt": "2026-05-04T01:08:35.165Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/33251"
+        "sourceUrl": "/api/v1/market/token-icon/33251"
       },
       "mega": {
         "relativePath": "icons-cache/tokens/mega.png",
         "updatedAt": "2026-05-10T21:42:30.589Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38770"
+        "sourceUrl": "/api/v1/market/token-icon/38770"
       },
       "opg": {
         "relativePath": "icons-cache/tokens/opg.png",
         "updatedAt": "2026-05-11T20:26:54.296Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39800"
+        "sourceUrl": "/api/v1/market/token-icon/39800"
       },
       "enso": {
         "relativePath": "icons-cache/tokens/enso.png",
         "updatedAt": "2026-04-30T23:54:50.949Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38668"
+        "sourceUrl": "/api/v1/market/token-icon/38668"
       },
       "drift": {
         "relativePath": "icons-cache/tokens/drift.png",
         "updatedAt": "2026-05-01T02:05:32.239Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/31278"
+        "sourceUrl": "/api/v1/market/token-icon/31278"
       },
       "mon": {
         "relativePath": "icons-cache/tokens/mon.png",
         "updatedAt": "2026-05-01T13:17:36.212Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30495"
+        "sourceUrl": "/api/v1/market/token-icon/30495"
       },
       "figr_heloc": {
         "relativePath": "icons-cache/tokens/figr_heloc.png",
         "updatedAt": "2026-05-10T07:05:49.523Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39361"
+        "sourceUrl": "/api/v1/market/token-icon/39361"
       },
       "pendle": {
         "relativePath": "icons-cache/tokens/pendle.png",
         "updatedAt": "2026-05-05T03:37:23.511Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/9481"
+        "sourceUrl": "/api/v1/market/token-icon/9481"
       },
       "ub": {
         "relativePath": "icons-cache/tokens/ub.png",
         "updatedAt": "2026-05-02T20:45:28.019Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38339"
+        "sourceUrl": "/api/v1/market/token-icon/38339"
       },
       "grass": {
         "relativePath": "icons-cache/tokens/grass.png",
         "updatedAt": "2026-05-06T21:35:08.013Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32956"
+        "sourceUrl": "/api/v1/market/token-icon/32956"
       },
       "lab": {
         "relativePath": "icons-cache/tokens/lab.png",
         "updatedAt": "2026-05-12T07:38:53.716Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/33223"
+        "sourceUrl": "/api/v1/market/token-icon/33223"
       },
       "skyai": {
         "relativePath": "icons-cache/tokens/skyai.png",
         "updatedAt": "2026-05-05T15:13:12.777Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36300"
+        "sourceUrl": "/api/v1/market/token-icon/36300"
       },
       "dash": {
         "relativePath": "icons-cache/tokens/dash.png",
         "updatedAt": "2026-05-09T19:42:19.234Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/131"
+        "sourceUrl": "/api/v1/market/token-icon/131"
       },
       "ordi": {
         "relativePath": "icons-cache/tokens/ordi.png",
         "updatedAt": "2026-05-03T16:52:31.167Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/25028"
+        "sourceUrl": "/api/v1/market/token-icon/25028"
       },
       "knc": {
         "relativePath": "icons-cache/tokens/knc.png",
         "updatedAt": "2026-05-02T16:23:20.826Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/9444"
+        "sourceUrl": "/api/v1/market/token-icon/9444"
       },
       "b": {
         "relativePath": "icons-cache/tokens/b.png",
         "updatedAt": "2026-05-03T21:53:25.338Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36532"
+        "sourceUrl": "/api/v1/market/token-icon/36532"
       },
       "lunc": {
         "relativePath": "icons-cache/tokens/lunc.png",
         "updatedAt": "2026-05-06T02:20:12.764Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/4172"
+        "sourceUrl": "/api/v1/market/token-icon/4172"
       },
       "baby": {
         "relativePath": "icons-cache/tokens/baby.png",
         "updatedAt": "2026-05-03T09:54:10.394Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32198"
+        "sourceUrl": "/api/v1/market/token-icon/32198"
       },
       "st": {
         "relativePath": "icons-cache/tokens/st.png",
         "updatedAt": "2026-05-11T11:48:59.096Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39802"
+        "sourceUrl": "/api/v1/market/token-icon/39802"
       },
       "pros": {
         "relativePath": "icons-cache/tokens/pros.png",
         "updatedAt": "2026-05-03T13:54:28.435Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39682"
+        "sourceUrl": "/api/v1/market/token-icon/39682"
       },
       "parti": {
         "relativePath": "icons-cache/tokens/parti.png",
         "updatedAt": "2026-05-04T00:48:57.903Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36102"
+        "sourceUrl": "/api/v1/market/token-icon/36102"
       },
       "steth": {
         "relativePath": "icons-cache/tokens/steth.png",
         "updatedAt": "2026-05-04T03:28:26.192Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/8085"
+        "sourceUrl": "/api/v1/market/token-icon/8085"
       },
       "tst": {
         "relativePath": "icons-cache/tokens/tst.png",
         "updatedAt": "2026-05-05T04:31:40.751Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35647"
+        "sourceUrl": "/api/v1/market/token-icon/35647"
       },
       "ondo": {
         "relativePath": "icons-cache/tokens/ondo.png",
         "updatedAt": "2026-05-11T17:19:54.632Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/21159"
+        "sourceUrl": "/api/v1/market/token-icon/21159"
       },
       "bill": {
         "relativePath": "icons-cache/tokens/bill.png",
         "updatedAt": "2026-05-11T20:26:54.296Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39545"
+        "sourceUrl": "/api/v1/market/token-icon/39545"
       },
       "ath": {
         "relativePath": "icons-cache/tokens/ath.png",
         "updatedAt": "2026-05-04T19:44:24.620Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30083"
+        "sourceUrl": "/api/v1/market/token-icon/30083"
       },
       "wbt": {
         "relativePath": "icons-cache/tokens/wbt.png",
         "updatedAt": "2026-05-04T20:48:48.071Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/21353"
+        "sourceUrl": "/api/v1/market/token-icon/21353"
       },
       "near": {
         "relativePath": "icons-cache/tokens/near.png",
         "updatedAt": "2026-05-11T11:03:01.456Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6535"
+        "sourceUrl": "/api/v1/market/token-icon/6535"
       },
       "dogs": {
         "relativePath": "icons-cache/tokens/dogs.png",
         "updatedAt": "2026-05-07T08:11:52.484Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32698"
+        "sourceUrl": "/api/v1/market/token-icon/32698"
       },
       "ena": {
         "relativePath": "icons-cache/tokens/ena.png",
         "updatedAt": "2026-05-09T10:00:59.457Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30171"
+        "sourceUrl": "/api/v1/market/token-icon/30171"
       },
       "rave": {
         "relativePath": "icons-cache/tokens/rave.png",
         "updatedAt": "2026-05-05T15:13:12.777Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38967"
+        "sourceUrl": "/api/v1/market/token-icon/38967"
       },
       "usdd": {
         "relativePath": "icons-cache/tokens/usdd.png",
         "updatedAt": "2026-05-05T16:54:45.149Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/19891"
+        "sourceUrl": "/api/v1/market/token-icon/19891"
       },
       "icp": {
         "relativePath": "icons-cache/tokens/icp.png",
         "updatedAt": "2026-05-11T22:16:40.047Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/8916"
+        "sourceUrl": "/api/v1/market/token-icon/8916"
       },
       "wif": {
         "relativePath": "icons-cache/tokens/wif.png",
         "updatedAt": "2026-05-07T06:06:19.040Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/28752"
+        "sourceUrl": "/api/v1/market/token-icon/28752"
       },
       "io": {
         "relativePath": "icons-cache/tokens/io.png",
         "updatedAt": "2026-05-07T09:06:39.314Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/29835"
+        "sourceUrl": "/api/v1/market/token-icon/29835"
       },
       "virtual": {
         "relativePath": "icons-cache/tokens/virtual.png",
         "updatedAt": "2026-05-07T13:36:36.064Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/29420"
+        "sourceUrl": "/api/v1/market/token-icon/29420"
       },
       "xmr": {
         "relativePath": "icons-cache/tokens/xmr.png",
         "updatedAt": "2026-05-11T23:48:42.206Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/328"
+        "sourceUrl": "/api/v1/market/token-icon/328"
       },
       "b3": {
         "relativePath": "icons-cache/tokens/b3.png",
         "updatedAt": "2026-05-08T06:55:12.425Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35690"
+        "sourceUrl": "/api/v1/market/token-icon/35690"
       },
       "wegl": {
         "relativePath": "icons-cache/tokens/wegl.png",
         "updatedAt": "2026-05-07T07:53:16.753Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39612"
+        "sourceUrl": "/api/v1/market/token-icon/39612"
       },
       "acu": {
         "relativePath": "icons-cache/tokens/acu.png",
         "updatedAt": "2026-05-10T13:04:16.758Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36492"
+        "sourceUrl": "/api/v1/market/token-icon/36492"
       },
       "jto": {
         "relativePath": "icons-cache/tokens/jto.png",
         "updatedAt": "2026-05-08T16:10:21.288Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/28541"
+        "sourceUrl": "/api/v1/market/token-icon/28541"
       },
       "dai": {
         "relativePath": "icons-cache/tokens/dai.png",
         "updatedAt": "2026-05-07T16:06:44.425Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/4943"
+        "sourceUrl": "/api/v1/market/token-icon/4943"
       },
       "not": {
         "relativePath": "icons-cache/tokens/not.png",
         "updatedAt": "2026-05-07T20:13:24.899Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/28850"
+        "sourceUrl": "/api/v1/market/token-icon/28850"
       },
       "nil": {
         "relativePath": "icons-cache/tokens/nil.png",
         "updatedAt": "2026-05-08T00:49:47.314Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35702"
+        "sourceUrl": "/api/v1/market/token-icon/35702"
       },
       "strk": {
         "relativePath": "icons-cache/tokens/strk.png",
         "updatedAt": "2026-05-09T11:09:09.481Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/22691"
+        "sourceUrl": "/api/v1/market/token-icon/22691"
       },
       "gala": {
         "relativePath": "icons-cache/tokens/gala.png",
         "updatedAt": "2026-05-09T18:20:57.985Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7080"
+        "sourceUrl": "/api/v1/market/token-icon/7080"
       },
       "op": {
         "relativePath": "icons-cache/tokens/op.png",
         "updatedAt": "2026-05-08T22:36:54.776Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11840"
+        "sourceUrl": "/api/v1/market/token-icon/11840"
       },
       "arb": {
         "relativePath": "icons-cache/tokens/arb.png",
         "updatedAt": "2026-05-09T01:08:16.173Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11841"
+        "sourceUrl": "/api/v1/market/token-icon/11841"
       },
       "sahara": {
         "relativePath": "icons-cache/tokens/sahara.png",
         "updatedAt": "2026-05-10T13:04:16.757Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36671"
+        "sourceUrl": "/api/v1/market/token-icon/36671"
       },
       "layer": {
         "relativePath": "icons-cache/tokens/layer.png",
         "updatedAt": "2026-05-11T06:28:29.427Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35429"
+        "sourceUrl": "/api/v1/market/token-icon/35429"
       },
       "bito": {
         "relativePath": "icons-cache/tokens/bito.png",
         "updatedAt": "2026-05-10T13:37:14.853Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6118"
+        "sourceUrl": "/api/v1/market/token-icon/6118"
       },
       "apt": {
         "relativePath": "icons-cache/tokens/apt.png",
         "updatedAt": "2026-05-11T22:00:32.184Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/21794"
+        "sourceUrl": "/api/v1/market/token-icon/21794"
       },
       "kaio": {
         "relativePath": "icons-cache/tokens/kaio.png",
         "updatedAt": "2026-05-11T11:03:01.456Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39903"
+        "sourceUrl": "/api/v1/market/token-icon/39903"
       },
       "osmo": {
         "relativePath": "icons-cache/tokens/osmo.png",
         "updatedAt": "2026-05-11T11:55:11.116Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/12220"
+        "sourceUrl": "/api/v1/market/token-icon/12220"
       },
       "ldo": {
         "relativePath": "icons-cache/tokens/ldo.png",
         "updatedAt": "2026-05-11T19:19:09.296Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/8000"
+        "sourceUrl": "/api/v1/market/token-icon/8000"
       },
       "saga": {
         "relativePath": "icons-cache/tokens/saga.png",
         "updatedAt": "2026-05-11T22:16:40.047Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30372"
+        "sourceUrl": "/api/v1/market/token-icon/30372"
       },
       "crv": {
         "relativePath": "icons-cache/tokens/crv.png",
         "updatedAt": "2026-05-12T00:48:44.943Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6538"
+        "sourceUrl": "/api/v1/market/token-icon/6538"
       },
       "vvv": {
         "relativePath": "icons-cache/tokens/vvv.png",
         "updatedAt": "2026-05-12T07:38:53.716Z",
-        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35509"
+        "sourceUrl": "/api/v1/market/token-icon/35509"
+      },
+      "inj": {
+        "relativePath": "icons-cache/tokens/inj.png",
+        "updatedAt": "2026-05-12T08:52:48.150Z",
+        "sourceUrl": "/api/v1/market/token-icon/7226"
       }
     },
     "dapps": {

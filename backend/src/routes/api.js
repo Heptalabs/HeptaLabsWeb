@@ -73,6 +73,12 @@ const signupRateLimiter = rateLimit({
     return `${ipKey}:${loginId}`;
   }
 });
+const rpcRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 const RPC_JSON_UPSTREAM_BY_CHAIN = Object.freeze({
   ETH: 'https://ethereum-rpc.publicnode.com',
   BSC: 'https://bsc-dataseed.binance.org',
@@ -367,10 +373,31 @@ function mapBalances(userRow) {
   };
 }
 
+const requireRpcProxyApiKey = (req) => {
+  if (!config.rpcProxyRequireApiKey) return;
+  const provided = String(req.header('x-rpc-proxy-key') || req.header('x-api-key') || '')
+    .trim();
+  if (!provided) {
+    throw new AppError(401, 'RPC proxy api key is required.');
+  }
+  if (provided !== config.rpcProxyApiKey) {
+    throw new AppError(403, 'Invalid RPC proxy api key.');
+  }
+};
+
 router.get(
   '/health',
   asyncHandler(async (req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
+  })
+);
+
+router.use(
+  '/rpc',
+  rpcRateLimiter,
+  asyncHandler(async (req, res, next) => {
+    requireRpcProxyApiKey(req);
+    next();
   })
 );
 

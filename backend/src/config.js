@@ -53,7 +53,9 @@ export const config = {
   coinmetricsApiKey: process.env.COINMETRICS_API_KEY || '',
   solscanApiKey: process.env.SOLSCAN_API_KEY || process.env.SOLSCAN_PRO_API_KEY || '',
   etherscanApiKey: process.env.ETHERSCAN_API_KEY || process.env.ETHERSCAN_KEY || '',
-  tronscanApiKey: process.env.TRONSCAN_API_KEY || ''
+  tronscanApiKey: process.env.TRONSCAN_API_KEY || '',
+  rpcProxyRequireApiKey: parseBooleanEnv(process.env.RPC_PROXY_REQUIRE_API_KEY, isProduction),
+  rpcProxyApiKey: String(process.env.RPC_PROXY_API_KEY || '').trim()
 };
 
 if (!config.databaseUrl) {
@@ -63,4 +65,8 @@ if (!config.databaseUrl) {
 
 if (!config.jwtSecret) {
   throw new Error('JWT_SECRET is required.');
+}
+
+if (config.rpcProxyRequireApiKey && !config.rpcProxyApiKey) {
+  throw new Error('RPC_PROXY_API_KEY is required when RPC_PROXY_REQUIRE_API_KEY=true.');
 }

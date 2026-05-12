@@ -40,6 +40,7 @@ const trim = (value, limit = 0) => {
 
 const nowIso = () => new Date().toISOString();
 const isHttpUrl = (value) => /^https?:\/\//i.test(trim(value));
+const LOCAL_MANIFEST_SOURCE_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
 
 const normalizeUrl = (value) => {
   const text = trim(value, 1200);
@@ -60,6 +61,25 @@ const normalizeHostFromUrl = (value) => {
     return trim(new URL(text).hostname.toLowerCase());
   } catch {
     return '';
+  }
+};
+
+const normalizeManifestSourceUrl = (value) => {
+  const text = trim(value, 1200);
+  if (!text) return '';
+  if (!isHttpUrl(text)) return text;
+  try {
+    const parsed = new URL(text);
+    const compactPath = `${parsed.pathname}${parsed.search || ''}`;
+    if (parsed.pathname.startsWith('/api/v1/market/token-icon/')) {
+      return compactPath;
+    }
+    if (LOCAL_MANIFEST_SOURCE_HOSTS.has(parsed.hostname.toLowerCase())) {
+      return compactPath;
+    }
+    return parsed.toString();
+  } catch {
+    return text;
   }
 };
 
@@ -98,7 +118,7 @@ const loadManifest = async () => {
         next.sections[sectionKey][safeKey(key)] = {
           relativePath: rel,
           updatedAt: trim(entry.updatedAt, 64) || new Date(0).toISOString(),
-          sourceUrl: trim(entry.sourceUrl, 1200)
+          sourceUrl: normalizeManifestSourceUrl(entry.sourceUrl)
         };
       });
     });
@@ -110,6 +130,18 @@ const loadManifest = async () => {
 };
 
 const saveManifest = async (manifest) => {
+  SECTION_KEYS.forEach((sectionKey) => {
+    const section = manifest?.sections?.[sectionKey];
+    if (!section || typeof section !== 'object') return;
+    Object.entries(section).forEach(([key, entry]) => {
+      if (!entry || typeof entry !== 'object') return;
+      section[key] = {
+        ...entry,
+        sourceUrl: normalizeManifestSourceUrl(entry.sourceUrl)
+      };
+    });
+  });
+
   const dir = path.dirname(ICON_CACHE_MANIFEST_PATH);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(ICON_CACHE_MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf-8');
@@ -233,7 +265,7 @@ const storeIcon = async ({ section, key, sourceUrl, binary, manifest, origin }) 
   manifest.sections[safeSection][safeItemKey] = {
     relativePath,
     updatedAt: nowIso(),
-    sourceUrl: trim(sourceUrl, 1200)
+    sourceUrl: normalizeManifestSourceUrl(sourceUrl)
   };
   manifest.updatedAt = nowIso();
   return makePublicUrl(origin, relativePath);

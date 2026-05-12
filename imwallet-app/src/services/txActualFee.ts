@@ -1,4 +1,5 @@
 import { resolveBackendBaseUrl } from './backendBaseUrl';
+import { withRpcProxyAuthHeaders } from './rpcProxyAuth';
 
 export type TxFeeChainCode = 'BTC' | 'ETH' | 'XRP' | 'BSC' | 'SOL' | 'TRX' | 'FIL';
 
@@ -30,7 +31,11 @@ const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs: numbe
   }
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, {
+      ...init,
+      headers: withRpcProxyAuthHeaders(init.headers),
+      signal: controller.signal
+    });
   } finally {
     clearTimeout(timeoutId);
     if (signal) signal.removeEventListener('abort', abortListener);

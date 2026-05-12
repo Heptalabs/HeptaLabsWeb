@@ -31,6 +31,7 @@ REQUIRED_VARS=(
 RECOMMENDED_VARS=(
   "CORS_ALLOWED_ORIGINS"
   "CONTENT_ADMIN_REQUIRE_AUTH"
+  "RPC_PROXY_REQUIRE_API_KEY"
   "COINMARKETCAP_API_KEY"
   "DAPPRADAR_API_KEY"
   "DAPPRADAR_PROJECT_ID"
@@ -98,6 +99,18 @@ if [[ "${content_admin_require_auth}" != "true" ]]; then
   echo "[warn] CONTENT_ADMIN_REQUIRE_AUTH is '${content_admin_require_auth:-<empty>}' (recommended: true in production)"
 else
   echo "[ok] CONTENT_ADMIN_REQUIRE_AUTH=true"
+fi
+
+rpc_proxy_require_api_key="${RPC_PROXY_REQUIRE_API_KEY:-}"
+if [[ "${rpc_proxy_require_api_key}" == "true" ]]; then
+  if [[ -z "${RPC_PROXY_API_KEY:-}" ]]; then
+    echo "[fail] RPC_PROXY_API_KEY is required when RPC_PROXY_REQUIRE_API_KEY=true"
+    missing_required=$((missing_required + 1))
+  else
+    echo "[ok] RPC proxy api key is set"
+  fi
+else
+  echo "[warn] RPC_PROXY_REQUIRE_API_KEY is '${rpc_proxy_require_api_key:-<empty>}' (recommended: true in production)"
 fi
 
 legacy_content_header="${CONTENT_ADMIN_ALLOW_LEGACY_ROLE_HEADER:-}"

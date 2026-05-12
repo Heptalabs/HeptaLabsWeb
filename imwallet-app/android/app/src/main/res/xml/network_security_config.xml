@@ -11,7 +11,14 @@
   </domain-config>
 
   <domain-config cleartextTrafficPermitted="false">
-    <domain includeSubdomains="true">download.imwallet.app</domain>
+    <domain includeSubdomains="false">api.imwallet.app</domain>
+  </domain-config>
+
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="false">download.imwallet.app</domain>
+    <pin-set expiration="2028-12-31">
+      <pin digest="SHA-256">+ZlKWo2ziKPnJht+bacN7QdvefklS45s9ZUt21yjt0U=</pin>
+    </pin-set>
   </domain-config>
 
   <domain-config cleartextTrafficPermitted="false">

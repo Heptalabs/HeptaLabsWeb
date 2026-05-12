@@ -31,6 +31,7 @@ import {
   type CompatChainCode
 } from './walletRecoveryCompat';
 import { resolveBackendBaseUrl } from './backendBaseUrl';
+import { withRpcProxyAuthHeaders } from './rpcProxyAuth';
 
 export type OnchainSendChain = 'BTC' | 'ETH' | 'XRP' | 'BSC' | 'SOL' | 'TRX' | 'FIL';
 export type OnchainSendAsset = 'NATIVE' | 'USDT';
@@ -177,13 +178,17 @@ const FIL_SECP256K1_SIGNATURE_TYPE = 1;
 const FIL_CID_PREFIX = Uint8Array.from([0x01, 0x71, 0xa0, 0xe4, 0x02, 0x20]);
 const EIP1559_TX_TYPE = 0x02;
 
-// noble secp256k1 sync signer requires these hash hooks in RN/web runtimes.
-if (!secp.hashes.sha256) {
-  secp.hashes.sha256 = sha256;
-}
-if (!secp.hashes.hmacSha256) {
-  secp.hashes.hmacSha256 = (key, message) => hmac(sha256, key, message);
-}
+let secpHashHooksInitialized = false;
+const ensureSecpHashHooks = () => {
+  if (secpHashHooksInitialized) return;
+  if (!secp.hashes.sha256) {
+    secp.hashes.sha256 = sha256;
+  }
+  if (!secp.hashes.hmacSha256) {
+    secp.hashes.hmacSha256 = (key, message) => hmac(sha256, key, message);
+  }
+  secpHashHooksInitialized = true;
+};
 
 const toCompatPath = (template: string, index: number) => template.replaceAll('{index}', String(Math.max(0, Math.floor(index))));
 
@@ -358,6 +363,7 @@ const buildFilMessageDigest = (encodedMessage: Uint8Array): Uint8Array => {
 };
 
 const signFilUnsignedMessage = (message: FilUnsignedMessage, privateKey: Uint8Array) => {
+  ensureSecpHashHooks();
   const encoded = encodeFilUnsignedMessage(message);
   const digest = buildFilMessageDigest(encoded);
   const signature = secp.sign(digest, privateKey, {
@@ -414,6 +420,7 @@ const deriveSolSeed = (words: string[], accountIndex = 0, passphrase = '') => {
 };
 
 const deriveEvmAddressFromPrivateKey = (privateKey: Uint8Array) => {
+  ensureSecpHashHooks();
   const uncompressed = secp.getPublicKey(privateKey, false).slice(1);
   const hashed = keccak_256(uncompressed);
   return `0x${bytesToHex(hashed.slice(hashed.length - 20))}`;
@@ -427,6 +434,7 @@ const deriveBtcAddressFromPrivateKey = (privateKey: Uint8Array) => {
 };
 
 const deriveXrpAddressFromPrivateKey = (privateKey: Uint8Array) => {
+  ensureSecpHashHooks();
   const compressed = secp.getPublicKey(privateKey, true);
   return deriveXrpAddress(bytesToHex(compressed).toUpperCase());
 };
@@ -439,6 +447,7 @@ const deriveTrxAddressFromPrivateKey = (privateKey: Uint8Array) => {
 };
 
 const deriveFilAddressFromPrivateKey = (privateKey: Uint8Array) => {
+  ensureSecpHashHooks();
   const extended = secp.getPublicKey(privateKey, false);
   return newSecp256k1Address(extended).toString();
 };
@@ -464,7 +473,7 @@ const postJsonRpc = async <T>(rpcUrl: string, method: string, params: unknown[])
   try {
     const response = await fetch(rpcUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: withRpcProxyAuthHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({
         jsonrpc: '2.0',
         id: method,
@@ -494,6 +503,7 @@ const fetchJson = async <T>(url: string, init?: RequestInit, timeoutMs = 12000) 
   try {
     const response = await fetch(url, {
       ...(init || {}),
+      headers: withRpcProxyAuthHeaders(init?.headers),
       signal: controller.signal
     });
     if (!response.ok) {
@@ -511,7 +521,7 @@ const postPlainText = async (url: string, body: string, timeoutMs = 12000) => {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'text/plain' },
+      headers: withRpcProxyAuthHeaders({ 'content-type': 'text/plain' }),
       body,
       signal: controller.signal
     });
@@ -787,6 +797,7 @@ const sendEvm = async (input: EvmOnchainSendInput): Promise<EvmOnchainSendResult
   });
 
   const msgHash = keccak_256(signingPayload);
+  ensureSecpHashHooks();
   const signature = secp.sign(msgHash, privateKey, {
     prehash: false,
     format: 'recovered',
@@ -896,6 +907,7 @@ const sendEvmNft = async (
   });
 
   const msgHash = keccak_256(signingPayload);
+  ensureSecpHashHooks();
   const signature = secp.sign(msgHash, privateKey, {
     prehash: false,
     format: 'recovered',
@@ -1078,6 +1090,7 @@ const sendXrp = async (input: OnchainSendInput): Promise<OnchainSendResult> => {
     throw new OnchainSendError('invalid_rpc_response', 'invalid XRP ledger index');
   }
 
+  ensureSecpHashHooks();
   const signingPubKey = bytesToHex(secp.getPublicKey(privateKey, true)).toUpperCase();
   const tx = {
     TransactionType: 'Payment',
