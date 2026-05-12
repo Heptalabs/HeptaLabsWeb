@@ -22,11 +22,26 @@ pass() {
   echo "[OK] $1"
 }
 
+has_pattern() {
+  local pattern="$1"
+  shift
+  if command -v rg >/dev/null 2>&1; then
+    if rg -n "$pattern" "$@" >/dev/null 2>&1; then
+      return 0
+    fi
+    local rg_status=$?
+    if [[ "$rg_status" -eq 1 ]]; then
+      return 1
+    fi
+  fi
+  grep -RinE "$pattern" "$@" >/dev/null 2>&1
+}
+
 require_no_match() {
   local pattern="$1"
   local target="$2"
   local label="$3"
-  if rg -n "$pattern" "$target" >/dev/null 2>&1; then
+  if has_pattern "$pattern" "$target"; then
     fail "$label (pattern: $pattern)"
   fi
   pass "$label"
@@ -36,7 +51,7 @@ require_match() {
   local pattern="$1"
   local target="$2"
   local label="$3"
-  if ! rg -n "$pattern" "$target" >/dev/null 2>&1; then
+  if ! has_pattern "$pattern" "$target"; then
     fail "$label (pattern: $pattern)"
   fi
   pass "$label"
@@ -44,8 +59,8 @@ require_match() {
 
 echo "== IMWallet Release Security Preflight =="
 
-if rg -n "DEFAULT_COMPAT_SEEDS|clipboard-read|clipboard-write|api\\.qrserver\\.com|Math\\.random\\(" \
-  "$APP_TSX" "$ROOT_DIR/src" "$ROOT_DIR/android" >/dev/null 2>&1; then
+if has_pattern "DEFAULT_COMPAT_SEEDS|clipboard-read|clipboard-write|api\\.qrserver\\.com|Math\\.random\\(" \
+  "$APP_TSX" "$ROOT_DIR/src" "$ROOT_DIR/android"; then
   fail "No critical insecure patterns in app source"
 fi
 pass "No critical insecure patterns in app source"
