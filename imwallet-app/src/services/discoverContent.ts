@@ -47,7 +47,6 @@ export type DiscoverClickLogPayload = {
   reason: string;
   platform: string;
   lang: 'ko' | 'en' | 'zh';
-  walletId: string;
 };
 
 const validCategories = new Set<DiscoverCategoryId>(['featured', 'dex', 'lending', 'yield', 'solana', 'market', 'social', 'games']);

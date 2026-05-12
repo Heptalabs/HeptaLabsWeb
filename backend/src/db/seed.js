@@ -4,6 +4,10 @@ import { pool } from './pool.js';
 const files = ['database/seed_v1.sql'];
 
 async function main() {
+  if (String(process.env.NODE_ENV || '').trim() === 'production' && String(process.env.ALLOW_PROD_DB_SEED || '') !== 'true') {
+    throw new Error('[db:seed] refusing to run in production without ALLOW_PROD_DB_SEED=true');
+  }
+
   for (const file of files) {
     const path = await runSqlFile(file);
     console.log(`[db:seed] applied: ${path}`);

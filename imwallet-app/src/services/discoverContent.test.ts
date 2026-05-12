@@ -70,8 +70,7 @@ describe('discoverContent service', () => {
       success: true,
       reason: 'external_opened',
       platform: 'web',
-      lang: 'ko',
-      walletId: 'wallet-1'
+      lang: 'ko'
     });
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);

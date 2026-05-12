@@ -1,4 +1,5 @@
-const { test } = require('playwright/test');
+const path = require('node:path');
+const { test } = require('@playwright/test');
 
 test('debug white screen', async ({ page }) => {
   page.on('console', (msg) => {
@@ -16,5 +17,5 @@ test('debug white screen', async ({ page }) => {
   await page.waitForTimeout(5000);
   const rootChildren = await page.evaluate(() => document.getElementById('root')?.childElementCount ?? -1);
   console.log(`[rootChildren] ${rootChildren}`);
-  await page.screenshot({ path: '/Users/heptalabs/Documents/New project/SJK/.tmp_pw_white_screen_debug.png', fullPage: true });
+  await page.screenshot({ path: path.resolve(process.cwd(), '.tmp_pw_white_screen_debug.png'), fullPage: true });
 });

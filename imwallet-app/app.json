@@ -2,7 +2,8 @@
   "expo": {
     "name": "IMWallet",
     "slug": "imwallet-app",
-    "version": "0.0.1",
+    "version": "0.1.0",
+    "scheme": "imwallet",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,11 +17,23 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.imwallet.mobile"
+      "bundleIdentifier": "app.imwallet.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "QR 스캔을 위해 카메라 권한이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "이미지 첨부를 위해 사진 권한이 필요합니다.",
+        "NSFaceIDUsageDescription": "지갑 잠금 해제를 위해 Face ID 권한이 필요합니다."
+      }
     },
     "android": {
       "package": "app.imwallet.mobile",
       "versionCode": 16,
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "USE_BIOMETRIC",
+        "VIBRATE",
+        "READ_MEDIA_IMAGES"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -30,7 +43,39 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "QR 스캔을 위해 카메라 권한이 필요합니다."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "이미지 첨부를 위해 사진 권한이 필요합니다."
+        }
+      ],
+      "expo-local-authentication",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": false,
+          "faceIDPermission": "지갑 잠금 해제를 위해 Face ID 권한이 필요합니다."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ]
   }
 }

@@ -144,9 +144,3 @@ export const deriveTrustCompatibleChainAddresses = (
 
 export const deriveTrustCompatiblePrimaryAddress = (words: string[], accountIndex = 0, passphrase = '') =>
   deriveTrustCompatibleChainAddresses(words, accountIndex, passphrase).ETH;
-
-export const DEFAULT_COMPAT_SEEDS: string[][] = [
-  'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'.split(' '),
-  'legal winner thank year wave sausage worth useful legal winner thank yellow'.split(' '),
-  'letter advice cage absurd amount doctor acoustic avoid letter advice cage above'.split(' ')
-];

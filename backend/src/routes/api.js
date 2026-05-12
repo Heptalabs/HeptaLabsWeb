@@ -1,8 +1,11 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { randomUUID } from 'crypto';
+import { getAddress as toChecksumEvmAddress } from 'ethers';
+import bs58check from 'bs58check';
+import { bech32 } from 'bech32';
 import { pool, withTransaction } from '../db/pool.js';
 import { config } from '../config.js';
 import { asyncHandler } from '../utils/async-handler.js';
@@ -44,7 +47,6 @@ const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,16}$/;
 const NAME_REGEX = /^[A-Za-z가-힣\s]+$/;
 const PHONE_REGEX = /^[0-9]+$/;
 const TXID_REGEX = /^[A-Za-z0-9]+$/;
-const ADDRESS_REGEX = /^[A-Za-z0-9]+$/;
 const ALLOWED_NETWORKS = new Set(['TRC20', 'ERC20', 'BEP20', 'OTHER']);
 const CONTENT_ADMIN_ROLES = new Set(['viewer', 'operator', 'compliance', 'admin']);
 const CONTENT_ROLE_PERMISSIONS = {
@@ -60,6 +62,113 @@ const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+const signupRateLimiter = rateLimit({
+  windowMs: Math.max(10_000, config.authRateLimitWindowMs),
+  max: Math.max(5, Math.floor(config.authRateLimitMaxRequests / 2)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const loginId = String(req.body?.loginId || '').trim().toLowerCase();
+    const ipKey = ipKeyGenerator(req.ip || req.socket?.remoteAddress || '');
+    return `${ipKey}:${loginId}`;
+  }
+});
+const RPC_JSON_UPSTREAM_BY_CHAIN = Object.freeze({
+  ETH: 'https://ethereum-rpc.publicnode.com',
+  BSC: 'https://bsc-dataseed.binance.org',
+  XRP: 'https://xrplcluster.com',
+  SOL: 'https://api.mainnet-beta.solana.com',
+  FIL: 'https://api.node.glif.io/rpc/v1'
+});
+const RPC_BTC_BLOCKSTREAM_BASE = 'https://blockstream.info/api';
+const RPC_MEMPOOL_BASE = 'https://mempool.space/api';
+const RPC_TRONGRID_BASE = 'https://api.trongrid.io';
+const RPC_PROXY_TIMEOUT_MS = 15_000;
+
+const createTimeoutController = (timeoutMs = RPC_PROXY_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timer)
+  };
+};
+
+const buildProxyUrl = (baseUrl, pathname, query = {}) => {
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  const url = new URL(normalizedPath, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+  Object.entries(query || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    url.searchParams.set(key, String(value));
+  });
+  return url.toString();
+};
+
+const forwardUpstreamRequest = async ({ url, method = 'GET', body, contentType, accept = 'application/json' }) => {
+  const guard = createTimeoutController();
+  try {
+    const headers = { accept };
+    if (contentType) headers['content-type'] = contentType;
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      body,
+      signal: guard.signal
+    });
+
+    const responseContentType = String(response.headers.get('content-type') || '').toLowerCase();
+    const payloadText = await response.text();
+    return {
+      ok: response.ok,
+      status: response.status,
+      contentType: responseContentType || 'text/plain; charset=utf-8',
+      text: payloadText
+    };
+  } finally {
+    guard.cleanup();
+  }
+};
+
+const parseJsonRpcPayload = (body) => {
+  const payload = body && typeof body === 'object' ? body : {};
+  const method = String(payload.method || '').trim();
+  if (!method) {
+    throw new AppError(400, 'JSON-RPC method is required.');
+  }
+  const params = Array.isArray(payload.params) ? payload.params : [];
+  const id = payload.id ?? method;
+  return {
+    jsonrpc: '2.0',
+    id,
+    method,
+    params
+  };
+};
+
+const proxyJsonRpcToChain = async (chain, body) => {
+  const targetUrl = RPC_JSON_UPSTREAM_BY_CHAIN[chain];
+  if (!targetUrl) {
+    throw new AppError(400, `Unsupported rpc chain: ${chain}`);
+  }
+  const rpcPayload = parseJsonRpcPayload(body);
+  const upstream = await forwardUpstreamRequest({
+    url: targetUrl,
+    method: 'POST',
+    body: JSON.stringify(rpcPayload),
+    contentType: 'application/json',
+    accept: 'application/json'
+  });
+  if (!upstream.ok) {
+    throw new AppError(502, `RPC upstream error (${chain}): ${upstream.status}`);
+  }
+
+  try {
+    return JSON.parse(upstream.text);
+  } catch {
+    throw new AppError(502, `RPC upstream returned invalid JSON (${chain}).`);
+  }
+};
 
 function getRequestOrigin(req) {
   const forwardedProto = String(req.header('x-forwarded-proto') || '').trim();
@@ -127,9 +236,79 @@ function assertValidTxid(txid) {
   }
 }
 
-function assertValidAddress(address, field = 'address') {
-  if (!ADDRESS_REGEX.test(address) || address.length > 300) {
-    throw new AppError(400, `${field} must be alphanumeric and <= 300 chars.`);
+function isValidEvmAddress(address) {
+  try {
+    return Boolean(toChecksumEvmAddress(address));
+  } catch {
+    return false;
+  }
+}
+
+function isValidTronAddress(address) {
+  try {
+    const decoded = bs58check.decode(address);
+    return decoded.length === 21 && decoded[0] === 0x41;
+  } catch {
+    return false;
+  }
+}
+
+function isValidBitcoinAddress(address) {
+  const trimmed = String(address || '').trim();
+  if (!trimmed) return false;
+
+  if (/^(bc1|tb1)/i.test(trimmed)) {
+    try {
+      const decoded = bech32.decode(trimmed, 1500);
+      return Array.isArray(decoded.words) && decoded.words.length > 1;
+    } catch {
+      return false;
+    }
+  }
+
+  if (/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(trimmed)) {
+    try {
+      const decoded = bs58check.decode(trimmed);
+      return decoded.length >= 21 && decoded.length <= 34;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function isValidAddressByNetwork(address, network = 'OTHER') {
+  const trimmed = String(address || '').trim();
+  if (!trimmed || trimmed.length > 300) return false;
+
+  const normalizedNetwork = String(network || '')
+    .trim()
+    .toUpperCase();
+
+  if (normalizedNetwork === 'ERC20' || normalizedNetwork === 'BEP20' || normalizedNetwork === 'ETH' || normalizedNetwork === 'BSC') {
+    return isValidEvmAddress(trimmed);
+  }
+  if (normalizedNetwork === 'TRC20' || normalizedNetwork === 'TRX') {
+    return isValidTronAddress(trimmed);
+  }
+  if (normalizedNetwork === 'BTC') {
+    return isValidBitcoinAddress(trimmed);
+  }
+  if (normalizedNetwork === 'USDT') {
+    return isValidEvmAddress(trimmed) || isValidTronAddress(trimmed);
+  }
+  if (normalizedNetwork === 'OTHER') {
+    // Keep OTHER conservative to avoid cross-chain misroutes in profile/signup inputs.
+    return false;
+  }
+
+  return false;
+}
+
+function assertValidAddress(address, field = 'address', network = 'OTHER') {
+  if (!isValidAddressByNetwork(address, network)) {
+    throw new AppError(400, `${field} format is invalid for ${network}.`);
   }
 }
 
@@ -192,6 +371,163 @@ router.get(
   '/health',
   asyncHandler(async (req, res) => {
     res.json({ ok: true, timestamp: new Date().toISOString() });
+  })
+);
+
+router.post(
+  '/rpc/:chain',
+  asyncHandler(async (req, res) => {
+    const chain = String(req.params.chain || '')
+      .trim()
+      .toUpperCase();
+    const payload = await proxyJsonRpcToChain(chain, req.body);
+    res.json(payload);
+  })
+);
+
+router.get(
+  '/rpc/btc/address/:address',
+  asyncHandler(async (req, res) => {
+    const address = String(req.params.address || '').trim();
+    if (!address) throw new AppError(400, 'address is required.');
+    const url = buildProxyUrl(RPC_BTC_BLOCKSTREAM_BASE, `/address/${encodeURIComponent(address)}`);
+    const upstream = await forwardUpstreamRequest({ url, method: 'GET', accept: 'application/json' });
+    if (!upstream.ok) throw new AppError(502, `BTC upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.get(
+  '/rpc/btc/tx/:hash',
+  asyncHandler(async (req, res) => {
+    const hash = String(req.params.hash || '').trim();
+    if (!hash) throw new AppError(400, 'hash is required.');
+    const url = buildProxyUrl(RPC_BTC_BLOCKSTREAM_BASE, `/tx/${encodeURIComponent(hash)}`);
+    const upstream = await forwardUpstreamRequest({ url, method: 'GET', accept: 'application/json' });
+    if (!upstream.ok) throw new AppError(502, `BTC upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.post(
+  '/rpc/btc/tx',
+  express.text({ type: '*/*', limit: '2mb' }),
+  asyncHandler(async (req, res) => {
+    const rawTx = typeof req.body === 'string' ? req.body : '';
+    if (!rawTx.trim()) throw new AppError(400, 'raw tx payload is required.');
+    const url = buildProxyUrl(RPC_BTC_BLOCKSTREAM_BASE, '/tx');
+    const upstream = await forwardUpstreamRequest({
+      url,
+      method: 'POST',
+      body: rawTx,
+      contentType: 'text/plain',
+      accept: 'text/plain'
+    });
+    if (!upstream.ok) throw new AppError(502, `BTC upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.get(
+  '/rpc/btc/fees/recommended',
+  asyncHandler(async (req, res) => {
+    const url = buildProxyUrl(RPC_MEMPOOL_BASE, '/v1/fees/recommended');
+    const upstream = await forwardUpstreamRequest({ url, method: 'GET', accept: 'application/json' });
+    if (!upstream.ok) throw new AppError(502, `Mempool upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.get(
+  '/rpc/trx/account/:address',
+  asyncHandler(async (req, res) => {
+    const address = String(req.params.address || '').trim();
+    if (!address) throw new AppError(400, 'address is required.');
+    const url = buildProxyUrl(RPC_TRONGRID_BASE, `/v1/accounts/${encodeURIComponent(address)}`, req.query || {});
+    const upstream = await forwardUpstreamRequest({ url, method: 'GET', accept: 'application/json' });
+    if (!upstream.ok) throw new AppError(502, `TRX upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.post(
+  '/rpc/trx/wallet/getchainparameters',
+  asyncHandler(async (req, res) => {
+    const url = buildProxyUrl(RPC_TRONGRID_BASE, '/wallet/getchainparameters');
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const upstream = await forwardUpstreamRequest({
+      url,
+      method: 'POST',
+      body: JSON.stringify(payload),
+      contentType: 'application/json',
+      accept: 'application/json'
+    });
+    if (!upstream.ok) throw new AppError(502, `TRX upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.post(
+  '/rpc/trx/wallet/gettransactioninfobyid',
+  asyncHandler(async (req, res) => {
+    const url = buildProxyUrl(RPC_TRONGRID_BASE, '/wallet/gettransactioninfobyid');
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const upstream = await forwardUpstreamRequest({
+      url,
+      method: 'POST',
+      body: JSON.stringify(payload),
+      contentType: 'application/json',
+      accept: 'application/json'
+    });
+    if (!upstream.ok) throw new AppError(502, `TRX upstream error: ${upstream.status}`);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
+  })
+);
+
+router.all(
+  '/rpc/trx/*',
+  asyncHandler(async (req, res) => {
+    const proxiedPath = String(req.params[0] || '').trim();
+    if (!proxiedPath) {
+      throw new AppError(400, 'trx proxy path is required.');
+    }
+    const url = buildProxyUrl(RPC_TRONGRID_BASE, `/${proxiedPath}`, req.query || {});
+    const method = String(req.method || 'GET').toUpperCase();
+    const hasBody = method !== 'GET' && method !== 'HEAD';
+
+    let body;
+    let contentType = undefined;
+    if (hasBody) {
+      if (typeof req.body === 'string') {
+        body = req.body;
+      } else if (req.body && typeof req.body === 'object') {
+        body = JSON.stringify(req.body);
+        contentType = 'application/json';
+      }
+      if (!contentType) {
+        const incomingContentType = String(req.headers['content-type'] || '').trim();
+        if (incomingContentType) contentType = incomingContentType;
+      }
+    }
+
+    const upstream = await forwardUpstreamRequest({
+      url,
+      method,
+      body,
+      contentType,
+      accept: String(req.headers.accept || '*/*')
+    });
+
+    res.status(upstream.status);
+    res.setHeader('content-type', upstream.contentType);
+    res.send(upstream.text);
   })
 );
 
@@ -546,6 +882,7 @@ router.get(
 
 router.post(
   '/auth/signup',
+  signupRateLimiter,
   asyncHandler(async (req, res) => {
     const { loginId, password, name, phone, email, referrerUid, usdtAddress } = req.body;
 
@@ -559,7 +896,7 @@ router.post(
     assertValidPhone(phone);
 
     if (usdtAddress) {
-      assertValidAddress(usdtAddress, 'usdtAddress');
+      assertValidAddress(usdtAddress, 'usdtAddress', 'USDT');
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -706,7 +1043,7 @@ router.patch(
     }
 
     if (usdtAddress) {
-      assertValidAddress(usdtAddress, 'usdtAddress');
+      assertValidAddress(usdtAddress, 'usdtAddress', 'USDT');
       fields.push(`usdt_address = $${fields.length + 1}`);
       values.push(usdtAddress);
     }
@@ -834,7 +1171,7 @@ router.post(
 
     assertNetwork(network);
     const parsedAmount = parseAmount(amount, 'amount');
-    assertValidAddress(destinationAddress, 'destinationAddress');
+    assertValidAddress(destinationAddress, 'destinationAddress', network);
 
     const requestIdempotencyKey = req.headers['x-idempotency-key'] || randomUUID();
 

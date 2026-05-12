@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-04T02:30:00.000Z",
+  "updatedAt": "2026-05-11T11:34:23.000Z",
   "items": [
     {
       "id": "imwallet-weekly-briefing",
@@ -16,9 +16,9 @@
         "zh": "IMWallet 每周简报"
       },
       "summary": {
-        "ko": "이번 주 브리핑은 비트코인 ETF 자금흐름 반전, 4월 해킹 급증, 스테이블코인 규제 절충안 진전을 중심으로 정리했습니다.",
-        "en": "This week focuses on the ETF flow reversal in bitcoin, April's surge in crypto hacks, and progress on the stablecoin policy compromise.",
-        "zh": "本周聚焦比特币 ETF 资金流反转、4 月黑客事件激增，以及稳定币监管折中方案的推进。"
+        "ko": "이번 주 브리핑은 IMWallet 전용 레포 정리, Discover/DApp 데이터 경로 강화, 운영 프리플라이트 문서 확장을 중심으로 정리했습니다.",
+        "en": "This week focuses on IMWallet repo consolidation, stronger Discover and DApp data paths, and expanded production preflight documentation.",
+        "zh": "本周聚焦 IMWallet 仓库收敛、Discover 与 DApp 数据链路强化，以及生产预检文档扩展。"
       },
       "sourceName": "IMWallet Research",
       "sourceUrl": "",
@@ -38,9 +38,9 @@
       ],
       "startsAt": null,
       "endsAt": null,
-      "publishedAt": "2026-05-04T02:30:00.000Z",
+      "publishedAt": "2026-05-11T11:34:23.000Z",
       "createdAt": "2026-04-17T17:50:53.679Z",
-      "updatedAt": "2026-05-04T02:30:00.000Z"
+      "updatedAt": "2026-05-11T11:34:23.000Z"
     }
   ]
 }

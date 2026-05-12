@@ -80,6 +80,18 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def resolveReleaseSigningValue = { key ->
+    if (project.hasProperty(key)) {
+        return project.property(key).toString()
+    }
+    def envValue = System.getenv(key)
+    return envValue != null ? envValue.toString() : null
+}
+def uploadStoreFile = resolveReleaseSigningValue('IMWALLET_UPLOAD_STORE_FILE')
+def uploadStorePassword = resolveReleaseSigningValue('IMWALLET_UPLOAD_STORE_PASSWORD')
+def uploadKeyAlias = resolveReleaseSigningValue('IMWALLET_UPLOAD_KEY_ALIAS')
+def uploadKeyPassword = resolveReleaseSigningValue('IMWALLET_UPLOAD_KEY_PASSWORD')
+def hasReleaseSigning = uploadStoreFile && uploadStorePassword && uploadKeyAlias && uploadKeyPassword
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -93,26 +105,29 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 16
-        versionName "0.0.1"
+        versionName "0.1.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
-        debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(uploadStoreFile)
+                storePassword uploadStorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
         }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            } else {
+                throw new GradleException("Missing release signing properties (IMWALLET_UPLOAD_*).")
+            }
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

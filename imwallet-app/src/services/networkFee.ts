@@ -1,3 +1,5 @@
+import { resolveBackendBaseUrl } from './backendBaseUrl';
+
 export type FeeChainCode = 'BTC' | 'ETH' | 'XRP' | 'BSC' | 'SOL' | 'TRX' | 'FIL';
 
 export type LiveNetworkFeeSnapshot = {
@@ -32,7 +34,14 @@ const BTC_TRANSFER_VBYTES = 140;
 const TRX_TRANSFER_BYTES = 250;
 const SOL_BASE_LAMPORTS_PER_SIGNATURE = 5000;
 const SOL_DEFAULT_COMPUTE_UNITS = 200000;
-const FIL_RPC_URL = 'https://api.node.glif.io';
+const RPC_PROXY_BASE = `${resolveBackendBaseUrl()}/api/v1/rpc`;
+const FIL_RPC_URL = `${RPC_PROXY_BASE}/fil`;
+const ETH_RPC_URL = `${RPC_PROXY_BASE}/eth`;
+const BSC_RPC_URL = `${RPC_PROXY_BASE}/bsc`;
+const XRP_RPC_URL = `${RPC_PROXY_BASE}/xrp`;
+const SOL_RPC_URL = `${RPC_PROXY_BASE}/sol`;
+const TRX_GET_CHAIN_PARAMETERS_URL = `${RPC_PROXY_BASE}/trx/wallet/getchainparameters`;
+const BTC_FEES_RECOMMENDED_URL = `${RPC_PROXY_BASE}/btc/fees/recommended`;
 const FIL_ATTO_PER_FIL = 1_000_000_000_000_000_000n;
 const FIL_DEFAULT_TRANSFER_GAS_LIMIT = 100_000_000n;
 const FIL_GAS_PREMIUM_TARGET_EPOCHS = 10;
@@ -185,7 +194,7 @@ const requestJsonRpc = async (url: string, method: string, params: unknown[], si
 };
 
 const fetchEthLikeFee = async (chain: 'ETH' | 'BSC', signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot> => {
-  const rpcUrl = chain === 'ETH' ? 'https://eth.llamarpc.com' : 'https://bsc-dataseed.binance.org';
+  const rpcUrl = chain === 'ETH' ? ETH_RPC_URL : BSC_RPC_URL;
   const result = await requestJsonRpc(rpcUrl, 'eth_gasPrice', [], signal);
   const gasPriceWei = parseHexInteger(result);
   if (!gasPriceWei || gasPriceWei <= 0) {
@@ -206,7 +215,7 @@ const fetchEthLikeFee = async (chain: 'ETH' | 'BSC', signal?: AbortSignal): Prom
 };
 
 const fetchBitcoinFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot> => {
-  const response = await fetchWithTimeout('https://mempool.space/api/v1/fees/recommended', { method: 'GET' }, 5000, signal);
+  const response = await fetchWithTimeout(BTC_FEES_RECOMMENDED_URL, { method: 'GET' }, 5000, signal);
   if (!response.ok) {
     throw new Error(`btc fee status ${response.status}`);
   }
@@ -234,7 +243,7 @@ const fetchBitcoinFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnap
 };
 
 const fetchXrpFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot> => {
-  const result = (await requestJsonRpc('https://xrplcluster.com', 'fee', [{}], signal)) as {
+  const result = (await requestJsonRpc(XRP_RPC_URL, 'fee', [{}], signal)) as {
     drops?: { open_ledger_fee?: string };
   };
 
@@ -254,7 +263,7 @@ const fetchXrpFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot
 
 const fetchTrxFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot> => {
   const response = await fetchWithTimeout(
-    'https://api.trongrid.io/wallet/getchainparameters',
+    TRX_GET_CHAIN_PARAMETERS_URL,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -288,7 +297,7 @@ const fetchTrxFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot
 };
 
 const fetchSolFee = async (signal?: AbortSignal): Promise<LiveNetworkFeeSnapshot> => {
-  const result = (await requestJsonRpc('https://api.mainnet-beta.solana.com', 'getRecentPrioritizationFees', [], signal)) as Array<{
+  const result = (await requestJsonRpc(SOL_RPC_URL, 'getRecentPrioritizationFees', [], signal)) as Array<{
     prioritizationFee?: number;
   }>;
 

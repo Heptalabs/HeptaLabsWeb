@@ -23,8 +23,7 @@ const MARKET_SYMBOL_TO_CMC_ID = Object.freeze({
   USDT: 825
 });
 const CMC_MARKET_CONVERTS = Object.freeze(['USD', 'CNY', 'KRW']);
-const CMC_DEFAULT_CNY_RATE = 7.2;
-const CMC_DEFAULT_KRW_RATE = 1370;
+const MARKET_STALE_MAX_MS = 2 * 60 * 60 * 1000;
 const MARKET_LAUNCHED_FALLBACK_BY_SYMBOL = Object.freeze({
   BTC: '2009-01-03',
   ETH: '2015-07-30',
@@ -105,6 +104,19 @@ const parsePositiveIntegerLoose = (value) => {
     return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
   }
   return parsePositiveInteger(value);
+};
+
+const getSnapshotAgeMs = (snapshot) => {
+  const ts = Date.parse(String(snapshot?.fetchedAt || ''));
+  if (!Number.isFinite(ts)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Date.now() - ts);
+};
+
+const getFreshCachedSnapshot = (cachedEntry, maxAgeMs) => {
+  if (!cachedEntry?.snapshot) return null;
+  const ageMs = getSnapshotAgeMs(cachedEntry.snapshot);
+  if (!Number.isFinite(ageMs) || ageMs > maxAgeMs) return null;
+  return cachedEntry.snapshot;
 };
 
 const toCmcIconUrl = (rawId) => {
@@ -500,16 +512,10 @@ const fetchHolderCountFromExplorerTokenPage = async (chainId, contractAddress) =
     const parsed = parseHolderCountFromExplorerHtml(html);
     if (parsed) return parsed;
   } catch {
-    // Fallback to Jina proxy below.
+    // Ignore and return null below.
   }
 
-  // Backup path: read explorer page through text proxy.
-  const base = host.replace(/^https?:\/\//i, '');
-  const proxyEndpoint = new URL(`https://r.jina.ai/http://${base}/token/${contractAddress}`);
-  const proxyText = await fetchHtmlWithTimeout(proxyEndpoint, {
-    accept: 'text/plain,text/markdown,text/html'
-  }, Math.max(12000, config.marketPriceTimeoutMs * 3));
-  return parseHolderCountFromExplorerHtml(proxyText);
+  return null;
 };
 
 const fetchHolderCountFromEtherscan = async (chainId, contractAddress) => {
@@ -898,12 +904,30 @@ export const getMarketPriceSnapshot = async (requestedSymbols) => {
       safeLoad(() => fetchFxRatesFromNaver())
     ]);
 
+    const freshCachedFxSnapshot = getFreshCachedSnapshot(marketFxCache.get('fx:usd'), MARKET_STALE_MAX_MS);
+    const effectiveFxSnapshot = fxSnapshot ?? freshCachedFxSnapshot;
+    const naverUsdKrw = parsePositiveNumber(effectiveFxSnapshot?.refs?.usdKrw);
+    const naverCnyKrw = parsePositiveNumber(effectiveFxSnapshot?.refs?.cnyKrw);
+    const derivedUsdCnyFromNaver = naverUsdKrw && naverCnyKrw ? naverUsdKrw / naverCnyKrw : null;
+
+    const cmcPriceRows = Object.values(cmcSnapshot?.prices ?? {});
+    const cmcFxCandidate = cmcPriceRows.find((entry) => parsePositiveNumber(entry?.usd) && parsePositiveNumber(entry?.krw));
+    const cmcFxUsd = parsePositiveNumber(cmcFxCandidate?.usd);
+    const cmcFxKrw = parsePositiveNumber(cmcFxCandidate?.krw);
+    const cmcFxCny = parsePositiveNumber(cmcFxCandidate?.cny);
+    const derivedUsdKrwFromCmc = cmcFxUsd && cmcFxKrw ? cmcFxKrw / cmcFxUsd : null;
+    const derivedUsdCnyFromCmc = cmcFxUsd && cmcFxCny ? cmcFxCny / cmcFxUsd : null;
+
     const usdKrwRate =
-      parsePositiveNumber(fxSnapshot?.refs?.usdKrw) ?? parsePositiveNumber(fxSnapshot?.rates?.KRW) ?? CMC_DEFAULT_KRW_RATE;
-    const naverUsdKrw = parsePositiveNumber(fxSnapshot?.refs?.usdKrw);
-    const naverCnyKrw = parsePositiveNumber(fxSnapshot?.refs?.cnyKrw);
-    const derivedUsdCny = naverUsdKrw && naverCnyKrw ? naverUsdKrw / naverCnyKrw : null;
-    const usdCnyRate = parsePositiveNumber(fxSnapshot?.rates?.CNY) ?? derivedUsdCny ?? CMC_DEFAULT_CNY_RATE;
+      parsePositiveNumber(effectiveFxSnapshot?.refs?.usdKrw) ??
+      parsePositiveNumber(effectiveFxSnapshot?.rates?.KRW) ??
+      derivedUsdKrwFromCmc;
+    const usdCnyRate =
+      parsePositiveNumber(effectiveFxSnapshot?.rates?.CNY) ?? derivedUsdCnyFromNaver ?? derivedUsdCnyFromCmc;
+
+    if (!usdKrwRate || !usdCnyRate) {
+      throw new Error('fx rates unavailable');
+    }
 
     const missingUsdSymbols = symbols.filter((symbol) => {
       const cmcUsd = parsePositiveNumber(cmcSnapshot?.prices?.[symbol]?.usd);
@@ -984,9 +1008,10 @@ export const getMarketPriceSnapshot = async (requestedSymbols) => {
       stale: false
     };
   } catch (error) {
-    if (cached?.snapshot) {
+    const freshCached = getFreshCachedSnapshot(cached, MARKET_STALE_MAX_MS);
+    if (freshCached) {
       return {
-        ...cached.snapshot,
+        ...freshCached,
         symbols,
         stale: true
       };
@@ -1356,9 +1381,10 @@ export const getMarketFxSnapshot = async () => {
       stale: false
     };
   } catch (error) {
-    if (cached?.snapshot) {
+    const freshCached = getFreshCachedSnapshot(cached, MARKET_STALE_MAX_MS);
+    if (freshCached) {
       return {
-        ...cached.snapshot,
+        ...freshCached,
         stale: true
       };
     }

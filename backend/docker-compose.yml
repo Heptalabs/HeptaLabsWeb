@@ -5,10 +5,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: heptalabs
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,11 +27,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/heptalabs
-      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/heptalabs
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       JWT_EXPIRES_IN: 7d
       DB_BOOTSTRAP_MAX_RETRIES: 40
       DB_BOOTSTRAP_RETRY_INTERVAL_SECONDS: 2
+      DB_BOOTSTRAP_MODE: migrate
     ports:
       - "4000:4000"
     command: ["./scripts/bootstrap-and-start.sh"]

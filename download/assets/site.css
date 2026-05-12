@@ -149,7 +149,7 @@ body.light .brand-logo-dark {
   justify-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   overflow-x: auto;
   overflow-y: visible;
   max-width: 100%;
@@ -162,36 +162,33 @@ body.light .brand-logo-dark {
 }
 
 .menu-btn {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.74rem;
-  font-weight: 800;
+  font-size: 0.82rem;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  min-height: 34px;
-  padding: 0 13px;
+  min-height: 30px;
+  padding: 2px 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  transition: 0.18s ease;
+  transition: color 0.16s ease, border-color 0.16s ease;
 }
 
 .menu-btn:hover {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--accent) 64%, var(--line));
-  transform: translateY(-1px);
+  border-bottom-color: color-mix(in srgb, var(--accent) 52%, var(--line));
 }
 
 .menu-btn.active {
-  color: var(--accent-text);
-  border-color: color-mix(in srgb, var(--accent) 82%, var(--line));
-  background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent-deep) 100%);
-  box-shadow: none;
+  color: var(--text);
+  border-bottom-color: var(--accent);
 }
 
 .header-controls {
@@ -904,7 +901,7 @@ body.light .footer-logo-dark {
   text-decoration: none;
   font-size: 0.9rem;
   line-height: 1.65;
-  transition: color 0.16s ease, transform 0.16s ease;
+  transition: color 0.16s ease;
 }
 
 .footer-col > a + a {
@@ -913,7 +910,12 @@ body.light .footer-logo-dark {
 
 .footer-col > a:hover {
   color: var(--text);
-  transform: translateX(2px);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer-download-link {
+  font-weight: 700;
 }
 
 .footer-socials {
@@ -1068,10 +1070,6 @@ body.light .footer-mini-symbol-dark {
 @media (max-width: 1120px) {
   .header-bar {
     grid-template-columns: minmax(180px, 1fr) auto minmax(220px, 1fr);
-  }
-
-  .menu-btn {
-    padding: 0 11px;
   }
 }
 

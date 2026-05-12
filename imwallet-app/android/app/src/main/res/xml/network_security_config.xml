@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system"/>
+    </trust-anchors>
+  </base-config>
+
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">imwallet.app</domain>
+  </domain-config>
+
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">download.imwallet.app</domain>
+  </domain-config>
+
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="false">ethereum-rpc.publicnode.com</domain>
+    <domain includeSubdomains="false">bsc-dataseed.binance.org</domain>
+    <domain includeSubdomains="false">api.mainnet-beta.solana.com</domain>
+    <domain includeSubdomains="false">xrplcluster.com</domain>
+    <domain includeSubdomains="false">api.trongrid.io</domain>
+    <domain includeSubdomains="true">node.glif.io</domain>
+    <domain includeSubdomains="false">blockstream.info</domain>
+    <domain includeSubdomains="false">mempool.space</domain>
+    <domain includeSubdomains="false">s1.ripple.com</domain>
+  </domain-config>
+
+  <debug-overrides>
+    <trust-anchors>
+      <certificates src="system"/>
+      <certificates src="user"/>
+    </trust-anchors>
+  </debug-overrides>
+</network-security-config>

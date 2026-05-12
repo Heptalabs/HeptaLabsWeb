@@ -1,51 +1,51 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-08T10:15:57.206Z",
+  "updatedAt": "2026-05-12T07:47:09.790Z",
   "sections": {
     "tokens": {
       "usdt": {
         "relativePath": "icons-cache/tokens/usdt.png",
-        "updatedAt": "2026-05-08T10:15:49.979Z",
+        "updatedAt": "2026-05-11T11:48:59.078Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/825"
       },
       "usdc": {
         "relativePath": "icons-cache/tokens/usdc.png",
-        "updatedAt": "2026-05-08T10:15:49.986Z",
+        "updatedAt": "2026-05-11T11:48:59.122Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3408"
       },
       "btc": {
         "relativePath": "icons-cache/tokens/btc.png",
-        "updatedAt": "2026-05-08T10:15:49.978Z",
+        "updatedAt": "2026-05-11T11:48:59.079Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1"
       },
       "eth": {
         "relativePath": "icons-cache/tokens/eth.png",
-        "updatedAt": "2026-05-08T10:15:49.979Z",
+        "updatedAt": "2026-05-11T11:48:59.080Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1027"
       },
       "sol": {
         "relativePath": "icons-cache/tokens/sol.png",
-        "updatedAt": "2026-05-08T10:15:49.991Z",
+        "updatedAt": "2026-05-11T11:48:59.083Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5426"
       },
       "xrp": {
         "relativePath": "icons-cache/tokens/xrp.png",
-        "updatedAt": "2026-05-08T10:15:49.988Z",
+        "updatedAt": "2026-05-11T11:48:59.083Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/52"
       },
       "doge": {
         "relativePath": "icons-cache/tokens/doge.png",
-        "updatedAt": "2026-05-08T10:15:49.993Z",
+        "updatedAt": "2026-05-11T11:48:59.081Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/74"
       },
       "ju": {
         "relativePath": "icons-cache/tokens/ju.png",
-        "updatedAt": "2026-05-08T10:15:50.039Z",
+        "updatedAt": "2026-05-11T11:48:59.091Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/37275"
       },
       "bnb": {
         "relativePath": "icons-cache/tokens/bnb.png",
-        "updatedAt": "2026-05-08T10:15:49.988Z",
+        "updatedAt": "2026-05-11T11:48:59.086Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1839"
       },
       "genius": {
@@ -55,47 +55,47 @@
       },
       "usd1": {
         "relativePath": "icons-cache/tokens/usd1.png",
-        "updatedAt": "2026-05-08T10:15:50.002Z",
+        "updatedAt": "2026-05-11T11:48:59.090Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36148"
       },
       "weth": {
         "relativePath": "icons-cache/tokens/weth.png",
-        "updatedAt": "2026-05-08T10:15:50.015Z",
+        "updatedAt": "2026-05-11T11:48:59.092Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2396"
       },
       "trx": {
         "relativePath": "icons-cache/tokens/trx.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.098Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1958"
       },
       "chip": {
         "relativePath": "icons-cache/tokens/chip.png",
-        "updatedAt": "2026-05-08T07:40:39.290Z",
+        "updatedAt": "2026-05-11T10:01:55.992Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39870"
       },
       "zec": {
         "relativePath": "icons-cache/tokens/zec.png",
-        "updatedAt": "2026-05-08T10:15:50.004Z",
+        "updatedAt": "2026-05-11T11:48:59.093Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1437"
       },
       "quq": {
         "relativePath": "icons-cache/tokens/quq.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.107Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36101"
       },
       "ton": {
         "relativePath": "icons-cache/tokens/ton.png",
-        "updatedAt": "2026-05-07T17:47:19.133Z",
+        "updatedAt": "2026-05-11T19:19:09.296Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11419"
       },
       "pengu": {
         "relativePath": "icons-cache/tokens/pengu.png",
-        "updatedAt": "2026-05-06T10:11:40.773Z",
+        "updatedAt": "2026-05-11T06:28:29.424Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34466"
       },
       "vbnb": {
         "relativePath": "icons-cache/tokens/vbnb.png",
-        "updatedAt": "2026-05-08T04:12:14.063Z",
+        "updatedAt": "2026-05-11T17:12:38.471Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7961"
       },
       "pieverse": {
@@ -105,12 +105,12 @@
       },
       "ada": {
         "relativePath": "icons-cache/tokens/ada.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.096Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2010"
       },
       "fdusd": {
         "relativePath": "icons-cache/tokens/fdusd.png",
-        "updatedAt": "2026-05-08T10:15:50.050Z",
+        "updatedAt": "2026-05-11T11:48:59.103Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/26081"
       },
       "ape": {
@@ -120,12 +120,12 @@
       },
       "pepe": {
         "relativePath": "icons-cache/tokens/pepe.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.110Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/24478"
       },
       "aave": {
         "relativePath": "icons-cache/tokens/aave.png",
-        "updatedAt": "2026-05-08T10:15:50.052Z",
+        "updatedAt": "2026-05-11T11:48:59.103Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7278"
       },
       "orca": {
@@ -135,47 +135,47 @@
       },
       "tao": {
         "relativePath": "icons-cache/tokens/tao.png",
-        "updatedAt": "2026-05-08T10:15:50.052Z",
+        "updatedAt": "2026-05-11T11:48:59.104Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/22974"
       },
       "cbbtc": {
         "relativePath": "icons-cache/tokens/cbbtc.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.105Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32994"
       },
       "sui": {
         "relativePath": "icons-cache/tokens/sui.png",
-        "updatedAt": "2026-05-08T10:15:50.041Z",
+        "updatedAt": "2026-05-11T11:48:59.084Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/20947"
       },
       "hype": {
         "relativePath": "icons-cache/tokens/hype.png",
-        "updatedAt": "2026-05-08T10:15:50.058Z",
+        "updatedAt": "2026-05-11T11:48:59.115Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32196"
       },
       "sc": {
         "relativePath": "icons-cache/tokens/sc.png",
-        "updatedAt": "2026-05-08T10:15:50.050Z",
+        "updatedAt": "2026-05-11T11:48:59.115Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7760"
       },
       "xaut": {
         "relativePath": "icons-cache/tokens/xaut.png",
-        "updatedAt": "2026-05-08T09:49:58.791Z",
+        "updatedAt": "2026-05-11T22:00:32.185Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5176"
       },
       "ltc": {
         "relativePath": "icons-cache/tokens/ltc.png",
-        "updatedAt": "2026-05-08T10:15:50.053Z",
+        "updatedAt": "2026-05-11T11:48:59.111Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2"
       },
       "bio": {
         "relativePath": "icons-cache/tokens/bio.png",
-        "updatedAt": "2026-05-04T09:59:30.632Z",
+        "updatedAt": "2026-05-09T21:16:40.758Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34812"
       },
       "paxg": {
         "relativePath": "icons-cache/tokens/paxg.png",
-        "updatedAt": "2026-05-07T16:06:44.425Z",
+        "updatedAt": "2026-05-11T13:55:26.022Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/4705"
       },
       "pump": {
@@ -185,12 +185,12 @@
       },
       "link": {
         "relativePath": "icons-cache/tokens/link.png",
-        "updatedAt": "2026-05-08T10:15:50.040Z",
+        "updatedAt": "2026-05-11T11:48:59.096Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1975"
       },
       "wbnb": {
         "relativePath": "icons-cache/tokens/wbnb.png",
-        "updatedAt": "2026-05-08T10:15:50.050Z",
+        "updatedAt": "2026-05-11T11:48:59.117Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7192"
       },
       "prl": {
@@ -200,12 +200,12 @@
       },
       "bch": {
         "relativePath": "icons-cache/tokens/bch.png",
-        "updatedAt": "2026-05-08T10:15:50.053Z",
+        "updatedAt": "2026-05-11T11:48:59.127Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/1831"
       },
       "trump": {
         "relativePath": "icons-cache/tokens/trump.png",
-        "updatedAt": "2026-05-08T10:15:50.052Z",
+        "updatedAt": "2026-05-11T11:48:59.117Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35336"
       },
       "u": {
@@ -220,12 +220,12 @@
       },
       "fet": {
         "relativePath": "icons-cache/tokens/fet.png",
-        "updatedAt": "2026-05-05T23:47:42.647Z",
+        "updatedAt": "2026-05-12T01:25:37.055Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3773"
       },
       "avax": {
         "relativePath": "icons-cache/tokens/avax.png",
-        "updatedAt": "2026-05-08T10:15:50.058Z",
+        "updatedAt": "2026-05-11T11:48:59.115Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5805"
       },
       "zbt": {
@@ -245,17 +245,17 @@
       },
       "rusd": {
         "relativePath": "icons-cache/tokens/rusd.png",
-        "updatedAt": "2026-05-03T22:59:25.543Z",
+        "updatedAt": "2026-05-10T07:05:49.523Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39893"
       },
       "wbtc": {
         "relativePath": "icons-cache/tokens/wbtc.png",
-        "updatedAt": "2026-05-05T01:51:54.133Z",
+        "updatedAt": "2026-05-11T17:12:38.471Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/3717"
       },
       "xlm": {
         "relativePath": "icons-cache/tokens/xlm.png",
-        "updatedAt": "2026-04-29T08:56:15.886Z",
+        "updatedAt": "2026-05-11T17:12:38.471Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/512"
       },
       "blend": {
@@ -265,7 +265,7 @@
       },
       "aster": {
         "relativePath": "icons-cache/tokens/aster.png",
-        "updatedAt": "2026-05-06T19:42:17.358Z",
+        "updatedAt": "2026-05-11T07:44:50.493Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36341"
       },
       "tria": {
@@ -280,32 +280,32 @@
       },
       "shib": {
         "relativePath": "icons-cache/tokens/shib.png",
-        "updatedAt": "2026-05-01T13:43:26.318Z",
+        "updatedAt": "2026-05-10T22:52:45.294Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/5994"
       },
       "rlusd": {
         "relativePath": "icons-cache/tokens/rlusd.png",
-        "updatedAt": "2026-05-07T00:05:00.332Z",
+        "updatedAt": "2026-05-12T07:47:09.781Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/34387"
       },
       "uni": {
         "relativePath": "icons-cache/tokens/uni.png",
-        "updatedAt": "2026-05-08T06:55:12.425Z",
+        "updatedAt": "2026-05-12T07:47:09.790Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7083"
       },
       "me": {
         "relativePath": "icons-cache/tokens/me.png",
-        "updatedAt": "2026-05-03T21:53:25.338Z",
+        "updatedAt": "2026-05-10T01:19:38.023Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/32197"
       },
       "fil": {
         "relativePath": "icons-cache/tokens/fil.png",
-        "updatedAt": "2026-05-08T04:12:14.063Z",
+        "updatedAt": "2026-05-11T10:01:55.996Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/2280"
       },
       "wld": {
         "relativePath": "icons-cache/tokens/wld.png",
-        "updatedAt": "2026-05-06T19:10:51.661Z",
+        "updatedAt": "2026-05-11T01:20:29.228Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/13502"
       },
       "plume": {
@@ -320,7 +320,7 @@
       },
       "dot": {
         "relativePath": "icons-cache/tokens/dot.png",
-        "updatedAt": "2026-04-30T09:35:01.266Z",
+        "updatedAt": "2026-05-11T15:01:07.100Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6636"
       },
       "wlfi": {
@@ -330,13 +330,13 @@
       },
       "mega": {
         "relativePath": "icons-cache/tokens/mega.png",
-        "updatedAt": "2026-05-05T15:13:12.777Z",
+        "updatedAt": "2026-05-10T21:42:30.589Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/38770"
       },
       "opg": {
         "relativePath": "icons-cache/tokens/opg.png",
-        "updatedAt": "2026-05-07T19:11:07.995Z",
-        "sourceUrl": "https://s2.coinmarketcap.com/static/img/coins/64x64/39800.png"
+        "updatedAt": "2026-05-11T20:26:54.296Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39800"
       },
       "enso": {
         "relativePath": "icons-cache/tokens/enso.png",
@@ -355,7 +355,7 @@
       },
       "figr_heloc": {
         "relativePath": "icons-cache/tokens/figr_heloc.png",
-        "updatedAt": "2026-05-07T20:55:09.287Z",
+        "updatedAt": "2026-05-10T07:05:49.523Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39361"
       },
       "pendle": {
@@ -375,7 +375,7 @@
       },
       "lab": {
         "relativePath": "icons-cache/tokens/lab.png",
-        "updatedAt": "2026-05-07T16:06:44.436Z",
+        "updatedAt": "2026-05-12T07:38:53.716Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/33223"
       },
       "skyai": {
@@ -385,7 +385,7 @@
       },
       "dash": {
         "relativePath": "icons-cache/tokens/dash.png",
-        "updatedAt": "2026-05-07T02:40:51.132Z",
+        "updatedAt": "2026-05-09T19:42:19.234Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/131"
       },
       "ordi": {
@@ -415,7 +415,7 @@
       },
       "st": {
         "relativePath": "icons-cache/tokens/st.png",
-        "updatedAt": "2026-05-08T10:15:50.061Z",
+        "updatedAt": "2026-05-11T11:48:59.096Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39802"
       },
       "pros": {
@@ -440,13 +440,13 @@
       },
       "ondo": {
         "relativePath": "icons-cache/tokens/ondo.png",
-        "updatedAt": "2026-05-07T12:20:14.591Z",
+        "updatedAt": "2026-05-11T17:19:54.632Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/21159"
       },
       "bill": {
         "relativePath": "icons-cache/tokens/bill.png",
-        "updatedAt": "2026-05-07T19:11:07.995Z",
-        "sourceUrl": "https://s2.coinmarketcap.com/static/img/coins/64x64/39545.png"
+        "updatedAt": "2026-05-11T20:26:54.296Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39545"
       },
       "ath": {
         "relativePath": "icons-cache/tokens/ath.png",
@@ -460,7 +460,7 @@
       },
       "near": {
         "relativePath": "icons-cache/tokens/near.png",
-        "updatedAt": "2026-05-08T09:49:58.800Z",
+        "updatedAt": "2026-05-11T11:03:01.456Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6535"
       },
       "dogs": {
@@ -470,7 +470,7 @@
       },
       "ena": {
         "relativePath": "icons-cache/tokens/ena.png",
-        "updatedAt": "2026-05-08T09:49:58.800Z",
+        "updatedAt": "2026-05-09T10:00:59.457Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30171"
       },
       "rave": {
@@ -485,7 +485,7 @@
       },
       "icp": {
         "relativePath": "icons-cache/tokens/icp.png",
-        "updatedAt": "2026-05-08T06:55:12.425Z",
+        "updatedAt": "2026-05-11T22:16:40.047Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/8916"
       },
       "wif": {
@@ -505,7 +505,7 @@
       },
       "xmr": {
         "relativePath": "icons-cache/tokens/xmr.png",
-        "updatedAt": "2026-05-06T14:30:05.335Z",
+        "updatedAt": "2026-05-11T23:48:42.206Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/328"
       },
       "b3": {
@@ -520,12 +520,12 @@
       },
       "acu": {
         "relativePath": "icons-cache/tokens/acu.png",
-        "updatedAt": "2026-05-08T09:49:58.786Z",
+        "updatedAt": "2026-05-10T13:04:16.758Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36492"
       },
       "jto": {
         "relativePath": "icons-cache/tokens/jto.png",
-        "updatedAt": "2026-05-07T12:02:39.580Z",
+        "updatedAt": "2026-05-08T16:10:21.288Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/28541"
       },
       "dai": {
@@ -545,24 +545,89 @@
       },
       "strk": {
         "relativePath": "icons-cache/tokens/strk.png",
-        "updatedAt": "2026-05-08T10:15:50.061Z",
+        "updatedAt": "2026-05-09T11:09:09.481Z",
         "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/22691"
+      },
+      "gala": {
+        "relativePath": "icons-cache/tokens/gala.png",
+        "updatedAt": "2026-05-09T18:20:57.985Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/7080"
+      },
+      "op": {
+        "relativePath": "icons-cache/tokens/op.png",
+        "updatedAt": "2026-05-08T22:36:54.776Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11840"
+      },
+      "arb": {
+        "relativePath": "icons-cache/tokens/arb.png",
+        "updatedAt": "2026-05-09T01:08:16.173Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/11841"
+      },
+      "sahara": {
+        "relativePath": "icons-cache/tokens/sahara.png",
+        "updatedAt": "2026-05-10T13:04:16.757Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/36671"
+      },
+      "layer": {
+        "relativePath": "icons-cache/tokens/layer.png",
+        "updatedAt": "2026-05-11T06:28:29.427Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35429"
+      },
+      "bito": {
+        "relativePath": "icons-cache/tokens/bito.png",
+        "updatedAt": "2026-05-10T13:37:14.853Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6118"
+      },
+      "apt": {
+        "relativePath": "icons-cache/tokens/apt.png",
+        "updatedAt": "2026-05-11T22:00:32.184Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/21794"
+      },
+      "kaio": {
+        "relativePath": "icons-cache/tokens/kaio.png",
+        "updatedAt": "2026-05-11T11:03:01.456Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/39903"
+      },
+      "osmo": {
+        "relativePath": "icons-cache/tokens/osmo.png",
+        "updatedAt": "2026-05-11T11:55:11.116Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/12220"
+      },
+      "ldo": {
+        "relativePath": "icons-cache/tokens/ldo.png",
+        "updatedAt": "2026-05-11T19:19:09.296Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/8000"
+      },
+      "saga": {
+        "relativePath": "icons-cache/tokens/saga.png",
+        "updatedAt": "2026-05-11T22:16:40.047Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/30372"
+      },
+      "crv": {
+        "relativePath": "icons-cache/tokens/crv.png",
+        "updatedAt": "2026-05-12T00:48:44.943Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/6538"
+      },
+      "vvv": {
+        "relativePath": "icons-cache/tokens/vvv.png",
+        "updatedAt": "2026-05-12T07:38:53.716Z",
+        "sourceUrl": "http://localhost:4000/api/v1/market/token-icon/35509"
       }
     },
     "dapps": {
       "opensea.io": {
         "relativePath": "icons-cache/dapps/opensea.io.ico",
-        "updatedAt": "2026-05-08T10:15:51.265Z",
+        "updatedAt": "2026-05-11T11:49:00.195Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/opensea.io.ico"
       },
       "pancakeswap.finance": {
         "relativePath": "icons-cache/dapps/pancakeswap.finance.jpg",
-        "updatedAt": "2026-05-08T10:15:51.172Z",
+        "updatedAt": "2026-05-11T11:49:00.074Z",
         "sourceUrl": "https://icons.llama.fi/pancakeswap-amm.jpg"
       },
       "app.uniswap.org": {
         "relativePath": "icons-cache/dapps/app.uniswap.org.png",
-        "updatedAt": "2026-05-08T10:15:51.164Z",
+        "updatedAt": "2026-05-11T11:49:00.076Z",
         "sourceUrl": "https://icons.llama.fi/uniswap-v3.png"
       },
       "app.1inch.io": {
@@ -582,7 +647,7 @@
       },
       "stake.lido.fi": {
         "relativePath": "icons-cache/dapps/stake.lido.fi.png",
-        "updatedAt": "2026-05-08T10:15:51.248Z",
+        "updatedAt": "2026-05-11T11:49:00.252Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/stake.lido.fi.ico"
       },
       "jup.ag": {
@@ -592,7 +657,7 @@
       },
       "app.aave.com": {
         "relativePath": "icons-cache/dapps/app.aave.com.ico",
-        "updatedAt": "2026-05-08T10:15:51.198Z",
+        "updatedAt": "2026-05-11T11:49:00.282Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/app.aave.com.ico"
       },
       "coinmarketcap.com": {
@@ -617,212 +682,212 @@
       },
       "bitfinex.com": {
         "relativePath": "icons-cache/dapps/bitfinex.com.png",
-        "updatedAt": "2026-05-08T10:15:50.316Z",
+        "updatedAt": "2026-05-11T11:48:59.385Z",
         "sourceUrl": "https://icons.llama.fi/bitfinex.png"
       },
       "binance.com": {
         "relativePath": "icons-cache/dapps/binance.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.317Z",
+        "updatedAt": "2026-05-11T11:48:59.369Z",
         "sourceUrl": "https://icons.llama.fi/binance-cex.jpg"
       },
       "bybit.com": {
         "relativePath": "icons-cache/dapps/bybit.com.png",
-        "updatedAt": "2026-05-08T10:15:50.329Z",
+        "updatedAt": "2026-05-11T11:48:59.368Z",
         "sourceUrl": "https://icons.llama.fi/bybit.png"
       },
       "aave.com": {
         "relativePath": "icons-cache/dapps/aave.com.png",
-        "updatedAt": "2026-05-08T10:15:50.325Z",
+        "updatedAt": "2026-05-11T11:48:59.177Z",
         "sourceUrl": "https://icons.llama.fi/aave-v3.png"
       },
       "okx.com": {
         "relativePath": "icons-cache/dapps/okx.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.316Z",
+        "updatedAt": "2026-05-11T11:48:59.384Z",
         "sourceUrl": "https://icons.llama.fi/okx.jpg"
       },
       "robinhood.com": {
         "relativePath": "icons-cache/dapps/robinhood.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.318Z",
+        "updatedAt": "2026-05-11T11:48:59.387Z",
         "sourceUrl": "https://icons.llama.fi/robinhood.jpg"
       },
       "ssv.network": {
         "relativePath": "icons-cache/dapps/ssv.network.jpg",
-        "updatedAt": "2026-05-08T10:15:50.117Z",
+        "updatedAt": "2026-05-11T11:48:59.183Z",
         "sourceUrl": "https://icons.llama.fi/ssv-network.jpg"
       },
       "eigencloud.xyz": {
         "relativePath": "icons-cache/dapps/eigencloud.xyz.png",
-        "updatedAt": "2026-05-08T10:15:50.150Z",
+        "updatedAt": "2026-05-11T11:48:59.203Z",
         "sourceUrl": "https://icons.llama.fi/eigencloud.png"
       },
       "app.morpho.org": {
         "relativePath": "icons-cache/dapps/app.morpho.org.png",
-        "updatedAt": "2026-05-08T10:15:50.351Z",
+        "updatedAt": "2026-05-11T11:48:59.396Z",
         "sourceUrl": "https://icons.llama.fi/morpho-blue.png"
       },
       "gemini.com": {
         "relativePath": "icons-cache/dapps/gemini.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.537Z",
+        "updatedAt": "2026-05-11T11:48:59.578Z",
         "sourceUrl": "https://icons.llama.fi/gemini.jpg"
       },
       "wbtc.network": {
         "relativePath": "icons-cache/dapps/wbtc.network.png",
-        "updatedAt": "2026-05-08T10:15:50.347Z",
+        "updatedAt": "2026-05-11T11:48:59.409Z",
         "sourceUrl": "https://icons.llama.fi/wbtc.png"
       },
       "lido.fi": {
         "relativePath": "icons-cache/dapps/lido.fi.png",
-        "updatedAt": "2026-05-08T10:15:50.140Z",
+        "updatedAt": "2026-05-11T11:48:59.195Z",
         "sourceUrl": "https://icons.llama.fi/lido.png"
       },
       "app.sky.money": {
         "relativePath": "icons-cache/dapps/app.sky.money.jpg",
-        "updatedAt": "2026-05-08T10:15:50.523Z",
+        "updatedAt": "2026-05-11T11:48:59.604Z",
         "sourceUrl": "https://icons.llama.fi/sky-lending.jpg"
       },
       "bitget.com": {
         "relativePath": "icons-cache/dapps/bitget.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.536Z",
+        "updatedAt": "2026-05-11T11:48:59.570Z",
         "sourceUrl": "https://icons.llama.fi/bitget.jpg"
       },
       "ether.fi": {
         "relativePath": "icons-cache/dapps/ether.fi.jpg",
-        "updatedAt": "2026-05-08T10:15:50.356Z",
+        "updatedAt": "2026-05-11T11:48:59.398Z",
         "sourceUrl": "https://icons.llama.fi/ether.fi.jpg"
       },
       "htx.com": {
         "relativePath": "icons-cache/dapps/htx.com.png",
-        "updatedAt": "2026-05-08T10:15:50.530Z",
+        "updatedAt": "2026-05-11T11:48:59.622Z",
         "sourceUrl": "https://icons.llama.fi/htx.png"
       },
       "coinbase.com": {
         "relativePath": "icons-cache/dapps/coinbase.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.533Z",
+        "updatedAt": "2026-05-11T11:48:59.424Z",
         "sourceUrl": "https://icons.llama.fi/coinbase-bridge.jpg"
       },
       "mexc.com": {
         "relativePath": "icons-cache/dapps/mexc.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.564Z",
+        "updatedAt": "2026-05-11T11:48:59.601Z",
         "sourceUrl": "https://icons.llama.fi/mexc.jpg"
       },
       "app.hyperliquid.xyz": {
         "relativePath": "icons-cache/dapps/app.hyperliquid.xyz.png",
-        "updatedAt": "2026-05-08T10:15:50.366Z",
+        "updatedAt": "2026-05-11T11:48:59.623Z",
         "sourceUrl": "https://icons.llama.fi/hyperliquid.png"
       },
       "app.ethena.fi": {
         "relativePath": "icons-cache/dapps/app.ethena.fi.png",
-        "updatedAt": "2026-05-08T10:15:50.733Z",
+        "updatedAt": "2026-05-11T11:48:59.788Z",
         "sourceUrl": "https://icons.llama.fi/ethena-usde.png"
       },
       "gate.com": {
         "relativePath": "icons-cache/dapps/gate.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.547Z",
+        "updatedAt": "2026-05-11T11:48:59.600Z",
         "sourceUrl": "https://icons.llama.fi/gate.jpg"
       },
       "babylonlabs.io": {
         "relativePath": "icons-cache/dapps/babylonlabs.io.jpg",
-        "updatedAt": "2026-05-08T10:15:50.730Z",
+        "updatedAt": "2026-05-11T11:48:59.773Z",
         "sourceUrl": "https://icons.llama.fi/babylon-protocol.jpg"
       },
       "deribit.com": {
         "relativePath": "icons-cache/dapps/deribit.com.png",
-        "updatedAt": "2026-05-08T10:15:50.577Z",
+        "updatedAt": "2026-05-11T11:48:59.639Z",
         "sourceUrl": "https://icons.llama.fi/deribit.png"
       },
       "justlend.just.network": {
         "relativePath": "icons-cache/dapps/justlend.just.network.png",
-        "updatedAt": "2026-05-08T10:15:50.737Z",
+        "updatedAt": "2026-05-11T11:48:59.806Z",
         "sourceUrl": "https://icons.llama.fi/justlend.png"
       },
       "usdt0.to": {
         "relativePath": "icons-cache/dapps/usdt0.to.jpg",
-        "updatedAt": "2026-05-08T10:15:50.547Z",
+        "updatedAt": "2026-05-11T11:48:59.620Z",
         "sourceUrl": "https://icons.llama.fi/usdt0.jpg"
       },
       "app.spark.fi": {
         "relativePath": "icons-cache/dapps/app.spark.fi.jpg",
-        "updatedAt": "2026-05-08T10:15:50.750Z",
+        "updatedAt": "2026-05-11T11:48:59.801Z",
         "sourceUrl": "https://icons.llama.fi/sparklend.jpg"
       },
       "kucoin.com": {
         "relativePath": "icons-cache/dapps/kucoin.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.765Z",
+        "updatedAt": "2026-05-11T11:48:59.827Z",
         "sourceUrl": "https://icons.llama.fi/kucoin.jpg"
       },
       "portal.arbitrum.io": {
         "relativePath": "icons-cache/dapps/portal.arbitrum.io.png",
-        "updatedAt": "2026-05-08T10:15:50.751Z",
+        "updatedAt": "2026-05-11T11:48:59.864Z",
         "sourceUrl": "https://icons.llama.fi/arbitrum-bridge.png"
       },
       "circle.com": {
         "relativePath": "icons-cache/dapps/circle.com.png",
-        "updatedAt": "2026-05-07T16:06:44.847Z",
+        "updatedAt": "2026-05-11T17:19:54.900Z",
         "sourceUrl": "https://icons.llama.fi/circle-usyc.png"
       },
       "gold.tether.to": {
         "relativePath": "icons-cache/dapps/gold.tether.to.png",
-        "updatedAt": "2026-05-08T10:15:50.764Z",
+        "updatedAt": "2026-05-11T11:48:59.831Z",
         "sourceUrl": "https://icons.llama.fi/tether-gold.png"
       },
       "securitize.io": {
         "relativePath": "icons-cache/dapps/securitize.io.png",
-        "updatedAt": "2026-05-08T10:15:50.778Z",
+        "updatedAt": "2026-05-11T11:48:59.649Z",
         "sourceUrl": "https://icons.llama.fi/blackrock-buidl.png"
       },
       "docs.base.org": {
         "relativePath": "icons-cache/dapps/docs.base.org.jpg",
-        "updatedAt": "2026-05-08T10:15:50.956Z",
+        "updatedAt": "2026-05-11T11:48:59.860Z",
         "sourceUrl": "https://icons.llama.fi/base-bridge.jpg"
       },
       "data.grove.finance": {
         "relativePath": "icons-cache/dapps/data.grove.finance.jpg",
-        "updatedAt": "2026-05-08T10:15:50.959Z",
+        "updatedAt": "2026-05-11T11:49:00.017Z",
         "sourceUrl": "https://icons.llama.fi/grove-finance.jpg"
       },
       "portalbridge.com": {
         "relativePath": "icons-cache/dapps/portalbridge.com.png",
-        "updatedAt": "2026-05-08T10:15:51.172Z",
+        "updatedAt": "2026-05-11T11:48:59.852Z",
         "sourceUrl": "https://icons.llama.fi/portal.png"
       },
       "ondo.finance": {
         "relativePath": "icons-cache/dapps/ondo.finance.jpg",
-        "updatedAt": "2026-05-08T10:15:50.957Z",
+        "updatedAt": "2026-05-11T11:48:59.791Z",
         "sourceUrl": "https://icons.llama.fi/ondo-yield-assets.jpg"
       },
       "polygon.technology": {
         "relativePath": "icons-cache/dapps/polygon.technology.jpg",
-        "updatedAt": "2026-05-08T10:15:50.977Z",
+        "updatedAt": "2026-05-11T11:49:00.017Z",
         "sourceUrl": "https://icons.llama.fi/polygon-bridge.jpg"
       },
       "just.network": {
         "relativePath": "icons-cache/dapps/just.network.png",
-        "updatedAt": "2026-05-08T10:15:50.960Z",
+        "updatedAt": "2026-05-11T11:49:00.010Z",
         "sourceUrl": "https://icons.llama.fi/justcryptos.png"
       },
       "curve.finance": {
         "relativePath": "icons-cache/dapps/curve.finance.png",
-        "updatedAt": "2026-05-08T10:15:50.970Z",
+        "updatedAt": "2026-05-11T11:48:59.874Z",
         "sourceUrl": "https://icons.llama.fi/curve.png"
       },
       "paxos.com": {
         "relativePath": "icons-cache/dapps/paxos.com.png",
-        "updatedAt": "2026-05-08T10:15:50.975Z",
+        "updatedAt": "2026-05-11T11:48:59.841Z",
         "sourceUrl": "https://icons.llama.fi/paxos-gold.png"
       },
       "crypto.com": {
         "relativePath": "icons-cache/dapps/crypto.com.jpg",
-        "updatedAt": "2026-05-08T10:15:50.983Z",
+        "updatedAt": "2026-05-11T11:49:00.016Z",
         "sourceUrl": "https://icons.llama.fi/crypto-com.jpg"
       },
       "maple.finance": {
         "relativePath": "icons-cache/dapps/maple.finance.png",
-        "updatedAt": "2026-05-08T10:15:50.985Z",
+        "updatedAt": "2026-05-11T11:49:00.042Z",
         "sourceUrl": "https://icons.llama.fi/maple.png"
       },
       "data.spark.fi": {
         "relativePath": "icons-cache/dapps/data.spark.fi.jpg",
-        "updatedAt": "2026-05-07T19:11:08.371Z",
+        "updatedAt": "2026-05-11T20:26:54.532Z",
         "sourceUrl": "https://icons.llama.fi/spark-savings.jpg"
       },
       "figuremarkets.com": {
@@ -832,12 +897,12 @@
       },
       "centrifuge.io": {
         "relativePath": "icons-cache/dapps/centrifuge.io.jpg",
-        "updatedAt": "2026-05-08T09:50:30.945Z",
+        "updatedAt": "2026-05-11T11:03:01.659Z",
         "sourceUrl": "https://icons.llama.fi/centrifuge-protocol.jpg"
       },
       "app.falcon.finance": {
         "relativePath": "icons-cache/dapps/app.falcon.finance.jpg",
-        "updatedAt": "2026-05-07T19:11:08.380Z",
+        "updatedAt": "2026-05-11T11:03:01.690Z",
         "sourceUrl": "https://icons.llama.fi/falcon-finance.jpg"
       },
       "obol.org": {
@@ -862,259 +927,264 @@
       },
       "defillama.com": {
         "relativePath": "icons-cache/dapps/defillama.com.jpg",
-        "updatedAt": "2026-05-07T17:47:19.449Z",
+        "updatedAt": "2026-05-11T19:19:09.918Z",
         "sourceUrl": "https://icons.llama.fi/steakhouse-financial.jpg"
+      },
+      "pendle.finance": {
+        "relativePath": "icons-cache/dapps/pendle.finance.jpg",
+        "updatedAt": "2026-05-10T19:47:55.190Z",
+        "sourceUrl": "https://icons.llama.fi/pendle.jpg"
       }
     },
     "sites": {
       "defillama.com": {
         "relativePath": "icons-cache/sites/defillama.com.png",
-        "updatedAt": "2026-05-08T10:15:51.485Z",
+        "updatedAt": "2026-05-11T11:49:00.514Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/defillama.com.ico"
       },
       "coinpaprika.com": {
         "relativePath": "icons-cache/sites/coinpaprika.com.png",
-        "updatedAt": "2026-05-08T10:15:51.484Z",
+        "updatedAt": "2026-05-11T11:49:00.507Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/coinpaprika.com.ico"
       },
       "coinmarketcap.com": {
         "relativePath": "icons-cache/sites/coinmarketcap.com.ico",
-        "updatedAt": "2026-05-08T10:15:52.221Z",
+        "updatedAt": "2026-05-11T11:49:00.370Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/coinmarketcap.com.ico"
       },
       "coingecko.com": {
         "relativePath": "icons-cache/sites/coingecko.com.png",
-        "updatedAt": "2026-05-08T10:15:51.341Z",
+        "updatedAt": "2026-05-11T11:49:00.371Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.coingecko.com.ico"
       },
       "livecoinwatch.com": {
         "relativePath": "icons-cache/sites/livecoinwatch.com.png",
-        "updatedAt": "2026-05-08T10:15:51.352Z",
+        "updatedAt": "2026-05-11T11:49:00.370Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.livecoinwatch.com.ico"
       },
       "glassnode.com": {
         "relativePath": "icons-cache/sites/glassnode.com.png",
-        "updatedAt": "2026-05-08T10:15:51.489Z",
+        "updatedAt": "2026-05-11T11:49:00.561Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/glassnode.com.ico"
       },
       "dune.com": {
         "relativePath": "icons-cache/sites/dune.com.ico",
-        "updatedAt": "2026-05-08T10:15:51.557Z",
+        "updatedAt": "2026-05-11T11:49:00.579Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/dune.com.ico"
       },
       "cryptoquant.com": {
         "relativePath": "icons-cache/sites/cryptoquant.com.ico",
-        "updatedAt": "2026-05-08T10:15:52.807Z",
+        "updatedAt": "2026-05-11T11:49:00.454Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/cryptoquant.com.ico"
       },
       "artemis.xyz": {
         "relativePath": "icons-cache/sites/artemis.xyz.png",
-        "updatedAt": "2026-05-08T10:15:53.805Z",
+        "updatedAt": "2026-05-11T11:49:00.460Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.artemis.xyz.ico"
       },
       "theblock.co": {
         "relativePath": "icons-cache/sites/theblock.co.png",
-        "updatedAt": "2026-05-08T10:15:51.562Z",
+        "updatedAt": "2026-05-11T11:49:00.531Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.theblock.co.ico"
       },
       "coindesk.com": {
         "relativePath": "icons-cache/sites/coindesk.com.png",
-        "updatedAt": "2026-05-08T10:15:51.553Z",
+        "updatedAt": "2026-05-11T11:49:00.450Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.coindesk.com.ico"
       },
       "cointelegraph.com": {
         "relativePath": "icons-cache/sites/cointelegraph.com.png",
-        "updatedAt": "2026-05-08T10:15:51.556Z",
+        "updatedAt": "2026-05-11T11:49:00.526Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/cointelegraph.com.ico"
       },
       "decrypt.co": {
         "relativePath": "icons-cache/sites/decrypt.co.png",
-        "updatedAt": "2026-05-08T10:15:51.623Z",
+        "updatedAt": "2026-05-11T11:49:00.556Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/decrypt.co.ico"
       },
       "blockworks.co": {
         "relativePath": "icons-cache/sites/blockworks.co.png",
-        "updatedAt": "2026-05-08T10:15:51.630Z",
+        "updatedAt": "2026-05-11T11:49:00.580Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/blockworks.co.ico"
       },
       "certik.com": {
         "relativePath": "icons-cache/sites/certik.com.png",
-        "updatedAt": "2026-05-08T10:15:51.698Z",
+        "updatedAt": "2026-05-11T11:49:00.612Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.certik.com.ico"
       },
       "etherscan.io": {
         "relativePath": "icons-cache/sites/etherscan.io.ico",
-        "updatedAt": "2026-05-08T10:15:52.650Z",
+        "updatedAt": "2026-05-11T11:49:00.658Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/etherscan.io.ico"
       },
       "revoke.cash": {
         "relativePath": "icons-cache/sites/revoke.cash.ico",
-        "updatedAt": "2026-05-08T10:15:53.389Z",
+        "updatedAt": "2026-05-11T11:49:00.648Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/revoke.cash.ico"
       },
       "mempool.space": {
         "relativePath": "icons-cache/sites/mempool.space.png",
-        "updatedAt": "2026-05-08T10:15:51.774Z",
+        "updatedAt": "2026-05-11T11:49:00.663Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/mempool.space.ico"
       },
       "chainalysis.com": {
         "relativePath": "icons-cache/sites/chainalysis.com.ico",
-        "updatedAt": "2026-05-08T10:15:51.630Z",
+        "updatedAt": "2026-05-11T11:49:00.653Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.chainalysis.com.ico"
       },
       "cryptocompare.com": {
         "relativePath": "icons-cache/sites/cryptocompare.com.png",
-        "updatedAt": "2026-05-08T10:15:51.682Z",
+        "updatedAt": "2026-05-11T11:49:00.814Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.cryptocompare.com.ico"
       },
       "arkhamintelligence.com": {
         "relativePath": "icons-cache/sites/arkhamintelligence.com.png",
-        "updatedAt": "2026-05-08T10:15:52.369Z",
+        "updatedAt": "2026-05-11T11:49:00.728Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/platform.arkhamintelligence.com.ico"
       },
       "blockchain.com": {
         "relativePath": "icons-cache/sites/blockchain.com.png",
-        "updatedAt": "2026-05-08T10:15:51.848Z",
+        "updatedAt": "2026-05-11T11:49:00.687Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.blockchain.com.ico"
       },
       "solscan.io": {
         "relativePath": "icons-cache/sites/solscan.io.png",
-        "updatedAt": "2026-05-08T10:15:52.295Z",
+        "updatedAt": "2026-05-11T11:49:00.741Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/solscan.io.ico"
       },
       "bscscan.com": {
         "relativePath": "icons-cache/sites/bscscan.com.ico",
-        "updatedAt": "2026-05-08T10:15:52.415Z",
+        "updatedAt": "2026-05-11T11:49:00.693Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/bscscan.com.ico"
       },
       "tokenterminal.com": {
         "relativePath": "icons-cache/sites/tokenterminal.com.ico",
-        "updatedAt": "2026-05-08T10:15:52.443Z",
+        "updatedAt": "2026-05-11T11:49:00.800Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/tokenterminal.com.ico"
       },
       "coinbase.com": {
         "relativePath": "icons-cache/sites/coinbase.com.png",
-        "updatedAt": "2026-05-08T10:15:52.513Z",
+        "updatedAt": "2026-05-11T11:49:00.762Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.coinbase.com.ico"
       },
       "bankless.com": {
         "relativePath": "icons-cache/sites/bankless.com.png",
-        "updatedAt": "2026-05-08T10:15:52.586Z",
+        "updatedAt": "2026-05-11T11:49:00.771Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.bankless.com.ico"
       },
       "messari.io": {
         "relativePath": "icons-cache/sites/messari.io.ico",
-        "updatedAt": "2026-05-08T10:15:52.897Z",
+        "updatedAt": "2026-05-11T11:49:00.842Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/messari.io.ico"
       },
       "a16zcrypto.com": {
         "relativePath": "icons-cache/sites/a16zcrypto.com.webp",
-        "updatedAt": "2026-05-08T10:15:54.526Z",
+        "updatedAt": "2026-05-11T11:49:00.828Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/a16zcrypto.com.ico"
       },
       "coinbureau.com": {
-        "relativePath": "icons-cache/sites/coinbureau.com.png",
-        "updatedAt": "2026-05-08T10:15:55.515Z",
-        "sourceUrl": "https://www.google.com/s2/favicons?domain=www.coinbureau.com&sz=256"
+        "relativePath": "icons-cache/sites/coinbureau.com.ico",
+        "updatedAt": "2026-05-11T11:49:02.231Z",
+        "sourceUrl": "https://icons.duckduckgo.com/ip3/www.coinbureau.com.ico"
       },
       "academy.binance.com": {
         "relativePath": "icons-cache/sites/academy.binance.com.png",
-        "updatedAt": "2026-05-08T10:15:53.703Z",
+        "updatedAt": "2026-05-11T11:49:01.901Z",
         "sourceUrl": "https://www.google.com/s2/favicons?domain=academy.binance.com&sz=256"
       },
       "cryptorank.io": {
         "relativePath": "icons-cache/sites/cryptorank.io.png",
-        "updatedAt": "2026-05-08T10:15:52.879Z",
+        "updatedAt": "2026-05-11T11:49:00.847Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/cryptorank.io.ico"
       },
       "scamsniffer.io": {
         "relativePath": "icons-cache/sites/scamsniffer.io.ico",
-        "updatedAt": "2026-05-08T10:15:53.937Z",
+        "updatedAt": "2026-05-11T11:49:00.819Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.scamsniffer.io.ico"
       },
       "nansen.ai": {
         "relativePath": "icons-cache/sites/nansen.ai.png",
-        "updatedAt": "2026-05-08T10:15:53.096Z",
+        "updatedAt": "2026-05-11T11:49:00.915Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.nansen.ai.ico"
       },
       "coinstats.app": {
         "relativePath": "icons-cache/sites/coinstats.app.png",
-        "updatedAt": "2026-05-08T10:15:53.022Z",
+        "updatedAt": "2026-05-11T11:49:00.906Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/coinstats.app.ico"
       },
       "coincodex.com": {
         "relativePath": "icons-cache/sites/coincodex.com.png",
-        "updatedAt": "2026-05-08T10:15:52.950Z",
+        "updatedAt": "2026-05-11T11:49:00.869Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/coincodex.com.ico"
       },
       "intotheblock.com": {
         "relativePath": "icons-cache/sites/intotheblock.com.png",
-        "updatedAt": "2026-05-08T10:15:54.225Z",
+        "updatedAt": "2026-05-11T11:49:00.921Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/app.intotheblock.com.ico"
       },
       "santiment.net": {
         "relativePath": "icons-cache/sites/santiment.net.png",
-        "updatedAt": "2026-05-08T10:15:53.461Z",
+        "updatedAt": "2026-05-11T11:49:00.927Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/santiment.net.ico"
       },
       "token.unlocks.app": {
         "relativePath": "icons-cache/sites/token.unlocks.app.png",
-        "updatedAt": "2026-05-08T10:15:56.729Z",
+        "updatedAt": "2026-05-11T11:49:03.783Z",
         "sourceUrl": "https://www.google.com/s2/favicons?domain=token.unlocks.app&sz=256"
       },
       "footprint.network": {
         "relativePath": "icons-cache/sites/footprint.network.ico",
-        "updatedAt": "2026-05-08T10:15:53.797Z",
+        "updatedAt": "2026-05-11T11:49:00.994Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.footprint.network.ico"
       },
       "bitcoinmagazine.com": {
         "relativePath": "icons-cache/sites/bitcoinmagazine.com.png",
-        "updatedAt": "2026-05-08T10:15:53.869Z",
+        "updatedAt": "2026-05-11T11:49:00.996Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/bitcoinmagazine.com.ico"
       },
       "thedefiant.io": {
         "relativePath": "icons-cache/sites/thedefiant.io.ico",
-        "updatedAt": "2026-05-08T10:15:55.075Z",
+        "updatedAt": "2026-05-11T11:49:01.007Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/thedefiant.io.ico"
       },
       "immunefi.com": {
         "relativePath": "icons-cache/sites/immunefi.com.png",
-        "updatedAt": "2026-05-08T10:15:54.104Z",
+        "updatedAt": "2026-05-11T11:49:01.083Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/immunefi.com.ico"
       },
       "wublockchain.com": {
         "relativePath": "icons-cache/sites/wublockchain.com.ico",
-        "updatedAt": "2026-05-08T10:15:55.261Z",
+        "updatedAt": "2026-05-11T11:49:00.999Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/wublockchain.com.ico"
       },
       "cryptoslate.com": {
         "relativePath": "icons-cache/sites/cryptoslate.com.png",
-        "updatedAt": "2026-05-08T10:15:54.012Z",
+        "updatedAt": "2026-05-11T11:49:01.006Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/cryptoslate.com.ico"
       },
       "dlnews.com": {
         "relativePath": "icons-cache/sites/dlnews.com.png",
-        "updatedAt": "2026-05-08T10:15:57.206Z",
+        "updatedAt": "2026-05-11T11:49:03.925Z",
         "sourceUrl": "https://www.google.com/s2/favicons?domain=www.dlnews.com&sz=256"
       },
       "hacken.io": {
         "relativePath": "icons-cache/sites/hacken.io.ico",
-        "updatedAt": "2026-05-08T10:15:55.390Z",
+        "updatedAt": "2026-05-11T11:49:01.098Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/hacken.io.ico"
       },
       "slowmist.com": {
         "relativePath": "icons-cache/sites/slowmist.com.ico",
-        "updatedAt": "2026-05-08T10:15:52.753Z",
+        "updatedAt": "2026-05-11T11:49:00.612Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/www.slowmist.com.ico"
       },
       "peckshield.com": {
         "relativePath": "icons-cache/sites/peckshield.com.png",
-        "updatedAt": "2026-05-08T10:15:56.846Z",
+        "updatedAt": "2026-05-11T11:49:03.928Z",
         "sourceUrl": "https://www.google.com/s2/favicons?domain=peckshield.com&sz=256"
       },
       "coin360.com": {
         "relativePath": "icons-cache/sites/coin360.com.ico",
-        "updatedAt": "2026-05-08T10:15:54.023Z",
+        "updatedAt": "2026-05-11T11:49:00.906Z",
         "sourceUrl": "https://icons.duckduckgo.com/ip3/coin360.com.ico"
       }
     }

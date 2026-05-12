@@ -1,4 +1,5 @@
 import { ChainCode, chainRegexMap } from '../domain/wallet-domain';
+import { resolveBackendBaseUrl } from './backendBaseUrl';
 
 type EthLikeChain = 'ETH' | 'BSC';
 type UsdtBalanceMap = Partial<Record<EthLikeChain | 'TRX', number>>;
@@ -9,13 +10,14 @@ export type OnchainBalanceSnapshot = {
   fetchedAt: string;
 };
 
-const ETH_RPC_URL = 'https://ethereum-rpc.publicnode.com';
-const BSC_RPC_URL = 'https://bsc-dataseed.binance.org';
-const SOL_RPC_URL = 'https://api.mainnet-beta.solana.com';
-const XRP_RPC_URL = 'https://xrplcluster.com';
-const FIL_RPC_URL = 'https://api.node.glif.io/rpc/v1';
-const TRX_ACCOUNT_URL = 'https://api.trongrid.io/v1/accounts';
-const BTC_ADDRESS_URL = 'https://blockstream.info/api/address';
+const RPC_PROXY_BASE = `${resolveBackendBaseUrl()}/api/v1/rpc`;
+const ETH_RPC_URL = `${RPC_PROXY_BASE}/eth`;
+const BSC_RPC_URL = `${RPC_PROXY_BASE}/bsc`;
+const SOL_RPC_URL = `${RPC_PROXY_BASE}/sol`;
+const XRP_RPC_URL = `${RPC_PROXY_BASE}/xrp`;
+const FIL_RPC_URL = `${RPC_PROXY_BASE}/fil`;
+const TRX_ACCOUNT_URL = `${RPC_PROXY_BASE}/trx/account`;
+const BTC_ADDRESS_URL = `${RPC_PROXY_BASE}/btc/address`;
 const USDT_ERC20_CONTRACT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
 const USDT_TRC20_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';

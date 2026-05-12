@@ -1,8 +1,9 @@
 import React from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 type ReceiveQrCardProps = {
-  qrUri: string;
+  qrValue: string;
   address: string;
   emptyHint: string;
   copyLabel: string;
@@ -12,14 +13,20 @@ type ReceiveQrCardProps = {
   onShare: () => void;
 };
 
-export const ReceiveQrCard = ({ qrUri, address, emptyHint, copyLabel, shareLabel, styles, onCopy, onShare }: ReceiveQrCardProps) => {
-  const hasQr = Boolean(qrUri);
+export const ReceiveQrCard = ({ qrValue, address, emptyHint, copyLabel, shareLabel, styles, onCopy, onShare }: ReceiveQrCardProps) => {
+  const hasQr = Boolean(qrValue);
   return (
     <>
       <View style={styles.qrBox}>
         {hasQr ? (
           <View style={styles.qrImageFrame}>
-            <Image source={{ uri: qrUri }} style={styles.qrImage} resizeMode="contain" />
+            <QRCode
+              value={qrValue}
+              size={210}
+              backgroundColor="transparent"
+              color="#111111"
+              quietZone={12}
+            />
           </View>
         ) : (
           <Text style={styles.qrEmptyText}>{emptyHint}</Text>

@@ -30,6 +30,7 @@ import {
   normalizeSeedWords,
   type CompatChainCode
 } from './walletRecoveryCompat';
+import { resolveBackendBaseUrl } from './backendBaseUrl';
 
 export type OnchainSendChain = 'BTC' | 'ETH' | 'XRP' | 'BSC' | 'SOL' | 'TRX' | 'FIL';
 export type OnchainSendAsset = 'NATIVE' | 'USDT';
@@ -87,6 +88,8 @@ export type EvmOnchainSendResult = {
   nonce: number;
   gasLimit: number;
   gasPriceWei: string;
+  maxFeePerGasWei: string;
+  maxPriorityFeePerGasWei: string;
   asset: EvmSendAsset;
 };
 
@@ -96,6 +99,8 @@ export type OnchainNftSendResult = {
   nonce?: number;
   gasLimit?: number;
   gasPriceWei?: string;
+  maxFeePerGasWei?: string;
+  maxPriorityFeePerGasWei?: string;
 };
 
 export type OnchainNftOwnershipTarget = {
@@ -134,15 +139,16 @@ export class OnchainSendError extends Error {
   }
 }
 
-const ETH_RPC_URL = 'https://ethereum-rpc.publicnode.com';
-const BSC_RPC_URL = 'https://bsc-dataseed.binance.org';
-const XRP_RPC_URL = 'https://xrplcluster.com';
-const SOL_RPC_URL = 'https://api.mainnet-beta.solana.com';
-const TRX_FULL_HOST = 'https://api.trongrid.io';
-const FIL_RPC_URL = 'https://api.node.glif.io/rpc/v1';
-const BTC_ADDRESS_API = 'https://blockstream.info/api/address';
-const BTC_BROADCAST_API = 'https://blockstream.info/api/tx';
-const BTC_FEE_API = 'https://mempool.space/api/v1/fees/recommended';
+const RPC_PROXY_BASE = `${resolveBackendBaseUrl()}/api/v1/rpc`;
+const ETH_RPC_URL = `${RPC_PROXY_BASE}/eth`;
+const BSC_RPC_URL = `${RPC_PROXY_BASE}/bsc`;
+const XRP_RPC_URL = `${RPC_PROXY_BASE}/xrp`;
+const SOL_RPC_URL = `${RPC_PROXY_BASE}/sol`;
+const TRX_FULL_HOST = `${RPC_PROXY_BASE}/trx`;
+const FIL_RPC_URL = `${RPC_PROXY_BASE}/fil`;
+const BTC_ADDRESS_API = `${RPC_PROXY_BASE}/btc/address`;
+const BTC_BROADCAST_API = `${RPC_PROXY_BASE}/btc/tx`;
+const BTC_FEE_API = `${RPC_PROXY_BASE}/btc/fees/recommended`;
 
 const USDT_ERC20_CONTRACT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const USDT_BEP20_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
@@ -169,6 +175,7 @@ const XRP_FULLY_CANONICAL_SIG_FLAG = 0x80000000;
 const FIL_MAINNET_SEC_PREFIX = 'f';
 const FIL_SECP256K1_SIGNATURE_TYPE = 1;
 const FIL_CID_PREFIX = Uint8Array.from([0x01, 0x71, 0xa0, 0xe4, 0x02, 0x20]);
+const EIP1559_TX_TYPE = 0x02;
 
 // noble secp256k1 sync signer requires these hash hooks in RN/web runtimes.
 if (!secp.hashes.sha256) {
@@ -547,61 +554,89 @@ const parseEvmOwnerOfResult = (raw: unknown) => {
   return `0x${normalized.slice(-40)}`;
 };
 
-const buildSigningPayload = (params: {
+const buildEip1559SigningPayload = (params: {
   nonce: bigint;
-  gasPriceWei: bigint;
+  maxPriorityFeePerGasWei: bigint;
+  maxFeePerGasWei: bigint;
   gasLimit: bigint;
   to: string;
   valueWei: bigint;
   dataHex: string;
   chainId: bigint;
 }) =>
-  rlpEncode([
-    params.nonce,
-    params.gasPriceWei,
-    params.gasLimit,
-    hexToBytes(params.to),
-    params.valueWei,
-    hexToBytes(params.dataHex),
-    params.chainId,
-    0n,
-    0n
-  ]);
+  concatBytes(
+    Uint8Array.from([EIP1559_TX_TYPE]),
+    rlpEncode([
+      params.chainId,
+      params.nonce,
+      params.maxPriorityFeePerGasWei,
+      params.maxFeePerGasWei,
+      params.gasLimit,
+      hexToBytes(params.to),
+      params.valueWei,
+      hexToBytes(params.dataHex),
+      []
+    ])
+  );
 
-const buildRawTx = (params: {
+const buildEip1559RawTx = (params: {
+  chainId: bigint;
   nonce: bigint;
-  gasPriceWei: bigint;
+  maxPriorityFeePerGasWei: bigint;
+  maxFeePerGasWei: bigint;
   gasLimit: bigint;
   to: string;
   valueWei: bigint;
   dataHex: string;
-  v: bigint;
+  yParity: bigint;
   r: Uint8Array;
   s: Uint8Array;
 }) =>
-  rlpEncode([
-    params.nonce,
-    params.gasPriceWei,
-    params.gasLimit,
-    hexToBytes(params.to),
-    params.valueWei,
-    hexToBytes(params.dataHex),
-    params.v,
-    params.r,
-    params.s
-  ]);
+  concatBytes(
+    Uint8Array.from([EIP1559_TX_TYPE]),
+    rlpEncode([
+      params.chainId,
+      params.nonce,
+      params.maxPriorityFeePerGasWei,
+      params.maxFeePerGasWei,
+      params.gasLimit,
+      hexToBytes(params.to),
+      params.valueWei,
+      hexToBytes(params.dataHex),
+      [],
+      params.yParity,
+      params.r,
+      params.s
+    ])
+  );
 
-const resolveGasPriceWei = async (rpcUrl: string, manualGasPriceGwei?: number) => {
+const resolveEip1559Fees = async (rpcUrl: string, manualGasPriceGwei?: number) => {
   const manual = Number(manualGasPriceGwei);
   if (Number.isFinite(manual) && manual > 0) {
-    return BigInt(Math.round(manual * 1_000_000_000));
+    const manualWei = BigInt(Math.round(manual * 1_000_000_000));
+    return {
+      maxPriorityFeePerGasWei: manualWei,
+      maxFeePerGasWei: manualWei
+    };
   }
-  const result = await postJsonRpc<string>(rpcUrl, 'eth_gasPrice', []);
-  const gasPriceWei = parseHexBigInt(result);
-  if (!gasPriceWei || gasPriceWei <= 0n) {
-    throw new OnchainSendError('invalid_rpc_response', 'invalid gas price');
+
+  const [priorityRaw, blockRaw] = await Promise.all([
+    postJsonRpc<string>(rpcUrl, 'eth_maxPriorityFeePerGas', []).catch(() => null),
+    postJsonRpc<{ baseFeePerGas?: string }>(rpcUrl, 'eth_getBlockByNumber', ['pending', false]).catch(() => null)
+  ]);
+
+  const priorityFeeWei = parseHexBigInt(priorityRaw ?? '') ?? 2_000_000_000n;
+  const baseFeeWei = parseHexBigInt(blockRaw?.baseFeePerGas ?? '') ?? 0n;
+  const maxPriorityFeePerGasWei = priorityFeeWei > 0n ? priorityFeeWei : 2_000_000_000n;
+  const maxFeePerGasWei = baseFeeWei > 0n ? baseFeeWei * 2n + maxPriorityFeePerGasWei : maxPriorityFeePerGasWei * 2n;
+
+  if (maxPriorityFeePerGasWei <= 0n || maxFeePerGasWei <= 0n || maxFeePerGasWei < maxPriorityFeePerGasWei) {
+    throw new OnchainSendError('invalid_rpc_response', 'invalid EIP-1559 fee values');
   }
-  return gasPriceWei;
+  return {
+    maxPriorityFeePerGasWei,
+    maxFeePerGasWei
+  };
 };
 
 const resolveNonce = async (rpcUrl: string, fromAddress: string, manualNonce?: number) => {
@@ -725,9 +760,9 @@ const sendEvm = async (input: EvmOnchainSendInput): Promise<EvmOnchainSendResult
     throw new OnchainSendError('invalid_rpc_response', 'invalid chain id');
   }
 
-  const [nonce, gasPriceWei] = await Promise.all([
+  const [nonce, eip1559Fees] = await Promise.all([
     resolveNonce(rpcUrl, from, input.manualNonce),
-    resolveGasPriceWei(rpcUrl, input.manualGasPriceGwei)
+    resolveEip1559Fees(rpcUrl, input.manualGasPriceGwei)
   ]);
 
   const gasLimit = await resolveGasLimit({
@@ -740,9 +775,10 @@ const sendEvm = async (input: EvmOnchainSendInput): Promise<EvmOnchainSendResult
     asset: input.asset
   });
 
-  const signingPayload = buildSigningPayload({
+  const signingPayload = buildEip1559SigningPayload({
     nonce,
-    gasPriceWei,
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei,
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei,
     gasLimit,
     to: normalizeHexAddress(txTo),
     valueWei: txValueWei,
@@ -761,19 +797,20 @@ const sendEvm = async (input: EvmOnchainSendInput): Promise<EvmOnchainSendResult
     throw new OnchainSendError('broadcast_failed', 'unexpected signature length');
   }
 
-  const recovery = BigInt(signature[64]);
+  const yParity = BigInt(signature[64]);
   const r = signature.slice(0, 32);
   const s = signature.slice(32, 64);
-  const v = chainId * 2n + 35n + recovery;
 
-  const rawTx = buildRawTx({
+  const rawTx = buildEip1559RawTx({
+    chainId,
     nonce,
-    gasPriceWei,
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei,
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei,
     gasLimit,
     to: normalizeHexAddress(txTo),
     valueWei: txValueWei,
     dataHex: txData,
-    v,
+    yParity,
     r,
     s
   });
@@ -790,7 +827,9 @@ const sendEvm = async (input: EvmOnchainSendInput): Promise<EvmOnchainSendResult
     txHash: hashNormalized,
     nonce: Number(nonce),
     gasLimit: Number(gasLimit),
-    gasPriceWei: gasPriceWei.toString(),
+    gasPriceWei: eip1559Fees.maxFeePerGasWei.toString(),
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei.toString(),
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei.toString(),
     asset: input.asset
   };
 };
@@ -833,9 +872,9 @@ const sendEvmNft = async (
     throw new OnchainSendError('invalid_rpc_response', 'invalid chain id');
   }
 
-  const [nonce, gasPriceWei] = await Promise.all([
+  const [nonce, eip1559Fees] = await Promise.all([
     resolveNonce(rpcUrl, from, input.manualNonce),
-    resolveGasPriceWei(rpcUrl, input.manualGasPriceGwei)
+    resolveEip1559Fees(rpcUrl, input.manualGasPriceGwei)
   ]);
   const gasLimit = await resolveNftGasLimit({
     rpcUrl,
@@ -845,9 +884,10 @@ const sendEvmNft = async (
     manualGasLimit: input.manualGasLimit
   });
 
-  const signingPayload = buildSigningPayload({
+  const signingPayload = buildEip1559SigningPayload({
     nonce,
-    gasPriceWei,
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei,
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei,
     gasLimit,
     to: normalizeHexAddress(contract),
     valueWei: 0n,
@@ -865,18 +905,19 @@ const sendEvmNft = async (
     throw new OnchainSendError('broadcast_failed', 'unexpected signature length');
   }
 
-  const recovery = BigInt(signature[64]);
+  const yParity = BigInt(signature[64]);
   const r = signature.slice(0, 32);
   const s = signature.slice(32, 64);
-  const v = chainId * 2n + 35n + recovery;
-  const rawTx = buildRawTx({
+  const rawTx = buildEip1559RawTx({
+    chainId,
     nonce,
-    gasPriceWei,
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei,
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei,
     gasLimit,
     to: normalizeHexAddress(contract),
     valueWei: 0n,
     dataHex: txData,
-    v,
+    yParity,
     r,
     s
   });
@@ -893,7 +934,9 @@ const sendEvmNft = async (
     txHash: hashNormalized,
     nonce: Number(nonce),
     gasLimit: Number(gasLimit),
-    gasPriceWei: gasPriceWei.toString()
+    gasPriceWei: eip1559Fees.maxFeePerGasWei.toString(),
+    maxFeePerGasWei: eip1559Fees.maxFeePerGasWei.toString(),
+    maxPriorityFeePerGasWei: eip1559Fees.maxPriorityFeePerGasWei.toString()
   };
 };
 
@@ -1028,9 +1071,12 @@ const sendXrp = async (input: OnchainSendInput): Promise<OnchainSendResult> => {
     [{}]
   );
   const feeDrops = parsePositiveInteger(feeResponse?.drops?.open_ledger_fee) ?? 12;
-  const lastLedgerSeq = parsePositiveInteger(
+  const validatedLedgerIndex = parsePositiveInteger(
     feeResponse?.validated_ledger?.seq ?? accountInfo?.validated_ledger?.seq ?? accountInfo?.ledger_current_index
   );
+  if (!validatedLedgerIndex || validatedLedgerIndex <= 0) {
+    throw new OnchainSendError('invalid_rpc_response', 'invalid XRP ledger index');
+  }
 
   const signingPubKey = bytesToHex(secp.getPublicKey(privateKey, true)).toUpperCase();
   const tx = {
@@ -1042,7 +1088,7 @@ const sendXrp = async (input: OnchainSendInput): Promise<OnchainSendResult> => {
     Sequence: Math.floor(sequence),
     Flags: XRP_FULLY_CANONICAL_SIG_FLAG,
     SigningPubKey: signingPubKey,
-    LastLedgerSequence: (lastLedgerSeq ?? Math.floor(sequence + 20)) + 20
+    LastLedgerSequence: validatedLedgerIndex + 20
   } as Record<string, unknown>;
 
   const signingBlob = encodeXrpForSigning(tx);

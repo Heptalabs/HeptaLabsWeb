@@ -53,9 +53,7 @@ const DEFAULT_ALLOWED_EXTERNAL_HOSTS = [
   'galxe.com',
   'pancakeswap.finance',
   'uniswap.org',
-  'opensea.io',
-  'localhost',
-  '127.0.0.1'
+  'opensea.io'
 ];
 
 const ENV_ALLOWED_EXTERNAL_HOSTS = (process.env.DISCOVER_ALLOWED_URL_HOSTS || '')
@@ -72,6 +70,7 @@ const IMAGE_MIME_EXT_MAP = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp'
 };
+const MAX_DISCOVER_ICON_BYTES = 2 * 1024 * 1024;
 
 const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
 const MAX_CLICK_LOG_ITEMS = 5000;
@@ -126,9 +125,12 @@ const normalizeValidatedExternalUrl = (value, fieldName = 'url') => {
 
   const protocol = parsed.protocol.toLowerCase();
   const host = parsed.hostname.toLowerCase();
-  const isLocal = host === 'localhost' || host === '127.0.0.1';
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1';
+  if (isLocal || host.endsWith('.local')) {
+    throw new AppError(400, `${fieldName} host is not allowed.`);
+  }
   const httpsAllowed = protocol === 'https:';
-  const localHttpAllowed = protocol === 'http:' && isLocal;
+  const localHttpAllowed = false;
   const relaxedHttpAllowed = !ENFORCE_DISCOVER_HTTPS && protocol === 'http:';
 
   if (!httpsAllowed && !localHttpAllowed && !relaxedHttpAllowed) {
@@ -380,12 +382,29 @@ const normalizePublicImageUrl = (value) => {
   const text = toTrimmedString(value, 900);
   if (!text) return '';
   try {
-    const parsed = new URL(text);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '';
-    return parsed.toString();
+    return normalizeValidatedExternalUrl(text, 'iconUrl');
   } catch {
     return '';
   }
+};
+
+const isSupportedImageMagicBytes = (bytes) => {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 4) return false;
+  const b = bytes;
+  const isPng = b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
+  const isJpeg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  const isWebp =
+    b.length >= 12 &&
+    b[0] === 0x52 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 &&
+    b[9] === 0x45 &&
+    b[10] === 0x42 &&
+    b[11] === 0x50;
+  const isIco = b[0] === 0x00 && b[1] === 0x00 && b[2] === 0x01 && b[3] === 0x00;
+  return isPng || isJpeg || isWebp || isIco;
 };
 
 const buildDiscoverIconCandidates = (entry) => {
@@ -399,8 +418,6 @@ const buildDiscoverIconCandidates = (entry) => {
       const host = new URL(safeSourceUrl).hostname.toLowerCase();
       const override = ICON_HOST_OVERRIDE_MAP[host];
       if (override) candidates.push(override);
-      candidates.push(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`);
-      candidates.push(`https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`);
       candidates.push(`https://${host}/favicon.ico`);
     } catch {
       // ignore malformed source url
@@ -434,7 +451,8 @@ const verifyDiscoverIconUrl = async (url) => {
     const response = await fetch(safeUrl, {
       method: 'GET',
       headers: {
-        accept: 'image/*'
+        accept: 'image/*',
+        range: 'bytes=0-1023'
       },
       signal: controller.signal
     });
@@ -442,7 +460,13 @@ const verifyDiscoverIconUrl = async (url) => {
     if (response.ok) {
       const contentType = String(response.headers.get('content-type') || '').toLowerCase();
       const contentLength = Number(response.headers.get('content-length') || 0);
-      ok = contentType.startsWith('image/') && (contentLength === 0 || contentLength >= 128);
+      if (contentLength > MAX_DISCOVER_ICON_BYTES) {
+        ok = false;
+      } else {
+        const payload = new Uint8Array(await response.arrayBuffer());
+        const hasMagicBytes = isSupportedImageMagicBytes(payload);
+        ok = contentType.startsWith('image/') && hasMagicBytes;
+      }
     }
   } catch {
     ok = false;
@@ -630,7 +654,6 @@ const normalizeStoredClickLog = (raw) => ({
   reason: toTrimmedString(raw?.reason, 240),
   platform: toTrimmedString(raw?.platform, 24),
   lang: toTrimmedString(raw?.lang, 8),
-  walletId: toTrimmedString(raw?.walletId, 128),
   clickedAt: parseIsoOrNull(raw?.clickedAt) || nowIso()
 });
 
@@ -1055,7 +1078,6 @@ export const appendDiscoverClickLog = async (payload) => {
     reason: toTrimmedString(payload?.reason, 240),
     platform: toTrimmedString(payload?.platform, 24),
     lang: toTrimmedString(payload?.lang, 8),
-    walletId: toTrimmedString(payload?.walletId, 128),
     clickedAt: nowIso()
   };
 

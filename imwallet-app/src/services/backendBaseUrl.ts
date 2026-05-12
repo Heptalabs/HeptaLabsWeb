@@ -7,9 +7,25 @@ const isLocalWebHost = (hostname: string) => {
   return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '0.0.0.0';
 };
 
+const ensureSecureOrLocalUrl = (input: string) => {
+  const normalized = trimTrailingSlash(input);
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    return normalized;
+  }
+
+  const localHost = isLocalWebHost(parsed.hostname);
+  if (parsed.protocol === 'http:' && !localHost) {
+    throw new Error(`Insecure backend url is not allowed: ${normalized}`);
+  }
+  return normalized;
+};
+
 export const resolveBackendBaseUrl = () => {
   const fromEnv = process.env.EXPO_PUBLIC_BACKEND_BASE_URL?.trim();
-  if (fromEnv) return trimTrailingSlash(fromEnv);
+  if (fromEnv) return ensureSecureOrLocalUrl(fromEnv);
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
@@ -17,12 +33,12 @@ export const resolveBackendBaseUrl = () => {
     if (isLocalWebHost(hostname)) {
       return `${protocol}//${hostname}:4000`;
     }
-    return trimTrailingSlash(window.location.origin);
+    return ensureSecureOrLocalUrl(`https://${hostname}`);
   }
 
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
     return 'http://localhost:4000';
   }
 
-  return 'https://download.imwallet.app';
+  return 'https://api.imwallet.app';
 };

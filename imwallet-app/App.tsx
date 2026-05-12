@@ -35,13 +35,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import {
   CollectibleItem,
-  dapps,
-  discoverTokens,
   initialCollectibles,
   TokenItem,
   TxItem,
   WalletAccount
-} from './src/data/mockWallet';
+} from './src/data/appCatalog';
 import { validateAddressForChain as validateAddressWithEngine } from './src/services/addressEngine';
 import { buildSendDraftFromInput, parseAmountInput, validateSendAmount } from './src/services/sendFlowEngine';
 import { DEFAULT_MARKET_SYMBOLS, fetchMarketPriceMap, type MarketPriceMap } from './src/services/marketPrice';
@@ -67,7 +65,6 @@ import {
   sendOnchainTransaction
 } from './src/services/onchainSend';
 import {
-  DEFAULT_COMPAT_SEEDS,
   deriveTrustCompatibleChainAddresses,
   deriveTrustCompatiblePrimaryAddress,
   generateRecoverySeedWords,
@@ -90,7 +87,7 @@ import {
 } from './src/services/discoverIconCache';
 import { useWalletStore } from './src/state/useWalletStore';
 import { useAssetToggleStore } from './src/state/useAssetToggleStore';
-import { createQrImageUrl, createReceiveShareText } from './src/services/qrShare';
+import { createReceiveShareText } from './src/services/qrShare';
 import { logEvent } from './src/services/logger';
 import { trackError, trackPerformance } from './src/services/monitoring';
 import { ReceiveQrCard } from './src/components/receive/ReceiveQrCard';
@@ -235,6 +232,7 @@ type DiscoverTrustedHostEntry = {
   host: string;
   memo: string;
   createdAt: string;
+  expiresAt: string;
 };
 
 type SendAuthMethod = 'password' | 'fingerprint' | 'face';
@@ -300,9 +298,9 @@ type HistoryDateFilter = 'ALL' | 'TODAY' | '7D' | '30D' | 'RANGE';
 type HistoryScopeFilter = 'ALL' | 'ASSET' | 'NFT';
 type AddressBookDateFilter = 'ALL' | 'TODAY' | '7D' | '30D';
 const DEFAULT_RECOVERY_WORD_COUNT: RecoveryWordCount = 12;
-const DEFAULT_SEED_WORDS = [...DEFAULT_COMPAT_SEEDS[0]];
 const APP_PASSWORD_STORE_KEY = 'imwallet.app.password';
 const AUTH_METHOD_STORE_KEY = 'imwallet.app.auth_method';
+const PRIVACY_POLICY_URL = 'https://download.imwallet.app/download/privacy.html';
 const DISCOVER_TRUSTED_HOSTS_STORE_KEY = 'imwallet.discover.trusted_hosts.v1';
 const WALLET_SEED_MAP_STORE_KEY = 'imwallet.wallet.seed_map.v1';
 const WALLET_SEED_PASSPHRASE_MAP_STORE_KEY = 'imwallet.wallet.seed_passphrase_map.v1';
@@ -311,6 +309,10 @@ const TX_HISTORY_STORE_KEY = 'imwallet.store.tx_history.v1';
 const ADDRESS_BOOK_STORE_KEY = 'imwallet.store.address_book.v1';
 const NFT_ADDRESS_BOOK_STORE_KEY = 'imwallet.store.nft_address_book.v1';
 const APP_PASSWORD_LENGTH = 6;
+const PASSWORD_AUTH_BACKOFF_BASE_MS = 1500;
+const PASSWORD_AUTH_BACKOFF_MAX_MS = 5 * 60 * 1000;
+const SEED_CLIPBOARD_CLEAR_DELAY_MS = 60_000;
+const DISCOVER_TRUSTED_HOST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const webTransientStore = new Map<string, string>();
 
 const normalizeSeedWord = (raw: string) => raw.trim().toLowerCase().replace(/\s+/g, '');
@@ -327,14 +329,64 @@ const normalizeAccountIndexInput = (raw: string) => {
   const trimmed = raw.replace(/[^\d]/g, '').slice(0, 6);
   return trimmed.length ? String(normalizeAccountIndex(Number(trimmed))) : '0';
 };
+const toIsoOrNow = (raw: string, fallbackMs = Date.now()) => {
+  const parsed = new Date(String(raw || '').trim());
+  if (Number.isNaN(parsed.getTime())) return new Date(fallbackMs).toISOString();
+  return parsed.toISOString();
+};
+const computeTrustedHostExpiresAt = (createdAtIso: string, rawExpiresAt?: string) => {
+  const parsedExpiresAt = new Date(String(rawExpiresAt || '').trim());
+  if (!Number.isNaN(parsedExpiresAt.getTime())) return parsedExpiresAt.toISOString();
+  const createdAtTs = Date.parse(createdAtIso);
+  const fallbackBaseTs = Number.isFinite(createdAtTs) ? createdAtTs : Date.now();
+  return new Date(fallbackBaseTs + DISCOVER_TRUSTED_HOST_TTL_MS).toISOString();
+};
 
 const safeGenerateRecoverySeedWords = (wordCount: RecoveryWordCount = DEFAULT_RECOVERY_WORD_COUNT) => {
   try {
     return generateRecoverySeedWords(wordCount);
   } catch (error) {
     trackError('recovery_seed_generate_failed', error);
-    return [...DEFAULT_SEED_WORDS];
+    throw new Error('recovery_seed_generation_unavailable');
   }
+};
+
+const fillSecureRandomBytes = (bytes: Uint8Array) => {
+  const cryptoApi = (globalThis as { crypto?: { getRandomValues?: (array: Uint8Array) => Uint8Array } }).crypto;
+  if (cryptoApi?.getRandomValues) {
+    cryptoApi.getRandomValues(bytes);
+    return bytes;
+  }
+  let seed = (Date.now() ^ 0x9e3779b9) >>> 0;
+  for (let i = 0; i < bytes.length; i += 1) {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    bytes[i] = seed & 0xff;
+  }
+  return bytes;
+};
+
+const randomHexString = (hexLength: number) => {
+  const byteLength = Math.max(1, Math.ceil(hexLength / 2));
+  const bytes = fillSecureRandomBytes(new Uint8Array(byteLength));
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, hexLength);
+};
+
+const randomBase36String = (length: number) => {
+  const bytes = fillSecureRandomBytes(new Uint8Array(Math.max(1, length)));
+  return Array.from(bytes, (value) => (value % 36).toString(36))
+    .join('')
+    .slice(0, length);
+};
+
+const randomIntExclusive = (maxExclusive: number) => {
+  if (!Number.isFinite(maxExclusive) || maxExclusive <= 1) return 0;
+  const bytes = fillSecureRandomBytes(new Uint8Array(4));
+  const raw = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+  return raw % Math.floor(maxExclusive);
 };
 
 const loadSecureValue = async (key: string) => {
@@ -403,6 +455,7 @@ type Screen =
   | 'settingsWalletsAuth'
   | 'settingsWallets'
   | 'settingsHelp'
+  | 'settingsPrivacy'
   | 'settingsSupport'
   | 'settingsAbout'
   | 'addressBookSelect'
@@ -513,6 +566,7 @@ type Copy = {
   security: string;
   notifications: string;
   helpCenter: string;
+  privacyPolicy: string;
   support: string;
   about: string;
   preferences: string;
@@ -543,7 +597,6 @@ type Copy = {
   onboardingBody: string;
   createWallet: string;
   addExisting: string;
-  exploreDemo: string;
   securityCheck: string;
   backupTitle: string;
   backupBody: string;
@@ -734,71 +787,12 @@ type DiscoverTokenTopupSeed = {
 };
 
 const discoverTokenTopupSeedMap: Record<Exclude<DiscoverTokenCategoryId, 'all'>, DiscoverTokenTopupSeed[]> = {
-  layer1: [
-    { symbol: 'BTC', name: 'Bitcoin', marketCapUsd: 1_500_000_000_000 },
-    { symbol: 'ETH', name: 'Ethereum', marketCapUsd: 300_000_000_000 },
-    { symbol: 'XRP', name: 'XRP', marketCapUsd: 80_000_000_000 },
-    { symbol: 'BNB', name: 'BNB', marketCapUsd: 90_000_000_000 },
-    { symbol: 'SOL', name: 'Solana', marketCapUsd: 75_000_000_000 },
-    { symbol: 'ADA', name: 'Cardano', marketCapUsd: 25_000_000_000 },
-    { symbol: 'TRX', name: 'TRON', marketCapUsd: 11_000_000_000 },
-    { symbol: 'TON', name: 'Toncoin', marketCapUsd: 20_000_000_000 },
-    { symbol: 'AVAX', name: 'Avalanche', marketCapUsd: 15_000_000_000 },
-    { symbol: 'SUI', name: 'Sui', marketCapUsd: 5_000_000_000 }
-  ],
-  defi: [
-    { symbol: 'UNI', name: 'Uniswap', marketCapUsd: 7_000_000_000 },
-    { symbol: 'AAVE', name: 'Aave', marketCapUsd: 3_000_000_000 },
-    { symbol: 'MKR', name: 'Maker', marketCapUsd: 2_500_000_000 },
-    { symbol: 'ONDO', name: 'Ondo', marketCapUsd: 3_800_000_000 },
-    { symbol: 'LDO', name: 'Lido DAO', marketCapUsd: 1_800_000_000 },
-    { symbol: 'CRV', name: 'Curve DAO', marketCapUsd: 900_000_000 },
-    { symbol: 'PENDLE', name: 'Pendle', marketCapUsd: 1_100_000_000 },
-    { symbol: 'COMP', name: 'Compound', marketCapUsd: 500_000_000 },
-    { symbol: 'SNX', name: 'Synthetix', marketCapUsd: 800_000_000 },
-    { symbol: 'MORPHO', name: 'Morpho', marketCapUsd: 600_000_000 }
-  ],
-  stablecoin: [
-    { symbol: 'USDT', name: 'Tether', marketCapUsd: 110_000_000_000 },
-    { symbol: 'USDC', name: 'USD Coin', marketCapUsd: 55_000_000_000 },
-    { symbol: 'DAI', name: 'Dai', marketCapUsd: 5_000_000_000 },
-    { symbol: 'FDUSD', name: 'First Digital USD', marketCapUsd: 2_700_000_000 },
-    { symbol: 'TUSD', name: 'TrueUSD', marketCapUsd: 2_200_000_000 },
-    { symbol: 'USDE', name: 'Ethena USDe', marketCapUsd: 3_100_000_000 },
-    { symbol: 'USDD', name: 'USDD', marketCapUsd: 750_000_000 },
-    { symbol: 'FRAX', name: 'Frax', marketCapUsd: 650_000_000 },
-    { symbol: 'PYUSD', name: 'PayPal USD', marketCapUsd: 550_000_000 },
-    { symbol: 'GUSD', name: 'Gemini Dollar', marketCapUsd: 350_000_000 }
-  ],
-  exchange: [
-    { symbol: 'BNB', name: 'BNB', marketCapUsd: 90_000_000_000 },
-    { symbol: 'OKB', name: 'OKB', marketCapUsd: 16_000_000_000 },
-    { symbol: 'BGB', name: 'Bitget Token', marketCapUsd: 7_000_000_000 },
-    { symbol: 'LEO', name: 'UNUS SED LEO', marketCapUsd: 9_000_000_000 },
-    { symbol: 'GT', name: 'GateToken', marketCapUsd: 3_200_000_000 },
-    { symbol: 'KCS', name: 'KuCoin Token', marketCapUsd: 1_600_000_000 },
-    { symbol: 'CRO', name: 'Cronos', marketCapUsd: 3_500_000_000 },
-    { symbol: 'WBT', name: 'WhiteBIT Coin', marketCapUsd: 10_000_000_000 },
-    { symbol: 'HTX', name: 'HTX', marketCapUsd: 1_200_000_000 },
-    { symbol: 'MX', name: 'MX Token', marketCapUsd: 2_000_000_000 }
-  ],
-  meme: [
-    { symbol: 'DOGE', name: 'Dogecoin', marketCapUsd: 25_000_000_000 },
-    { symbol: 'SHIB', name: 'Shiba Inu', marketCapUsd: 11_000_000_000 },
-    { symbol: 'PEPE', name: 'Pepe', marketCapUsd: 4_000_000_000 },
-    { symbol: 'WIF', name: 'dogwifhat', marketCapUsd: 3_000_000_000 },
-    { symbol: 'BONK', name: 'Bonk', marketCapUsd: 2_000_000_000 },
-    { symbol: 'FLOKI', name: 'Floki', marketCapUsd: 1_900_000_000 },
-    { symbol: 'BRETT', name: 'Brett', marketCapUsd: 1_500_000_000 },
-    { symbol: 'MEME', name: 'Memecoin', marketCapUsd: 700_000_000 },
-    { symbol: 'MOG', name: 'Mog Coin', marketCapUsd: 600_000_000 },
-    { symbol: 'TURBO', name: 'Turbo', marketCapUsd: 500_000_000 }
-  ]
+  layer1: [],
+  defi: [],
+  stablecoin: [],
+  exchange: [],
+  meme: []
 };
-
-const discoverTokenTopupAllSeeds = Object.freeze(
-  Object.values(discoverTokenTopupSeedMap).flatMap((rows) => rows)
-);
 
 const discoverTokenTopupSeedSymbols = Object.freeze(
   Array.from(
@@ -1575,147 +1569,6 @@ const discoverSiteSeed: DiscoverSiteItem[] = [
   }
 ];
 
-type DiscoverCategorySeedItem = {
-  id: string;
-  category: DiscoverCategoryId;
-  title: string;
-  summary: string;
-  sourceName: string;
-  url: string;
-  pinned?: boolean;
-};
-
-const discoverCategorySeedItems: DiscoverCategorySeedItem[] = [
-  {
-    id: 'seed-dex-1',
-    category: 'dex',
-    title: '1inch',
-    summary: 'Multi-chain DEX aggregator with best-route swaps.',
-    sourceName: 'DEX',
-    url: 'https://app.1inch.io'
-  },
-  {
-    id: 'seed-lending-1',
-    category: 'lending',
-    title: 'Compound',
-    summary: 'Lending markets for major crypto assets.',
-    sourceName: 'Lending',
-    url: 'https://app.compound.finance'
-  },
-  {
-    id: 'seed-yield-1',
-    category: 'yield',
-    title: 'Yearn',
-    summary: 'Automated yield vault strategies.',
-    sourceName: 'Yield',
-    url: 'https://yearn.finance'
-  },
-  {
-    id: 'seed-solana-1',
-    category: 'solana',
-    title: 'Jupiter',
-    summary: 'Solana swap and routing hub.',
-    sourceName: 'Solana',
-    url: 'https://jup.ag'
-  },
-  {
-    id: 'seed-market-1',
-    category: 'market',
-    title: 'CoinMarketCap',
-    summary: 'Market overview, rankings, and watchlists.',
-    sourceName: 'Market',
-    url: 'https://coinmarketcap.com'
-  },
-  {
-    id: 'seed-social-1',
-    category: 'social',
-    title: 'Farcaster',
-    summary: 'Web3 social graph and clients.',
-    sourceName: 'Social',
-    url: 'https://www.farcaster.xyz'
-  },
-  {
-    id: 'seed-games-1',
-    category: 'games',
-    title: 'Pixels',
-    summary: 'Web3 social farming game.',
-    sourceName: 'Games',
-    url: 'https://www.pixels.xyz'
-  }
-];
-
-type DiscoverDappTopupSeedItem = {
-  id: string;
-  title: string;
-  summary: string;
-  sourceName: string;
-  url: string;
-  tags?: string[];
-};
-
-const discoverDappTopupSeedMap: Record<Exclude<DiscoverDappFilterId, 'all'>, DiscoverDappTopupSeedItem[]> = {
-  defi: [
-    { id: 'defi-aave', title: 'Aave', summary: 'Lend and borrow with deep on-chain liquidity.', sourceName: 'Aave', url: 'https://app.aave.com', tags: ['defi'] },
-    { id: 'defi-compound', title: 'Compound', summary: 'Permissionless money markets for major assets.', sourceName: 'Compound', url: 'https://app.compound.finance', tags: ['defi'] },
-    { id: 'defi-lido', title: 'Lido', summary: 'Liquid staking for ETH and more.', sourceName: 'Lido', url: 'https://stake.lido.fi', tags: ['defi'] },
-    { id: 'defi-morpho', title: 'Morpho', summary: 'Optimized lending markets with efficient rates.', sourceName: 'Morpho', url: 'https://app.morpho.org', tags: ['defi'] },
-    { id: 'defi-maker', title: 'Sky / Maker', summary: 'Stablecoin and collateralized debt positions.', sourceName: 'Maker', url: 'https://app.spark.fi', tags: ['defi'] },
-    { id: 'defi-pendle', title: 'Pendle', summary: 'Tokenized yield markets and fixed yield tools.', sourceName: 'Pendle', url: 'https://app.pendle.finance', tags: ['defi'] },
-    { id: 'defi-eigenlayer', title: 'EigenLayer', summary: 'Restaking marketplace and AVS ecosystem.', sourceName: 'EigenLayer', url: 'https://app.eigenlayer.xyz', tags: ['defi'] },
-    { id: 'defi-yearn', title: 'Yearn', summary: 'Automated vault strategies for yield.', sourceName: 'Yearn', url: 'https://yearn.fi', tags: ['defi'] },
-    { id: 'defi-convex', title: 'Convex', summary: 'Curve-aligned yield boosting and rewards.', sourceName: 'Convex', url: 'https://www.convexfinance.com', tags: ['defi'] },
-    { id: 'defi-curve', title: 'Curve', summary: 'Stable-asset liquidity pools and routing.', sourceName: 'Curve', url: 'https://curve.fi', tags: ['defi'] }
-  ],
-  exchanges: [
-    { id: 'ex-uniswap', title: 'Uniswap', summary: 'Multi-chain AMM exchange for token swaps.', sourceName: 'Uniswap', url: 'https://app.uniswap.org', tags: ['exchange', 'dex'] },
-    { id: 'ex-pancake', title: 'PancakeSwap', summary: 'BNB-focused DEX with high retail volume.', sourceName: 'PancakeSwap', url: 'https://pancakeswap.finance', tags: ['exchange', 'dex'] },
-    { id: 'ex-1inch', title: '1inch', summary: 'Best-route swap aggregator across venues.', sourceName: '1inch', url: 'https://app.1inch.io', tags: ['exchange', 'aggregator'] },
-    { id: 'ex-jupiter', title: 'Jupiter', summary: 'Top Solana swap routing and aggregation.', sourceName: 'Jupiter', url: 'https://jup.ag', tags: ['exchange', 'solana'] },
-    { id: 'ex-cow', title: 'CoW Swap', summary: 'Intent-based exchange with MEV protection.', sourceName: 'CoW Swap', url: 'https://swap.cow.fi', tags: ['exchange'] },
-    { id: 'ex-kyber', title: 'KyberSwap', summary: 'DEX aggregation and concentrated liquidity.', sourceName: 'KyberSwap', url: 'https://kyberswap.com', tags: ['exchange'] },
-    { id: 'ex-odos', title: 'Odos', summary: 'Smart-order routing for multi-token swaps.', sourceName: 'Odos', url: 'https://app.odos.xyz', tags: ['exchange', 'aggregator'] },
-    { id: 'ex-paraswap', title: 'ParaSwap', summary: 'Cross-source token swap execution engine.', sourceName: 'ParaSwap', url: 'https://app.paraswap.xyz', tags: ['exchange'] },
-    { id: 'ex-raydium', title: 'Raydium', summary: 'Core Solana exchange and liquidity venue.', sourceName: 'Raydium', url: 'https://raydium.io', tags: ['exchange', 'solana'] },
-    { id: 'ex-traderjoe', title: 'Trader Joe', summary: 'Avalanche-first DEX and trading suite.', sourceName: 'Trader Joe', url: 'https://traderjoexyz.com', tags: ['exchange'] }
-  ],
-  collectibles: [
-    { id: 'nft-opensea', title: 'OpenSea', summary: 'Largest NFT marketplace across chains.', sourceName: 'OpenSea', url: 'https://opensea.io', tags: ['nft', 'collectibles'] },
-    { id: 'nft-blur', title: 'Blur', summary: 'Pro-focused NFT trading and portfolio tools.', sourceName: 'Blur', url: 'https://blur.io', tags: ['nft', 'collectibles'] },
-    { id: 'nft-magiceden', title: 'Magic Eden', summary: 'Cross-chain marketplace for NFT collections.', sourceName: 'Magic Eden', url: 'https://magiceden.io', tags: ['nft', 'collectibles'] },
-    { id: 'nft-rarible', title: 'Rarible', summary: 'Creator-first NFT marketplace and tooling.', sourceName: 'Rarible', url: 'https://rarible.com', tags: ['nft', 'collectibles'] },
-    { id: 'nft-tensor', title: 'Tensor', summary: 'Solana NFT trading venue and analytics.', sourceName: 'Tensor', url: 'https://tensor.trade', tags: ['nft', 'collectibles'] },
-    { id: 'nft-x2y2', title: 'X2Y2', summary: 'Ethereum NFT marketplace with pro features.', sourceName: 'X2Y2', url: 'https://x2y2.io', tags: ['nft', 'collectibles'] },
-    { id: 'nft-looksrare', title: 'LooksRare', summary: 'Community-driven NFT marketplace.', sourceName: 'LooksRare', url: 'https://looksrare.org', tags: ['nft', 'collectibles'] },
-    { id: 'nft-element', title: 'Element', summary: 'Multi-chain NFT marketplace infrastructure.', sourceName: 'Element', url: 'https://element.market', tags: ['nft', 'collectibles'] },
-    { id: 'nft-foundation', title: 'Foundation', summary: 'Curated digital art marketplace for creators.', sourceName: 'Foundation', url: 'https://foundation.app', tags: ['nft', 'collectibles'] },
-    { id: 'nft-superrare', title: 'SuperRare', summary: 'Premium single-edition NFT artworks.', sourceName: 'SuperRare', url: 'https://superrare.com', tags: ['nft', 'collectibles'] }
-  ],
-  social: [
-    { id: 'soc-lens', title: 'Lens', summary: 'Composable social graph and creator ecosystem.', sourceName: 'Lens', url: 'https://www.lens.xyz', tags: ['social'] },
-    { id: 'soc-farcaster', title: 'Farcaster', summary: 'Decentralized social network protocol.', sourceName: 'Farcaster', url: 'https://www.farcaster.xyz', tags: ['social'] },
-    { id: 'soc-galxe', title: 'Galxe', summary: 'Web3 identity and campaign participation hub.', sourceName: 'Galxe', url: 'https://galxe.com', tags: ['social'] },
-    { id: 'soc-guild', title: 'Guild', summary: 'Token-gated communities and role management.', sourceName: 'Guild', url: 'https://guild.xyz', tags: ['social', 'community'] },
-    { id: 'soc-zealy', title: 'Zealy', summary: 'Community quests and engagement platform.', sourceName: 'Zealy', url: 'https://zealy.io', tags: ['social', 'community'] },
-    { id: 'soc-cyber', title: 'CyberConnect', summary: 'Web3 social protocol and user identity.', sourceName: 'CyberConnect', url: 'https://cyber.co', tags: ['social'] },
-    { id: 'soc-poap', title: 'POAP', summary: 'Onchain attendance badges for communities.', sourceName: 'POAP', url: 'https://poap.xyz', tags: ['social', 'collectibles'] },
-    { id: 'soc-mirror', title: 'Mirror', summary: 'Web3-native publishing and creator tools.', sourceName: 'Mirror', url: 'https://mirror.xyz', tags: ['social', 'content'] },
-    { id: 'soc-deso', title: 'DeSo', summary: 'Decentralized social applications ecosystem.', sourceName: 'DeSo', url: 'https://www.deso.com', tags: ['social'] },
-    { id: 'soc-dscvr', title: 'DSCVR', summary: 'Decentralized forums and social channels.', sourceName: 'DSCVR', url: 'https://dscvr.one', tags: ['social'] }
-  ],
-  games: [
-    { id: 'game-axie', title: 'Axie Infinity', summary: 'Battle and collect NFT creatures onchain.', sourceName: 'Axie', url: 'https://app.axieinfinity.com', tags: ['games'] },
-    { id: 'game-pixels', title: 'Pixels', summary: 'Social farming game with onchain assets.', sourceName: 'Pixels', url: 'https://www.pixels.xyz', tags: ['games'] },
-    { id: 'game-splinterlands', title: 'Splinterlands', summary: 'Card battles and tradable NFT decks.', sourceName: 'Splinterlands', url: 'https://splinterlands.com', tags: ['games'] },
-    { id: 'game-alien', title: 'Alien Worlds', summary: 'Metaverse mining and NFT strategy game.', sourceName: 'Alien Worlds', url: 'https://alienworlds.io', tags: ['games'] },
-    { id: 'game-gods', title: 'Gods Unchained', summary: 'Tactical card game with NFT ownership.', sourceName: 'Gods Unchained', url: 'https://godsunchained.com', tags: ['games'] },
-    { id: 'game-illuvium', title: 'Illuvium', summary: 'Open-world RPG and battler ecosystem.', sourceName: 'Illuvium', url: 'https://illuvium.io', tags: ['games'] },
-    { id: 'game-parallel', title: 'Parallel', summary: 'Sci-fi card game with web3 progression.', sourceName: 'Parallel', url: 'https://parallel.life', tags: ['games'] },
-    { id: 'game-sandbox', title: 'The Sandbox', summary: 'User-generated metaverse and land economy.', sourceName: 'The Sandbox', url: 'https://www.sandbox.game', tags: ['games'] },
-    { id: 'game-decentraland', title: 'Decentraland', summary: 'Open virtual world and social gameplay.', sourceName: 'Decentraland', url: 'https://decentraland.org', tags: ['games', 'social'] },
-    { id: 'game-bigtime', title: 'Big Time', summary: 'Action RPG with tradable cosmetic assets.', sourceName: 'Big Time', url: 'https://bigtime.gg', tags: ['games'] }
-  ]
-};
-
 type DiscoverDappLocalizationEntry = {
   koName: string;
   zhName: string;
@@ -1869,14 +1722,6 @@ const buildDiscoverDappIconCandidates = (item: DiscoverDappIconInput, preferredI
   return Array.from(new Set(candidates.filter((uri) => /^https?:\/\//i.test(String(uri).trim()))));
 };
 
-const mapTopupSeedFilterToFeedCategory = (filter: Exclude<DiscoverDappFilterId, 'all'>): DiscoverCategoryId => {
-  if (filter === 'exchanges') return 'dex';
-  if (filter === 'collectibles') return 'market';
-  if (filter === 'social') return 'social';
-  if (filter === 'games') return 'games';
-  return 'yield';
-};
-
 type WeeklyBriefingSeedItem = {
   id: string;
   publishedAt: string;
@@ -1913,6 +1758,99 @@ type WeeklyBriefingWeekGroup = {
 };
 
 const weeklyBriefingSeed: WeeklyBriefingSeedItem[] = [
+  {
+    id: 'briefing-2026-05-11-1',
+    publishedAt: '2026-05-11',
+    title: {
+      ko: 'IMWallet 전용 레포와 배포 워크플로 정리',
+      en: 'IMWallet Repo Scope and Delivery Workflows Tightened',
+      zh: 'IMWallet 仓库范围与交付流程已收敛'
+    },
+    summary: {
+      ko: '2026년 5월 8일 커밋에서 레포를 IMWallet 중심 구조로 정리하고, 앱 네이티브 빌드·OTA·백엔드 배포·공통 CI용 GitHub Actions 워크플로를 전용 경로로 추가했습니다. 이번 변경으로 제품 코드와 운영 경로가 한 축으로 정렬돼 릴리즈 준비와 변경 추적이 훨씬 단순해졌습니다.',
+      en: 'On May 8, 2026, the repository was pruned down to an IMWallet-first structure and gained dedicated GitHub Actions workflows for native app builds, OTA delivery, backend deployment, and shared CI. That narrows the operational surface area and makes release ownership easier to track across the product stack.',
+      zh: '在 2026 年 5 月 8 日的提交中，仓库被收敛为以 IMWallet 为中心的结构，并新增了原生 App 构建、OTA、后端部署与通用 CI 的专用 GitHub Actions 工作流。这让产品代码与交付路径更加一致，也更容易追踪发布责任。'
+    },
+    points: {
+      ko: [
+        '레포 정리: 비IMWallet 자산과 흐름을 줄이고 제품 중심 파일셋으로 재정렬했습니다.',
+        '배포 경로: `imwallet-app-native-build`, `imwallet-app-ota`, `imwallet-backend-cd`, `imwallet-ci` 워크플로가 추가됐습니다.',
+        '체크 포인트: 다음 주에는 실제 시크릿 주입과 워크플로 실행 결과가 안정적으로 연결되는지 확인해야 합니다.'
+      ],
+      en: [
+        'Repo focus: non-IMWallet surface area was removed so the codebase now tracks the product more directly.',
+        'Delivery path: dedicated workflows now exist for `imwallet-app-native-build`, `imwallet-app-ota`, `imwallet-backend-cd`, and `imwallet-ci`.',
+        'What to watch: the next step is validating secrets and first-run workflow health in the real delivery environment.'
+      ],
+      zh: [
+        '仓库聚焦：已去掉非 IMWallet 相关表面，代码库现在更直接映射产品本身。',
+        '交付路径：现已具备 `imwallet-app-native-build`、`imwallet-app-ota`、`imwallet-backend-cd` 与 `imwallet-ci` 专用流程。',
+        '关注点：下周应确认真实环境中的密钥注入与首次工作流执行是否稳定。'
+      ]
+    }
+  },
+  {
+    id: 'briefing-2026-05-11-2',
+    publishedAt: '2026-05-11',
+    title: {
+      ko: 'Discover 브리핑 고정과 DApp 데이터 경로 강화',
+      en: 'Discover Briefing Pinning and DApp Data Resilience Improved',
+      zh: 'Discover 简报固定逻辑与 DApp 数据韧性增强'
+    },
+    summary: {
+      ko: '같은 주 변경에서 앱 `App.tsx`, 백엔드 `discover-content`, `market-dapps` 경로가 함께 정리되며 IMWallet 주간 브리핑 카드의 우선 노출 규칙과 DApp 랭킹 공급자 fallback 구조가 강화됐습니다. 사용자는 Discover 상단에서 내부 브리핑을 더 일관되게 보게 되고, 데이터 공급자가 흔들릴 때도 카테고리 피드가 더 안정적으로 유지됩니다.',
+      en: 'The same update tightened the connection between the app’s Discover surface and backend content services, hardening the IMWallet weekly-briefing priority while improving fallback behavior for DApp ranking providers. In practice, the top Discover card becomes more predictable and category feeds stay more resilient when one upstream source is weak.',
+      zh: '同一批更新同时整理了 App 的 Discover 界面与后端 `discover-content`、`market-dapps` 路径，强化了 IMWallet 周简报卡片的优先展示规则，也提升了 DApp 排名数据源的回退能力。实际效果是顶部卡片更稳定，分类内容在单一上游异常时也更不容易失效。'
+    },
+    points: {
+      ko: [
+        '브리핑 고정: Discover 상단 카드가 IMWallet 주간 브리핑을 우선/기본값으로 유지하도록 경로가 단단해졌습니다.',
+        '데이터 fallback: DappRadar 미설정 또는 실패 시 DefiLlama 중심의 대체 경로와 진단 정보가 함께 제공됩니다.',
+        '사용자 영향: 상단 카드 일관성과 DApp 카테고리 안정성이 동시에 개선됐습니다.'
+      ],
+      en: [
+        'Briefing priority: the top Discover card is now more reliably anchored to the IMWallet weekly briefing.',
+        'Provider fallback: when DappRadar is unavailable or not configured, the stack falls back with diagnostics instead of failing silently.',
+        'User impact: Discover becomes more consistent at the top and more stable across DApp category feeds.'
+      ],
+      zh: [
+        '简报优先级：Discover 顶部卡片现在更稳定地锚定到 IMWallet 每周简报。',
+        '数据回退：当 DappRadar 不可用或未配置时，系统会带诊断信息地切换到备用来源，而不是静默失败。',
+        '用户影响：顶部内容一致性与 DApp 分类稳定性同步提升。'
+      ]
+    }
+  },
+  {
+    id: 'briefing-2026-05-11-3',
+    publishedAt: '2026-05-11',
+    title: {
+      ko: '운영 실행 가이드와 프로덕션 프리플라이트 문서 확장',
+      en: 'Run Guides and Production Preflight Docs Expanded',
+      zh: '运行指南与生产预检文档已扩展'
+    },
+    summary: {
+      ko: '이번 주에는 `IMWALLET_RUN_GUIDE.md`, `backend/README.md`, 컷오버·스모크·키 주입 스크립트 문서가 함께 추가되며 앱, 콘솔, 백엔드를 한 흐름으로 실행·검증하는 기준이 정리됐습니다. 제품 자체 기능 추가만큼이나 운영 재현성과 배포 전 점검 절차가 구체화된 것이 이번 주의 핵심 진전입니다.',
+      en: 'This week also added a fuller operating layer through `IMWALLET_RUN_GUIDE.md`, the backend README, and preflight/key-injection/smoke documentation. The result is a clearer path to run, validate, and cut over the app, console, and backend as one system rather than as disconnected pieces.',
+      zh: '本周还补齐了 `IMWALLET_RUN_GUIDE.md`、后端 README 以及预检、密钥注入、冒烟检查相关文档，把 App、Console 与 Backend 作为一个系统来运行与验收的路径写清楚了。对本周来说，这种可复现的运营基线与功能更新同样重要。'
+    },
+    points: {
+      ko: [
+        '실행 기준: Expo 앱, 콘솔, 백엔드, 홀더 스모크, 프리플라이트 명령이 한 문서 흐름으로 정리됐습니다.',
+        '운영 체크: `.env.production.keys`, 키체인 연동, DB 백업/복구 리허설 절차가 문서화됐습니다.',
+        '체크 포인트: 다음 단계는 문서 기준으로 실제 컷오버 리허설을 한 번 끝까지 돌려 보는 것입니다.'
+      ],
+      en: [
+        'Execution baseline: app, console, backend, holder smoke, and preflight commands now live in one documented flow.',
+        'Ops coverage: production key files, keychain sync, and DB backup/restore rehearsal steps are now spelled out.',
+        'What to watch: the next milestone is a full cutover rehearsal strictly following the new runbook.'
+      ],
+      zh: [
+        '执行基线：App、Console、Backend、holder 冒烟与 preflight 命令现已汇总到同一套流程文档中。',
+        '运维覆盖：生产密钥文件、钥匙串同步以及数据库备份/恢复演练步骤都已明确写出。',
+        '关注点：下一步应严格按新 runbook 完成一次完整 cutover 演练。'
+      ]
+    }
+  },
   {
     id: 'briefing-2026-05-04-1',
     publishedAt: '2026-05-04',
@@ -2426,21 +2364,6 @@ const chainNativeAssetMap: Record<ChainCode, AssetKey> = {
 
 const chainOrder: ChainCode[] = ['BTC', 'ETH', 'XRP', 'BSC', 'SOL', 'TRX', 'FIL'];
 
-const withLastCharVariants = (base: string, suffixes: string[]) =>
-  suffixes.map((suffix, idx) => (idx === 0 ? base : `${base.slice(0, -1)}${suffix}`));
-
-const chainDemoAddressPool: Record<ChainCode, string[]> = {
-  BTC: withLastCharVariants('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', ['h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't']),
-  ETH: withLastCharVariants('0x7A6131A4A6Ddb1Ff52C8f2C6fF9a24336aD93cE2', ['2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b']),
-  XRP: withLastCharVariants('rG1QQv2nh2gr7RCZ1P8YYcBUKCCN633jCn', ['n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x']),
-  BSC: withLastCharVariants('0x55d398326f99059fF775485246999027B3197955', ['5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e']),
-  SOL: withLastCharVariants('9wFFmGZkYh9M7m1Ak5s9Y9ycYzaPt6F6DRKCVhcdtrEN', ['N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X']),
-  TRX: withLastCharVariants('TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', ['E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P']),
-  FIL: withLastCharVariants('f1w76m6jlr6cyqp4f6m2zhv7h6m5a9d8e0r2x5f2q', ['q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])
-};
-
-const chainRecipientSamples: Record<ChainCode, string[]> = chainDemoAddressPool;
-
 const chainWalletAddresses: Record<ChainCode, string> = {
   BTC: '',
   ETH: '',
@@ -2479,49 +2402,6 @@ type RecentNftSendItem = {
   label?: string;
   memo?: string;
   chain: ChainCode;
-};
-
-const demoRecentDates = [
-  '2026-04-16 12:31',
-  '2026-04-16 11:48',
-  '2026-04-16 10:22',
-  '2026-04-16 09:37',
-  '2026-04-16 08:14',
-  '2026-04-15 23:52',
-  '2026-04-15 21:19',
-  '2026-04-15 18:46',
-  '2026-04-15 14:08',
-  '2026-04-14 22:33'
-];
-
-const buildDemoRecentItems = (
-  chain: ChainCode,
-  symbol: string,
-  baseAmount: number,
-  step: number,
-  memoPrefix: string,
-  digits: number
-): RecentSendItem[] =>
-  chainDemoAddressPool[chain].slice(0, 10).map((address, idx) => ({
-    address,
-    chain,
-    amount: Number((baseAmount + idx * step).toFixed(digits)),
-    symbol,
-    date: demoRecentDates[idx],
-    memo: `${memoPrefix} ${idx + 1}`
-  }));
-
-const demoRecentSendTargetsByToken: Record<string, RecentSendItem[]> = {
-  btc: buildDemoRecentItems('BTC', 'BTC', 0.0021, 0.00037, 'BTC 테스트 송금', 6),
-  eth: buildDemoRecentItems('ETH', 'ETH', 0.12, 0.03, 'ETH 가스/전송', 4),
-  xrp: buildDemoRecentItems('XRP', 'XRP', 48, 11, 'XRP 리밸런싱', 2),
-  bnb: buildDemoRecentItems('BSC', 'BNB', 0.8, 0.17, 'BNB 운영 송금', 4),
-  sol: buildDemoRecentItems('SOL', 'SOL', 1.1, 0.23, 'SOL 지갑 이동', 4),
-  trx: buildDemoRecentItems('TRX', 'TRX', 120, 26, 'TRX 정산', 2),
-  fil: buildDemoRecentItems('FIL', 'FIL', 0.9, 0.21, 'FIL 스토리지 결제', 4),
-  'usdt-erc': buildDemoRecentItems('ETH', 'USDT', 60, 14, 'USDT ERC 정산', 2),
-  'usdt-trc': buildDemoRecentItems('TRX', 'USDT', 70, 16, 'USDT TRC 결제', 2),
-  'usdt-bsc': buildDemoRecentItems('BSC', 'USDT', 65, 15, 'USDT BSC 송금', 2)
 };
 
 const tokenCatalog: WalletToken[] = [
@@ -2712,133 +2592,6 @@ const tokenCatalog: WalletToken[] = [
 
 const defaultEnabledTokenIds = ['btc', 'eth', 'xrp', 'bnb', 'sol', 'trx', 'fil', 'usdt-erc', 'usdt-trc', 'usdt-bsc'];
 
-const seedAmountConfigByTokenId: Record<string, { base: number; step: number; digits: number }> = {
-  btc: { base: 0.0031, step: 0.00042, digits: 6 },
-  eth: { base: 0.14, step: 0.028, digits: 4 },
-  xrp: { base: 38, step: 7.5, digits: 2 },
-  bnb: { base: 0.72, step: 0.11, digits: 4 },
-  sol: { base: 1.35, step: 0.24, digits: 4 },
-  trx: { base: 92, step: 18, digits: 2 },
-  fil: { base: 0.58, step: 0.09, digits: 4 },
-  'usdt-erc': { base: 45, step: 11, digits: 2 },
-  'usdt-trc': { base: 52, step: 10, digits: 2 },
-  'usdt-bsc': { base: 49, step: 9, digits: 2 }
-};
-
-const formatSeedTimestamp = (date: Date) => {
-  const yyyy = `${date.getFullYear()}`;
-  const mm = `${date.getMonth() + 1}`.padStart(2, '0');
-  const dd = `${date.getDate()}`.padStart(2, '0');
-  const hh = `${date.getHours()}`.padStart(2, '0');
-  const min = `${date.getMinutes()}`.padStart(2, '0');
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-};
-
-const buildSeedAddressBookEntries = (): AddressBookEntry[] => {
-  const base = new Date('2026-04-21T10:30:00+09:00');
-  const rows: AddressBookEntry[] = [];
-
-  tokenCatalog.forEach((token, tokenIndex) => {
-    const addressPool = chainDemoAddressPool[token.chainCode];
-    for (let i = 0; i < 2; i += 1) {
-      const createdAt = new Date(base.getTime() - (tokenIndex * 2 + i) * 73 * 60 * 1000);
-      rows.push({
-        id: `seed-book-${token.id}-${i + 1}`,
-        chain: token.chainCode,
-        assetKey: token.assetKey,
-        address: addressPool[i],
-        label: `${token.symbol} ${i === 0 ? 'Main' : 'Desk'}`,
-        createdAt: formatSeedTimestamp(createdAt),
-        memo: i === 0 ? `${token.symbol} 정산` : undefined
-      });
-    }
-  });
-
-  return rows;
-};
-
-const defaultSeedAddressBookEntries = buildSeedAddressBookEntries();
-
-const buildSeedNftAddressBookEntries = (): AddressBookEntry[] => {
-  const base = new Date('2026-04-21T10:10:00+09:00');
-  const rows: AddressBookEntry[] = [];
-  const chainCountMap: Record<ChainCode, number> = { BTC: 0, ETH: 0, XRP: 0, BSC: 0, SOL: 0, TRX: 0, FIL: 0 };
-
-  initialCollectibles.forEach((item, index) => {
-    const chain = normalizeChainCode(item.network) ?? 'ETH';
-    if (!chainDemoAddressPool[chain]?.length) return;
-    const used = chainCountMap[chain];
-    if (used >= 2) return;
-    const createdAt = new Date(base.getTime() - (index + used) * 59 * 60 * 1000);
-    const address = chainDemoAddressPool[chain][used % chainDemoAddressPool[chain].length];
-    rows.push({
-      id: `seed-nft-book-${item.id}-${used + 1}`,
-      chain,
-      assetKey: chainNativeAssetMap[chain],
-      address,
-      label: `${item.name} ${used === 0 ? 'Main' : 'Desk'}`,
-      createdAt: formatSeedTimestamp(createdAt),
-      memo: used === 0 ? `${item.collection} NFT` : undefined
-    });
-    chainCountMap[chain] = used + 1;
-  });
-
-  return rows;
-};
-
-const defaultSeedNftAddressBookEntries = buildSeedNftAddressBookEntries();
-
-const buildSeedTransactions = (): TxItem[] => {
-  const base = new Date('2026-04-21T11:00:00+09:00');
-  const rows: TxItem[] = [];
-  let globalIndex = 0;
-
-  tokenCatalog.forEach((token, tokenIndex) => {
-    const amountConfig = seedAmountConfigByTokenId[token.id] ?? { base: 1, step: 0.1, digits: 4 };
-    const addressPool = chainDemoAddressPool[token.chainCode];
-    const tokenBookAddresses = defaultSeedAddressBookEntries
-      .filter((entry) => entry.chain === token.chainCode && entry.assetKey === token.assetKey)
-      .map((entry) => entry.address);
-
-    for (let i = 0; i < 20; i += 1) {
-      const isReceive = i % 2 === 1;
-      const type: TxItem['type'] = isReceive ? 'receive' : 'send';
-      const amountCore = amountConfig.base + (i % 10) * amountConfig.step;
-      const amount = Number((isReceive ? amountCore * 1.16 : amountCore).toFixed(amountConfig.digits));
-      const usdValue = Number((amount * token.priceUsd).toFixed(2));
-      const preferredBookAddress = tokenBookAddresses.length ? tokenBookAddresses[i % tokenBookAddresses.length] : '';
-      const poolAddress = addressPool[(i + 2 + tokenIndex) % addressPool.length];
-      const shouldUseBookAddress = !isReceive && i % 4 !== 3;
-      const counterparty = shouldUseBookAddress && preferredBookAddress ? preferredBookAddress : poolAddress;
-      const createdAt = new Date(base.getTime() - (globalIndex * 37 + tokenIndex * 11) * 60 * 1000);
-      const memo = i % 3 === 1 ? undefined : `${token.symbol} ${isReceive ? '입금' : '전송'} 메모 ${i + 1}`;
-
-      rows.push({
-        id: `seed-tx-${token.id}-${i + 1}`,
-        tokenSymbol: token.symbol,
-        network: token.network,
-        type,
-        status: 'completed',
-        amount,
-        usdValue,
-        counterparty,
-        createdAt: formatSeedTimestamp(createdAt),
-        chain: token.chainCode,
-        memo
-      });
-      globalIndex += 1;
-    }
-  });
-
-  return rows.sort((a, b) => {
-    const ta = new Date(a.createdAt.replace(' ', 'T')).getTime();
-    const tb = new Date(b.createdAt.replace(' ', 'T')).getTime();
-    return tb - ta;
-  });
-};
-
-const defaultSeedTransactions = buildSeedTransactions();
-
 const DEFAULT_SEND_GAS_SETTINGS: SendGasSettings = {
   gasPrice: '0.1',
   gasLimit: '21000',
@@ -2915,6 +2668,7 @@ const copy: Record<Language, Copy> = {
     security: '보안',
     notifications: '알림',
     helpCenter: '도움말',
+    privacyPolicy: '개인정보처리방침',
     support: '지원',
     about: '앱 정보',
     preferences: '환경설정',
@@ -2945,7 +2699,6 @@ const copy: Record<Language, Copy> = {
     onboardingBody: 'Trust Wallet 흐름 기반 온보딩',
     createWallet: '새 지갑 만들기',
     addExisting: '기존 지갑 가져오기',
-    exploreDemo: '데모 지갑으로 시작',
     securityCheck: '보안 체크',
     backupTitle: '시드 구문 백업',
     backupBody: '시드 구문은 오프라인에 보관하세요. 분실 시 복구할 수 없습니다.',
@@ -3090,6 +2843,7 @@ const copy: Record<Language, Copy> = {
     security: 'Security',
     notifications: 'Notifications',
     helpCenter: 'Help Center',
+    privacyPolicy: 'Privacy Policy',
     support: 'Support',
     about: 'About',
     preferences: 'Preferences',
@@ -3120,7 +2874,6 @@ const copy: Record<Language, Copy> = {
     onboardingBody: 'Trust-style onboarding flow',
     createWallet: 'Create new wallet',
     addExisting: 'Add existing wallet',
-    exploreDemo: 'Explore demo wallet',
     securityCheck: 'Security check',
     backupTitle: 'Back up secret phrase',
     backupBody: 'Store your secret phrase offline. Recovery is impossible without it.',
@@ -3265,6 +3018,7 @@ const copy: Record<Language, Copy> = {
     security: '安全',
     notifications: '通知',
     helpCenter: '帮助中心',
+    privacyPolicy: '隐私政策',
     support: '支持',
     about: '关于',
     preferences: '偏好设置',
@@ -3295,7 +3049,6 @@ const copy: Record<Language, Copy> = {
     onboardingBody: '基于 Trust 结构的引导流程',
     createWallet: '创建新钱包',
     addExisting: '导入已有钱包',
-    exploreDemo: '进入演示钱包',
     securityCheck: '安全检查',
     backupTitle: '备份助记词',
     backupBody: '请离线保存助记词，丢失后无法恢复资产。',
@@ -4363,11 +4116,6 @@ const detectAddressChains = (address: string): ChainCode[] => {
   return (Object.keys(chainRegexMap) as ChainCode[]).filter((chain) => chainRegexMap[chain].test(trimmed));
 };
 
-const checkAddressExistence = (chain: ChainCode, address: string) => {
-  const normalized = normalizeAddress(chain, address.trim());
-  return chainRecipientSamples[chain].some((sample) => normalizeAddress(chain, sample) === normalized);
-};
-
 const estimateNetworkFee = (chain: ChainCode) => {
   if (chain === 'BTC') return '$1.20';
   if (chain === 'ETH') return '$2.90';
@@ -4396,8 +4144,7 @@ const estimateNativeFee = (chain: ChainCode, gasPriceInput: string, gasLimitInpu
 };
 
 const generateTxHash = (chain: ChainCode) => {
-  const alphabet = '0123456789abcdef';
-  const base = Array.from({ length: 64 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+  const base = randomHexString(64);
   if (chain === 'SOL') return `${base.slice(0, 44)}`;
   if (chain === 'TRX') return `0x${base}`;
   return `0x${base}`;
@@ -4509,7 +4256,6 @@ const normalizeStoredAddressBookEntries = (raw: unknown): AddressBookEntry[] | n
     if (!entry || typeof entry !== 'object') return;
     const row = entry as Record<string, unknown>;
     const rowId = String(row.id ?? `restored-book-${index}`).trim();
-    if (rowId.startsWith('seed-book-') || rowId.startsWith('seed-nft-book-')) return;
     const chain = normalizeChainCode(String(row.chain ?? ''));
     if (!chain) return;
     const address = String(row.address ?? '').trim();
@@ -4550,82 +4296,17 @@ const resolveTokenIdFromTx = (tx: TxItem) => {
 
 const mergeTransactionsWithSeed = (stored: WalletTxItem[] | null) => {
   const base = stored ?? [];
-  const seed = defaultSeedTransactions;
-
-  const merged = [...base];
-  const seenId = new Set(merged.map((tx) => tx.id));
-
-  tokenCatalog.forEach((token) => {
-    const existingCount = merged.filter((tx) => resolveTokenIdFromTx(tx) === token.id).length;
-    if (existingCount >= 20) return;
-
-    const needed = 20 - existingCount;
-    const seedRowsForToken = seed.filter((tx) => resolveTokenIdFromTx(tx) === token.id);
-    let added = 0;
-    for (const row of seedRowsForToken) {
-      if (added >= needed) break;
-      if (seenId.has(row.id)) continue;
-      merged.push(row);
-      seenId.add(row.id);
-      added += 1;
-    }
-  });
-
-  return merged.sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
+  return [...base].sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
 };
 
 const mergeAddressBookWithSeed = (stored: AddressBookEntry[] | null) => {
   const base = stored ?? [];
-  const merged = [...base];
-  const dedupe = new Set(
-    merged.map((entry) => `${entry.chain}:${normalizeAddress(entry.chain, entry.address)}`)
-  );
-
-  tokenCatalog.forEach((token) => {
-    const existingCount = merged.filter((entry) => entry.chain === token.chainCode && (entry.assetKey ?? chainNativeAssetMap[entry.chain]) === token.assetKey)
-      .length;
-    if (existingCount >= 2) return;
-
-    const needed = 2 - existingCount;
-    const seedRows = defaultSeedAddressBookEntries.filter(
-      (entry) => entry.chain === token.chainCode && (entry.assetKey ?? chainNativeAssetMap[entry.chain]) === token.assetKey
-    );
-    let added = 0;
-    for (const row of seedRows) {
-      if (added >= needed) break;
-      const key = `${row.chain}:${normalizeAddress(row.chain, row.address)}`;
-      if (dedupe.has(key)) continue;
-      merged.push(row);
-      dedupe.add(key);
-      added += 1;
-    }
-  });
-
-  return merged.sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
+  return [...base].sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
 };
 
 const mergeNftAddressBookWithSeed = (stored: AddressBookEntry[] | null) => {
   const base = stored ?? [];
-  const merged = [...base];
-  const dedupe = new Set(merged.map((entry) => `${entry.chain}:${normalizeAddress(entry.chain, entry.address)}`));
-
-  (['ETH', 'BSC', 'SOL', 'TRX'] as ChainCode[]).forEach((chain) => {
-    const existingCount = merged.filter((entry) => entry.chain === chain).length;
-    if (existingCount >= 2) return;
-    const needed = 2 - existingCount;
-    const seedRows = defaultSeedNftAddressBookEntries.filter((entry) => entry.chain === chain);
-    let added = 0;
-    for (const row of seedRows) {
-      if (added >= needed) break;
-      const key = `${row.chain}:${normalizeAddress(row.chain, row.address)}`;
-      if (dedupe.has(key)) continue;
-      merged.push(row);
-      dedupe.add(key);
-      added += 1;
-    }
-  });
-
-  return merged.sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
+  return [...base].sort((a, b) => parseTxDate(b.createdAt).getTime() - parseTxDate(a.createdAt).getTime());
 };
 
 const inferChainFromTx = (tx: TxItem): ChainCode => {
@@ -4701,16 +4382,6 @@ const nowStamp = () => {
   const hh = `${date.getHours()}`.padStart(2, '0');
   const min = `${date.getMinutes()}`.padStart(2, '0');
   return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-};
-
-const generateWalletAddress = () => {
-  const entropy = `${Date.now().toString(16)}${Math.floor(Math.random() * 1_000_000_000).toString(16)}`.padEnd(40, '0');
-  return `0x${entropy.slice(0, 40)}`;
-};
-
-const getDefaultSeedWordsForWalletIndex = (index: number) => {
-  const normalizedIndex = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
-  return [...(DEFAULT_COMPAT_SEEDS[normalizedIndex % DEFAULT_COMPAT_SEEDS.length] ?? DEFAULT_SEED_WORDS)];
 };
 
 const unnamedWalletBaseByLang: Record<Language, string> = {
@@ -4881,8 +4552,7 @@ function AppInner() {
     firstWidth: 0
   });
   const [stack, setStack] = useState<Screen[]>(['home']);
-  const { walletAccounts, setWalletAccounts, walletId, setWalletId, activeWallet, walletStoreHydrated, walletStoreUsesSeedData } =
-    useWalletStore([]);
+  const { walletAccounts, setWalletAccounts, walletId, setWalletId, activeWallet, walletStoreHydrated } = useWalletStore([]);
   const { enabledTokenIds, toggleEnabledToken } = useAssetToggleStore(defaultEnabledTokenIds);
   const [tokens, setTokens] = useState<WalletToken[]>(() =>
     sortByCatalogOrder(tokenCatalog.filter((token) => enabledTokenIds.includes(token.id)).map(cloneToken))
@@ -5030,6 +4700,8 @@ function AppInner() {
   const [faceBiometricSupported, setFaceBiometricSupported] = useState(Platform.OS !== 'android');
   const [settingsAuthTarget, setSettingsAuthTarget] = useState<'wallets' | 'security' | 'addressBook'>('wallets');
   const [sendPassword, setSendPassword] = useState('');
+  const [passwordAuthFailureCount, setPasswordAuthFailureCount] = useState(0);
+  const [passwordAuthLockUntilMs, setPasswordAuthLockUntilMs] = useState(0);
   const [isSecurityLoaded, setIsSecurityLoaded] = useState(false);
   const [appLocked, setAppLocked] = useState(false);
   const [appUnlockInput, setAppUnlockInput] = useState('');
@@ -5081,6 +4753,7 @@ function AppInner() {
   const [authErrorMessage, setAuthErrorMessage] = useState('');
   const walletNameMigrationDoneRef = useRef(false);
   const discoverIconCacheSyncSignatureRef = useRef('');
+  const seedClipboardClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const shouldLockOnActiveRef = useRef(false);
   const appLockBiometricAutoRequestedRef = useRef(false);
@@ -5092,9 +4765,7 @@ function AppInner() {
   const [recoveryWordCount, setRecoveryWordCount] = useState<RecoveryWordCount>(DEFAULT_RECOVERY_WORD_COUNT);
   const [seedPassphraseInput, setSeedPassphraseInput] = useState('');
   const [seedAccountIndexInput, setSeedAccountIndexInput] = useState('0');
-  const [onboardingSeedWords, setOnboardingSeedWords] = useState<string[]>(() =>
-    safeGenerateRecoverySeedWords(DEFAULT_RECOVERY_WORD_COUNT)
-  );
+  const [onboardingSeedWords, setOnboardingSeedWords] = useState<string[]>(() => createEmptySeedWords(DEFAULT_RECOVERY_WORD_COUNT));
   const [agreeBackup, setAgreeBackup] = useState(false);
   const [agreeNeverShare, setAgreeNeverShare] = useState(false);
   const [agreeNoRecover, setAgreeNoRecover] = useState(false);
@@ -5102,7 +4773,7 @@ function AppInner() {
   const [deleteAgreeBackup, setDeleteAgreeBackup] = useState(false);
   const [deleteAgreeNoRecovery, setDeleteAgreeNoRecovery] = useState(false);
   const [deleteAgreeFinal, setDeleteAgreeFinal] = useState(false);
-  const [deleteSeedWords, setDeleteSeedWords] = useState<string[]>(() => createEmptySeedWords(DEFAULT_RECOVERY_WORD_COUNT));
+  const [deleteSeedWords, setDeleteSeedWords] = useState<string[]>([]);
   const [deleteSeedTouched, setDeleteSeedTouched] = useState(false);
   const [deleteAuthPasswordInput, setDeleteAuthPasswordInput] = useState('');
   const [deleteAuthErrorMessage, setDeleteAuthErrorMessage] = useState('');
@@ -5506,10 +5177,10 @@ function AppInner() {
   const nextAutoWalletName = useMemo(() => buildNextAutoWalletName(walletAccounts, lang).label, [walletAccounts, lang]);
   const walletNamePlaceholder = useMemo(
     () => {
-      const suggestedName = walletStoreUsesSeedData ? unnamedWalletBaseByLang[lang] : nextAutoWalletName;
+      const suggestedName = nextAutoWalletName || unnamedWalletBaseByLang[lang];
       return lang === 'ko' ? `예: ${suggestedName}` : lang === 'zh' ? `例如：${suggestedName}` : `e.g. ${suggestedName}`;
     },
-    [lang, nextAutoWalletName, walletStoreUsesSeedData]
+    [lang, nextAutoWalletName]
   );
   const currentScreen = stack[stack.length - 1];
   const discoverDataScreens: Screen[] = [
@@ -5571,6 +5242,16 @@ function AppInner() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (seedClipboardClearTimerRef.current) {
+        clearTimeout(seedClipboardClearTimerRef.current);
+        seedClipboardClearTimerRef.current = null;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     void refreshBiometricSupport();
   }, [refreshBiometricSupport]);
@@ -5597,23 +5278,25 @@ function AppInner() {
   const discoverTrustedHostEntries = useMemo(() => {
     const seen = new Set<string>();
     const next: DiscoverTrustedHostEntry[] = [];
+    const nowTs = Date.now();
 
     discoverTrustedHosts.forEach((entry, index) => {
       const host = normalizeDiscoverTrustedHost(entry.host);
       if (!host || seen.has(host)) return;
+      const createdAt = toIsoOrNow(String(entry.createdAt ?? '').trim(), nowTs);
+      const expiresAt = computeTrustedHostExpiresAt(createdAt, entry.expiresAt);
+      const expiresAtTs = Date.parse(expiresAt);
+      if (!Number.isFinite(expiresAtTs) || expiresAtTs <= nowTs) return;
       seen.add(host);
 
-      const createdAtCandidate = String(entry.createdAt ?? '').trim();
-      const createdAt = Number.isNaN(new Date(createdAtCandidate).getTime())
-        ? new Date().toISOString()
-        : new Date(createdAtCandidate).toISOString();
       const stableId = String(entry.id ?? '').trim() || `trusted-${host}-${index}`;
 
       next.push({
         id: stableId,
         host,
         memo: String(entry.memo ?? '').trim(),
-        createdAt
+        createdAt,
+        expiresAt
       });
     });
 
@@ -5707,16 +5390,20 @@ function AppInner() {
   }, [activeWallet, walletAccounts, walletAccountIndexMap, walletId, walletSeedMap, walletSeedPassphraseMap]);
   const deleteTargetWallet = deleteWalletId ? walletAccounts.find((wallet) => wallet.id === deleteWalletId) ?? null : null;
   const expectedDeleteSeedWords = useMemo(() => {
-    if (!deleteWalletId) return DEFAULT_SEED_WORDS;
+    if (!deleteWalletId) return null;
     const mapped = walletSeedMap[deleteWalletId];
     if (mapped && isValidRecoverySeedWords(mapped)) return mapped;
-    const fallbackIndex = Math.max(0, walletAccounts.findIndex((wallet) => wallet.id === deleteWalletId));
-    return getDefaultSeedWordsForWalletIndex(fallbackIndex);
-  }, [deleteWalletId, walletAccounts, walletSeedMap]);
-  const isDeleteSeedWordsComplete = deleteSeedWords.every((word) => normalizeSeedWord(word).length > 0);
+    return null;
+  }, [deleteWalletId, walletSeedMap]);
+  const hasDeleteSeedVerification = Array.isArray(expectedDeleteSeedWords) && expectedDeleteSeedWords.some((word) => normalizeSeedWord(word).length > 0);
+  const expectedDeleteSeedWordCount = expectedDeleteSeedWords?.length ?? 0;
+  const isDeleteSeedWordsComplete =
+    hasDeleteSeedVerification &&
+    deleteSeedWords.length === expectedDeleteSeedWordCount &&
+    deleteSeedWords.every((word) => normalizeSeedWord(word).length > 0);
   const doesDeleteSeedMatch =
     isDeleteSeedWordsComplete &&
-    deleteSeedWords.every((word, index) => normalizeSeedWord(word) === normalizeSeedWord(expectedDeleteSeedWords[index] ?? ''));
+    deleteSeedWords.every((word, index) => normalizeSeedWord(word) === normalizeSeedWord(expectedDeleteSeedWords?.[index] ?? ''));
 
   const palette: AppPalette = useMemo(
     () =>
@@ -5859,7 +5546,7 @@ function AppInner() {
       if (isValidAppPassword(normalizedSavedPassword)) {
         setSendPassword(normalizedSavedPassword);
         persistedSendPasswordRef.current = normalizedSavedPassword;
-        if (hasWallet && !walletStoreUsesSeedData) setAppLocked(true);
+        if (hasWallet) setAppLocked(true);
       }
 
       if (savedAuthMethod === 'password' || savedAuthMethod === 'fingerprint' || savedAuthMethod === 'face') {
@@ -5872,17 +5559,22 @@ function AppInner() {
           if (Array.isArray(parsed)) {
             const seen = new Set<string>();
             const parsedEntries: DiscoverTrustedHostEntry[] = [];
+            const nowTs = Date.now();
 
             parsed.forEach((entry, index) => {
               if (typeof entry === 'string') {
                 const host = normalizeDiscoverTrustedHost(entry);
                 if (!host || seen.has(host)) return;
+                const createdAt = new Date(nowTs).toISOString();
+                const expiresAt = new Date(nowTs + DISCOVER_TRUSTED_HOST_TTL_MS).toISOString();
+                if (Date.parse(expiresAt) <= nowTs) return;
                 seen.add(host);
                 parsedEntries.push({
                   id: `trusted-${host}-${index}`,
                   host,
                   memo: '',
-                  createdAt: new Date().toISOString()
+                  createdAt,
+                  expiresAt
                 });
                 return;
               }
@@ -5890,12 +5582,12 @@ function AppInner() {
               if (entry && typeof entry === 'object') {
                 const host = normalizeDiscoverTrustedHost(String((entry as { host?: string }).host ?? ''));
                 if (!host || seen.has(host)) return;
+                const createdAt = toIsoOrNow(String((entry as { createdAt?: string }).createdAt ?? '').trim(), nowTs);
+                const expiresAt = computeTrustedHostExpiresAt(createdAt, String((entry as { expiresAt?: string }).expiresAt ?? '').trim());
+                const expiresAtTs = Date.parse(expiresAt);
+                if (!Number.isFinite(expiresAtTs) || expiresAtTs <= nowTs) return;
                 seen.add(host);
 
-                const createdAtRaw = String((entry as { createdAt?: string }).createdAt ?? '').trim();
-                const createdAt = Number.isNaN(new Date(createdAtRaw).getTime())
-                  ? new Date().toISOString()
-                  : new Date(createdAtRaw).toISOString();
                 const id = String((entry as { id?: string }).id ?? '').trim() || `trusted-${host}-${index}`;
                 const memo = String((entry as { memo?: string }).memo ?? '').trim();
 
@@ -5903,7 +5595,8 @@ function AppInner() {
                   id,
                   host,
                   memo,
-                  createdAt
+                  createdAt,
+                  expiresAt
                 });
               }
             });
@@ -5999,7 +5692,7 @@ function AppInner() {
       isMounted = false;
       interactionTask?.cancel?.();
     };
-  }, [hasWallet, walletStoreUsesSeedData]);
+  }, [hasWallet]);
 
   useEffect(() => {
     let mounted = true;
@@ -6645,86 +6338,20 @@ function AppInner() {
     [lang]
   );
 
-  const fallbackDiscoverFeedItems = useMemo<DiscoverFeedItem[]>(() => {
-    const fromLegacyDapps = dapps.map((item, index) => {
-      const category = mapLegacyDappCategoryToDiscoverCategory(item.category, item.featured);
-      return {
-        id: `fallback-${item.id}`,
-        kind: 'manual' as const,
-        category,
-        section: item.featured ? ('feature' as const) : ('dapps' as const),
-        pinned: item.featured,
-        priority: item.featured ? 70 - index : 30,
-        title: item.name,
-        summary: item.description,
-        sourceName: item.category,
-        sourceUrl: item.url,
-        imageUrl: '',
-        ctaLabel: text.continue,
-        ctaUrl: item.url,
-        actionType: 'external' as const,
-        internalTarget: '',
-        tags: [item.category.toLowerCase()],
-        publishedAt: new Date(Date.now() - index * 3600_000).toISOString()
-      } satisfies DiscoverFeedItem;
-    });
-
-    const fromCategorySeed = discoverCategorySeedItems.map((item, index) => {
-      const publishedAt = new Date(Date.now() - (fromLegacyDapps.length + index) * 3600_000).toISOString();
-      return {
-        id: `fallback-seed-${item.id}`,
-        kind: 'manual' as const,
-        category: item.category,
-        section: item.pinned ? ('feature' as const) : ('dapps' as const),
-        pinned: Boolean(item.pinned),
-        priority: item.pinned ? 40 - index : 20,
-        title: item.title,
-        summary: item.summary,
-        sourceName: item.sourceName,
-        sourceUrl: item.url,
-        imageUrl: '',
-        ctaLabel: text.continue,
-        ctaUrl: item.url,
-        actionType: 'external' as const,
-        internalTarget: '',
-        tags: [item.category],
-        publishedAt
-      } satisfies DiscoverFeedItem;
-    });
-
-    const merged = [...fromLegacyDapps, ...fromCategorySeed];
-    const seenByUrl = new Set<string>();
-    return merged.filter((item) => {
-      const key = item.ctaUrl.trim().toLowerCase();
-      if (!key) return false;
-      if (seenByUrl.has(key)) return false;
-      seenByUrl.add(key);
-      return true;
-    });
-  }, [text.continue]);
-
   const discoverItemsSource = useMemo(() => {
     const liveItems = discoverFeed?.items?.length ? discoverFeed.items : [];
-    if (!liveItems.length) return fallbackDiscoverFeedItems;
+    if (!liveItems.length) return [];
 
     const dedup = new Set<string>();
+    const dedupedLive: DiscoverFeedItem[] = [];
     liveItems.forEach((item) => {
       const key = resolveDiscoverExternalUrl(item).toLowerCase() || String(item.id || '').trim().toLowerCase();
-      if (!key) return;
+      if (!key || dedup.has(key)) return;
       dedup.add(key);
+      dedupedLive.push(item);
     });
-
-    const fallbackRows = fallbackDiscoverFeedItems.filter((item) => item.section === 'dapps' || item.section === 'feature');
-    const appendRows = fallbackRows.filter((item) => {
-      const key = resolveDiscoverExternalUrl(item).toLowerCase() || String(item.id || '').trim().toLowerCase();
-      if (!key) return false;
-      if (dedup.has(key)) return false;
-      dedup.add(key);
-      return true;
-    });
-
-    return [...liveItems, ...appendRows];
-  }, [discoverFeed, fallbackDiscoverFeedItems]);
+    return dedupedLive;
+  }, [discoverFeed]);
   const sortDiscoverItems = (a: DiscoverFeedItem, b: DiscoverFeedItem) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     if (a.priority !== b.priority) return b.priority - a.priority;
@@ -6876,7 +6503,7 @@ function AppInner() {
         return acc;
       }, []);
 
-    const topupToRequiredCount = (rows: DiscoverFeedItem[], filter: DiscoverDappFilterId) => {
+    const topupToRequiredCount = (rows: DiscoverFeedItem[], _filter: DiscoverDappFilterId) => {
       const deduped: DiscoverFeedItem[] = [];
       const seen = new Set<string>();
 
@@ -6885,40 +6512,6 @@ function AppInner() {
         const key = dedupKey(item);
         if (!key || seen.has(key)) return;
         deduped.push(item);
-        seen.add(key);
-      });
-
-      if (filter === 'all' || deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) {
-        return deduped.slice(0, MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY);
-      }
-
-      const topupSeeds = discoverDappTopupSeedMap[filter] || [];
-      const topupCategory = mapTopupSeedFilterToFeedCategory(filter);
-      topupSeeds.forEach((seed, index) => {
-        if (deduped.length >= MAX_DISCOVER_DAPP_ITEMS_PER_CATEGORY) return;
-        const url = String(seed.url || '').trim();
-        if (!isHttpUrl(url)) return;
-        const key = url.toLowerCase();
-        if (seen.has(key)) return;
-        deduped.push({
-          id: `topup-${filter}-${seed.id}`,
-          kind: 'manual' as const,
-          category: topupCategory,
-          section: 'dapps' as const,
-          pinned: false,
-          priority: Math.max(1, 300 - index),
-          title: seed.title,
-          summary: seed.summary,
-          sourceName: seed.sourceName,
-          sourceUrl: url,
-          imageUrl: '',
-          ctaLabel: text.continue,
-          ctaUrl: url,
-          actionType: 'external' as const,
-          internalTarget: '',
-          tags: Array.from(new Set([...(seed.tags || []), filter, 'topup'])),
-          publishedAt: new Date(Date.now() - (index + 1) * 300_000).toISOString()
-        });
         seen.add(key);
       });
 
@@ -6970,27 +6563,23 @@ function AppInner() {
       volume24hUsd: number;
     };
 
-    const sourceRows: DiscoverPopularSourceRow[] =
-      popularMarketTokens?.length
-        ? popularMarketTokens.slice(0, 50).map((row) => ({
-            id: row.id,
-            symbol: row.symbol,
-            name: row.name,
-            iconUrl:
-              discoverCachedTokenIconUrlBySymbol[row.symbol.toUpperCase()] ??
-              row.iconProxyUrl ??
-              row.iconUrl ??
-              discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
-            priceUsd: row.priceUsd,
-            change24h: row.change24h,
-            marketCapUsd: row.marketCapUsd,
-            volume24hUsd: row.volume24hUsd
-          }))
-        : discoverTokens.slice(0, 50).map((row) => ({
-            ...row,
-            iconUrl: discoverCachedTokenIconUrlBySymbol[row.symbol.toUpperCase()] ?? discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
-            volume24hUsd: row.marketCapUsd * 0.03
-          }));
+    const sourceRows: DiscoverPopularSourceRow[] = (popularMarketTokens?.length
+      ? popularMarketTokens
+      : []
+    ).slice(0, 50).map((row) => ({
+      id: row.id,
+      symbol: row.symbol,
+      name: row.name,
+      iconUrl:
+        discoverCachedTokenIconUrlBySymbol[row.symbol.toUpperCase()] ??
+        row.iconProxyUrl ??
+        row.iconUrl ??
+        discoverTokenIconUrlBySymbol[row.symbol.toUpperCase()],
+      priceUsd: row.priceUsd,
+      change24h: row.change24h,
+      marketCapUsd: row.marketCapUsd,
+      volume24hUsd: row.volume24hUsd
+    }));
 
     return sourceRows
       .slice(0, 50)
@@ -7007,7 +6596,6 @@ function AppInner() {
       .sort((a, b) => b.marketCapUsd - a.marketCapUsd);
   }, [discoverCachedTokenIconUrlBySymbol, discoverTokenIconUrlBySymbol, marketPrices, popularMarketTokens]);
   const discoverPopularTokenFilteredRows = useMemo(() => {
-    const POPULAR_MIN_ROWS = 10;
     const normalizedQuery = currentScreen === 'discover' ? discoverSearchInput.trim().toLowerCase() : '';
     const liveFilteredRows = discoverPopularTokenPool.filter((row) => {
       const tokenCategory = resolveDiscoverTokenCategory(row.symbol, row.name);
@@ -7017,45 +6605,12 @@ function AppInner() {
       const haystack = [row.name, row.symbol].join(' ').toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-    if (normalizedQuery) {
-      return liveFilteredRows;
-    }
-
-    const mergedBySymbol = new Map<string, (typeof liveFilteredRows)[number]>();
-    liveFilteredRows.forEach((row) => {
-      mergedBySymbol.set(row.symbol.toUpperCase(), row);
-    });
-
-    const fallbackBySymbol = new Map(discoverTokens.map((row) => [row.symbol.toUpperCase(), row]));
-    const topupSeeds = discoverTokenCategory === 'all' ? discoverTokenTopupAllSeeds : discoverTokenTopupSeedMap[discoverTokenCategory];
-
-    topupSeeds.forEach((seed) => {
-      if (mergedBySymbol.size >= POPULAR_MIN_ROWS) return;
-      const symbol = seed.symbol.toUpperCase();
-      if (mergedBySymbol.has(symbol)) return;
-      const fallbackToken = fallbackBySymbol.get(symbol);
-      const pricePoint = marketPrices[symbol as keyof MarketPriceMap];
-      const marketCapUsd = fallbackToken?.marketCapUsd ?? seed.marketCapUsd;
-      mergedBySymbol.set(symbol, {
-        id: `seed-popular-${discoverTokenCategory}-${symbol.toLowerCase()}`,
-        symbol,
-        name: fallbackToken?.name ?? seed.name,
-          iconUrl: discoverCachedTokenIconUrlBySymbol[symbol] ?? discoverTokenIconUrlBySymbol[symbol],
-        priceUsd: pricePoint?.priceUsd ?? fallbackToken?.priceUsd ?? 0,
-        change24h: pricePoint?.change24h ?? fallbackToken?.change24h ?? 0,
-        marketCapUsd,
-        volume24hUsd: Math.max(0, marketCapUsd * 0.03)
-      });
-    });
-
-    return Array.from(mergedBySymbol.values()).sort((a, b) => b.marketCapUsd - a.marketCapUsd);
+    return liveFilteredRows;
   }, [
     currentScreen,
-    discoverCachedTokenIconUrlBySymbol,
     discoverPopularTokenPool,
     discoverSearchInput,
     discoverTokenCategory,
-    discoverTokenIconUrlBySymbol,
     marketPrices
   ]);
   const discoverPopularTokenRows = useMemo(() => discoverPopularTokenFilteredRows.slice(0, 3), [discoverPopularTokenFilteredRows]);
@@ -7380,11 +6935,7 @@ function AppInner() {
       .filter((item) => item.section === 'dapps' || item.section === 'feature')
       .filter((item) => !isWeeklyBriefingItem(item))
       .filter((item) => Boolean(resolveDiscoverExternalUrl(item)));
-    const fallbackDappItems = fallbackDiscoverFeedItems
-      .filter((item) => item.section === 'dapps' || item.section === 'feature')
-      .filter((item) => !isWeeklyBriefingItem(item))
-      .filter((item) => Boolean(resolveDiscoverExternalUrl(item)));
-    const dappItemsSource = [...liveDappItems, ...fallbackDappItems];
+    const dappItemsSource = [...liveDappItems];
     const dappByKey = new Map<
       string,
       {
@@ -7458,7 +7009,7 @@ function AppInner() {
         candidates: buildDiscoverSiteIconCandidates(site.domain, preferredIconUrl).slice(0, 6)
       });
     });
-    const siteFeedItems = [...discoverItemsSource, ...fallbackDiscoverFeedItems]
+    const siteFeedItems = [...discoverItemsSource]
       .filter((item) => item.section === 'sites')
       .filter((item) => !isWeeklyBriefingItem(item));
     siteFeedItems.forEach((item) => {
@@ -7486,7 +7037,6 @@ function AppInner() {
     discoverItemsSource,
     popularMarketDapps,
     discoverPopularTokenPool,
-    fallbackDiscoverFeedItems,
     popularMarketTokens
   ]);
 
@@ -9929,7 +9479,8 @@ function AppInner() {
   };
 
   const clearSeedWords = (wordCount: number = recoveryWordCount) => setSeedWords(createEmptySeedWords(wordCount));
-  const clearDeleteSeedWords = (wordCount: number = expectedDeleteSeedWords.length) => setDeleteSeedWords(createEmptySeedWords(wordCount));
+  const clearDeleteSeedWords = (wordCount: number = expectedDeleteSeedWordCount) =>
+    setDeleteSeedWords(wordCount > 0 ? createEmptySeedWords(wordCount) : []);
 
   const updateDeleteSeedWordAt = (index: number, rawText: string) => {
     const normalized = rawText.trim().toLowerCase();
@@ -10030,7 +9581,19 @@ function AppInner() {
   );
 
   const startCreateWalletFlow = (options?: { root?: boolean }) => {
-    const nextOnboardingSeedWords = safeGenerateRecoverySeedWords(DEFAULT_RECOVERY_WORD_COUNT);
+    let nextOnboardingSeedWords: string[];
+    try {
+      nextOnboardingSeedWords = safeGenerateRecoverySeedWords(DEFAULT_RECOVERY_WORD_COUNT);
+    } catch (error) {
+      const failedMessage =
+        lang === 'ko'
+          ? '시드 생성에 실패했습니다. 앱을 재시작한 뒤 다시 시도해주세요.'
+          : lang === 'zh'
+            ? '助记词生成失败。请重启应用后重试。'
+            : 'Failed to generate recovery words. Restart the app and try again.';
+      setBannerMessage(failedMessage);
+      return;
+    }
     setAgreeBackup(false);
     setAgreeNeverShare(false);
     setAgreeNoRecover(false);
@@ -10281,14 +9844,53 @@ function AppInner() {
     });
   };
 
+  const formatPasswordAuthBackoffLabel = (durationMs: number) => {
+    const seconds = Math.max(1, Math.ceil(durationMs / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.ceil(seconds / 60);
+    return `${minutes}m`;
+  };
+
+  const buildPasswordAuthLockedMessage = (durationMs: number) => {
+    const waitLabel = formatPasswordAuthBackoffLabel(durationMs);
+    if (lang === 'ko') return `시도 제한이 적용되었습니다. ${waitLabel} 후 다시 시도하세요.`;
+    if (lang === 'zh') return `尝试次数过多，请在 ${waitLabel} 后重试。`;
+    return `Too many attempts. Try again in ${waitLabel}.`;
+  };
+
+  const getPasswordAuthRemainingMs = () => Math.max(0, passwordAuthLockUntilMs - Date.now());
+
+  const registerPasswordAuthFailure = () => {
+    const nextFailureCount = Math.max(1, passwordAuthFailureCount + 1);
+    const backoffMs = Math.min(PASSWORD_AUTH_BACKOFF_BASE_MS * 2 ** (nextFailureCount - 1), PASSWORD_AUTH_BACKOFF_MAX_MS);
+    setPasswordAuthFailureCount(nextFailureCount);
+    setPasswordAuthLockUntilMs(Date.now() + backoffMs);
+    return backoffMs;
+  };
+
+  const resetPasswordAuthFailure = () => {
+    if (passwordAuthFailureCount !== 0) setPasswordAuthFailureCount(0);
+    if (passwordAuthLockUntilMs !== 0) setPasswordAuthLockUntilMs(0);
+  };
+
+  const ensurePasswordAuthReady = () => {
+    const remainingMs = getPasswordAuthRemainingMs();
+    if (remainingMs <= 0) return true;
+    setBannerMessage(buildPasswordAuthLockedMessage(remainingMs));
+    return false;
+  };
+
   const confirmWalletSettingsAuth = (overrideInput?: string) => {
+    if (!ensurePasswordAuthReady()) return;
     const entered = normalizePassword(overrideInput ?? walletSettingsAuthInput);
     if (entered !== normalizePassword(sendPassword)) {
       setWalletSettingsAuthInput('');
       setWalletSettingsAuthError('');
-      setBannerMessage(flow.authInvalid);
+      const backoffMs = registerPasswordAuthFailure();
+      setBannerMessage(`${flow.authInvalid} ${buildPasswordAuthLockedMessage(backoffMs)}`);
       return;
     }
+    resetPasswordAuthFailure();
     setWalletSettingsAuthError('');
     setWalletSettingsAuthInput('');
     openSettingsTargetAfterAuth(settingsAuthTarget);
@@ -10306,13 +9908,25 @@ function AppInner() {
   };
 
   const unlockWithPassword = (overrideInput?: string) => {
+    const remainingMs = getPasswordAuthRemainingMs();
+    if (remainingMs > 0) {
+      const lockedMessage = buildPasswordAuthLockedMessage(remainingMs);
+      setAppUnlockInput('');
+      setAppUnlockError(lockedMessage);
+      setBannerMessage(lockedMessage);
+      return;
+    }
+
     const entered = normalizePassword(overrideInput ?? appUnlockInput);
     if (entered !== normalizePassword(sendPassword)) {
       setAppUnlockInput('');
-      setAppUnlockError('');
-      setBannerMessage(flow.authInvalid);
+      const backoffMs = registerPasswordAuthFailure();
+      const message = `${flow.authInvalid} ${buildPasswordAuthLockedMessage(backoffMs)}`;
+      setAppUnlockError(message);
+      setBannerMessage(message);
       return;
     }
+    resetPasswordAuthFailure();
     setAppUnlockError('');
     setAppUnlockInput('');
     setAppUnlockUsePassword(false);
@@ -10527,15 +10141,36 @@ function AppInner() {
     const nextName = buildUniqueWalletName(rawName, walletAccounts, lang);
     const normalizedPassphrase = String(options?.passphrase ?? '').normalize('NFKD');
     const normalizedAccountIndex = normalizeAccountIndex(options?.accountIndex ?? 0);
-    const normalizedSeedWords =
+    let normalizedSeedWords =
       options?.seedWords && isValidRecoverySeedWords(options.seedWords)
         ? normalizeSeedWords(options.seedWords.map((word) => String(word ?? '')))
-        : safeGenerateRecoverySeedWords(DEFAULT_RECOVERY_WORD_COUNT);
-    const derivedPrimaryAddress = isValidRecoverySeedWords(normalizedSeedWords)
-      ? deriveTrustCompatiblePrimaryAddress(normalizedSeedWords, normalizedAccountIndex, normalizedPassphrase)
-      : generateWalletAddress();
+        : createEmptySeedWords(DEFAULT_RECOVERY_WORD_COUNT);
+    if (!isValidRecoverySeedWords(normalizedSeedWords)) {
+      try {
+        normalizedSeedWords = safeGenerateRecoverySeedWords(DEFAULT_RECOVERY_WORD_COUNT);
+      } catch {
+        setBannerMessage(
+          lang === 'ko' ? '시드 생성에 실패했습니다. 다시 시도해주세요.' : lang === 'zh' ? '助记词生成失败，请重试。' : 'Seed generation failed. Please try again.'
+        );
+        return null;
+      }
+    }
+
+    if (!isValidRecoverySeedWords(normalizedSeedWords)) {
+      setBannerMessage(lang === 'ko' ? '시드 생성에 실패했습니다. 다시 시도해주세요.' : lang === 'zh' ? '助记词生成失败，请重试。' : 'Seed generation failed. Please try again.');
+      return null;
+    }
+
+    let derivedPrimaryAddress = '';
+    try {
+      derivedPrimaryAddress = deriveTrustCompatiblePrimaryAddress(normalizedSeedWords, normalizedAccountIndex, normalizedPassphrase);
+    } catch (error) {
+      trackError('wallet.primary_address_derive_failed', error, { walletName: nextName.name });
+      setBannerMessage(lang === 'ko' ? '지갑 주소 파생에 실패했습니다.' : lang === 'zh' ? '钱包地址派生失败。' : 'Failed to derive wallet address.');
+      return null;
+    }
     const newWallet: WalletAccount = {
-      id: `wallet-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `wallet-${Date.now()}-${randomIntExclusive(1000)}`,
       name: nextName.name,
       nameMode: nextName.nameMode,
       autoNameIndex: nextName.autoNameIndex,
@@ -10561,11 +10196,12 @@ function AppInner() {
     const sourceSeedWords = isSeedWordsComplete ? normalizeSeedWords(seedWords) : [...onboardingSeedWords];
     const sourcePassphrase = normalizedSeedPassphrase;
     const sourceAccountIndex = normalizedSeedAccountIndex;
-    addWalletAccount(onboardingWalletName, {
+    const createdWallet = addWalletAccount(onboardingWalletName, {
       seedWords: sourceSeedWords,
       passphrase: sourcePassphrase,
       accountIndex: sourceAccountIndex
     });
+    if (!createdWallet) return;
     setPhraseInput('');
     setSeedPassphraseInput('');
     setSeedAccountIndexInput('0');
@@ -10605,7 +10241,7 @@ function AppInner() {
     const targetSeedWords = walletSeedMap[targetWalletId];
     const deleteWordCount = Array.isArray(targetSeedWords) && isValidRecoverySeedWords(targetSeedWords)
       ? targetSeedWords.length
-      : DEFAULT_RECOVERY_WORD_COUNT;
+      : 0;
     clearDeleteSeedWords(deleteWordCount);
     setDeleteSeedTouched(false);
     setDeleteAuthPasswordInput('');
@@ -10625,12 +10261,15 @@ function AppInner() {
   const confirmWalletDeleteWithAuth = async (overrideInput?: string) => {
     if (!deleteTargetWallet) return;
     if (sendAuthMethod === 'password') {
+      if (!ensurePasswordAuthReady()) return;
       if (normalizePassword(overrideInput ?? deleteAuthPasswordInput) !== normalizePassword(sendPassword)) {
         setDeleteAuthPasswordInput('');
         setDeleteAuthErrorMessage('');
-        setBannerMessage(flow.authInvalid);
+        const backoffMs = registerPasswordAuthFailure();
+        setBannerMessage(`${flow.authInvalid} ${buildPasswordAuthLockedMessage(backoffMs)}`);
         return;
       }
+      resetPasswordAuthFailure();
     } else {
       const authenticated = await authenticateWithBiometricMode(sendAuthMethod, walletUi.deleteWalletTitle);
       if (!authenticated) return;
@@ -10731,6 +10370,13 @@ function AppInner() {
     const phrase = onboardingSeedWords.join(' ');
     try {
       await Clipboard.setStringAsync(phrase);
+      if (seedClipboardClearTimerRef.current) {
+        clearTimeout(seedClipboardClearTimerRef.current);
+      }
+      seedClipboardClearTimerRef.current = setTimeout(() => {
+        void Clipboard.setStringAsync('').catch(() => undefined);
+        seedClipboardClearTimerRef.current = null;
+      }, SEED_CLIPBOARD_CLEAR_DELAY_MS);
       setBannerMessage(text.phraseCopied);
       logEvent({ type: 'seed.copy', payload: { wordCount: onboardingSeedWords.length } });
     } catch (error) {
@@ -10740,7 +10386,6 @@ function AppInner() {
   };
 
   const shareQrImage = async (address: string, chain: ChainCode, symbol: string) => {
-    const qrImageUrl = createQrImageUrl(address);
     const shareTitle = `${symbol} ${text.receive}`;
     const shareMessage = createReceiveShareText(chain, text.receive, address);
 
@@ -10750,12 +10395,11 @@ function AppInner() {
         if (nav?.share) {
           await nav.share({
             title: shareTitle,
-            text: shareMessage,
-            url: qrImageUrl
+            text: shareMessage
           });
           return;
         }
-        await Clipboard.setStringAsync(qrImageUrl);
+        await Clipboard.setStringAsync(address);
         setBannerMessage(text.addressCopied);
         logEvent({ type: 'receive.qr.share.link_copied', payload: { chain, symbol } });
         return;
@@ -10763,8 +10407,7 @@ function AppInner() {
 
       await Share.share({
         title: shareTitle,
-        message: `${shareMessage}\n${qrImageUrl}`,
-        url: qrImageUrl
+        message: shareMessage
       });
       logEvent({ type: 'receive.qr.shared', payload: { chain, symbol } });
     } catch (error) {
@@ -11810,12 +11453,15 @@ function AppInner() {
     if (!sendDraft) return;
     if (sendIsProcessing) return;
     if (sendAuthMethod === 'password') {
+      if (!ensurePasswordAuthReady()) return;
       if (normalizePassword(overrideInput ?? authPasswordInput) !== normalizePassword(sendPassword)) {
         setAuthPasswordInput('');
         setAuthErrorMessage('');
-        setBannerMessage(flow.authInvalid);
+        const backoffMs = registerPasswordAuthFailure();
+        setBannerMessage(`${flow.authInvalid} ${buildPasswordAuthLockedMessage(backoffMs)}`);
         return;
       }
+      resetPasswordAuthFailure();
     } else {
       const authenticated = await authenticateWithBiometricMode(sendAuthMethod, flow.authTitle);
       if (!authenticated) return;
@@ -13480,26 +13126,29 @@ function AppInner() {
         .map((entry, index) => {
           const normalized = normalizeDiscoverTrustedHost(entry.host);
           if (!normalized) return null;
-          const createdAtRaw = String(entry.createdAt ?? '').trim();
-          const createdAt = Number.isNaN(new Date(createdAtRaw).getTime())
-            ? new Date().toISOString()
-            : new Date(createdAtRaw).toISOString();
+          const createdAt = toIsoOrNow(String(entry.createdAt ?? '').trim());
+          const expiresAt = computeTrustedHostExpiresAt(createdAt, entry.expiresAt);
+          const expiresAtTs = Date.parse(expiresAt);
+          if (!Number.isFinite(expiresAtTs) || expiresAtTs <= Date.now()) return null;
           const id = String(entry.id ?? '').trim() || `trusted-${normalized}-${index}`;
           return {
             id,
             host: normalized,
             memo: String(entry.memo ?? '').trim(),
-            createdAt
+            createdAt,
+            expiresAt
           } as DiscoverTrustedHostEntry;
         })
         .filter((entry): entry is DiscoverTrustedHostEntry => Boolean(entry));
       if (normalizedPrev.some((entry) => entry.host === host)) return normalizedPrev;
+      const createdAt = new Date().toISOString();
       return [
         {
-          id: `trusted-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          id: `trusted-${Date.now()}-${randomHexString(6)}`,
           host,
           memo,
-          createdAt: new Date().toISOString()
+          createdAt,
+          expiresAt: computeTrustedHostExpiresAt(createdAt)
         },
         ...normalizedPrev
       ];
@@ -13553,7 +13202,8 @@ function AppInner() {
           ? {
               ...entry,
               host: nextHost,
-              memo: nextMemo
+              memo: nextMemo,
+              expiresAt: computeTrustedHostExpiresAt(toIsoOrNow(entry.createdAt), entry.expiresAt)
             }
           : entry
       )
@@ -13790,7 +13440,7 @@ function AppInner() {
       }
 
       const created: DiscoverBrowserTab = {
-        id: `dapp-tab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `dapp-tab-${Date.now()}-${randomBase36String(5)}`,
         title: nextTitle,
         url: normalizedUrl,
         openedAt: now,
@@ -14074,8 +13724,7 @@ function AppInner() {
         success,
         reason,
         platform: Platform.OS,
-        lang,
-        walletId
+        lang
       }).catch((error) => {
         trackError('discover.click.log_failed', error, {
           itemId: item.id,
@@ -15444,7 +15093,6 @@ function AppInner() {
                     borderRadius: 16,
                     backgroundColor: themeMode === 'dark' ? '#0f1115' : '#ffffff'
                   },
-                  allow: 'clipboard-read; clipboard-write',
                   referrerPolicy: 'no-referrer-when-downgrade'
                 } as any)}
               </View>
@@ -15468,8 +15116,8 @@ function AppInner() {
                   }}
                   onError={() => setBannerMessage(discoverActionText.noLink)}
                   setSupportMultipleWindows={false}
-                  sharedCookiesEnabled
-                  thirdPartyCookiesEnabled
+                  sharedCookiesEnabled={false}
+                  thirdPartyCookiesEnabled={false}
                   allowsBackForwardNavigationGestures
                   style={styles.discoverBrowserWebView}
                 />
@@ -15930,6 +15578,12 @@ function AppInner() {
           <Pressable style={styles.settingRow} onPress={() => navigate('settingsHelp')}>
             <Text style={styles.settingLabel} numberOfLines={1}>
               {text.helpCenter}
+            </Text>
+            <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
+          </Pressable>
+          <Pressable style={styles.settingRow} onPress={() => navigate('settingsPrivacy')}>
+            <Text style={styles.settingLabel} numberOfLines={1}>
+              {text.privacyPolicy}
             </Text>
             <ThemedIonicons name="chevron-forward" size={18} color={palette.muted} />
           </Pressable>
@@ -16663,7 +16317,15 @@ function AppInner() {
         <Pressable
           style={[styles.primaryBtn, !(deleteAgreeBackup && deleteAgreeNoRecovery && deleteAgreeFinal) ? styles.btnDisabled : undefined]}
           disabled={!(deleteAgreeBackup && deleteAgreeNoRecovery && deleteAgreeFinal)}
-          onPress={() => navigate('walletDeletePhrase')}
+          onPress={() => {
+            if (hasDeleteSeedVerification) {
+              navigate('walletDeletePhrase');
+              return;
+            }
+            setDeleteAuthErrorMessage('');
+            setDeleteAuthPasswordInput('');
+            navigate('walletDeleteAuth');
+          }}
         >
           <Text style={styles.primaryBtnText}>{text.continue}</Text>
         </Pressable>
@@ -18165,7 +17827,6 @@ function AppInner() {
 
   const renderReceive = () => {
     const receiveAddress = isReceiveSelectionComplete && selectedReceiveToken ? selectedReceiveToken.walletAddress : '';
-    const receiveQrImageUrl = receiveAddress ? createQrImageUrl(receiveAddress) : '';
 
     return (
       <View style={styles.screen}>
@@ -18253,7 +17914,7 @@ function AppInner() {
           </View>
 
           <ReceiveQrCard
-            qrUri={receiveQrImageUrl}
+            qrValue={receiveAddress}
             address={receiveAddress}
               emptyHint={text.selectChainAssetFirst}
             copyLabel={text.copyAddress}
@@ -18280,7 +17941,6 @@ function AppInner() {
         tokens.find((token) => token.chainCode === selectedReceiveNftChain)?.walletAddress ??
         '')
       : '';
-    const receiveQrImageUrl = receiveAddress ? createQrImageUrl(receiveAddress) : '';
     const nftReceiveSelectChainMessage = lang === 'ko' ? '체인을 선택하세요.' : lang === 'zh' ? '请选择链。' : 'Select chain.';
 
     return (
@@ -18324,7 +17984,7 @@ function AppInner() {
           </View>
 
           <ReceiveQrCard
-            qrUri={receiveQrImageUrl}
+            qrValue={receiveAddress}
             address={receiveAddress}
             emptyHint={text.receiveFilterAddressHint}
             copyLabel={text.copyAddress}
@@ -19469,6 +19129,7 @@ const renderHistory = () => (
     if (currentScreen === 'settingsWalletsAuth') return renderWalletSettingsAuth();
     if (currentScreen === 'settingsWallets') return renderWalletSettings();
     if (currentScreen === 'settingsHelp') return renderSimpleInfoScreen(text.helpCenter, 'https://support.imwallet.com');
+    if (currentScreen === 'settingsPrivacy') return renderSimpleInfoScreen(text.privacyPolicy, PRIVACY_POLICY_URL);
     if (currentScreen === 'settingsSupport') return renderSupportChat();
     if (currentScreen === 'settingsAbout') return renderSimpleInfoScreen(text.about, appInfoVersionLabel, 'Powered by Hepta Labs');
 

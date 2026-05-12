@@ -1,3 +1,5 @@
+import { resolveBackendBaseUrl } from './backendBaseUrl';
+
 export type TxFeeChainCode = 'BTC' | 'ETH' | 'XRP' | 'BSC' | 'SOL' | 'TRX' | 'FIL';
 
 export type ActualNetworkFeeSnapshot = {
@@ -8,13 +10,14 @@ export type ActualNetworkFeeSnapshot = {
   confirmedAt: string;
 };
 
-const ETH_RPC_URL = 'https://eth.llamarpc.com';
-const BSC_RPC_URL = 'https://bsc-dataseed.binance.org';
-const XRP_RPC_URL = 'https://xrplcluster.com';
-const SOL_RPC_URL = 'https://api.mainnet-beta.solana.com';
-const TRON_RPC_URL = 'https://api.trongrid.io/wallet/gettransactioninfobyid';
-const BTC_TX_API_URL = 'https://blockstream.info/api/tx/';
-const FIL_RPC_URL = 'https://api.node.glif.io';
+const RPC_PROXY_BASE = `${resolveBackendBaseUrl()}/api/v1/rpc`;
+const ETH_RPC_URL = `${RPC_PROXY_BASE}/eth`;
+const BSC_RPC_URL = `${RPC_PROXY_BASE}/bsc`;
+const XRP_RPC_URL = `${RPC_PROXY_BASE}/xrp`;
+const SOL_RPC_URL = `${RPC_PROXY_BASE}/sol`;
+const TRON_RPC_URL = `${RPC_PROXY_BASE}/trx/wallet/gettransactioninfobyid`;
+const BTC_TX_API_URL = `${RPC_PROXY_BASE}/btc/tx/`;
+const FIL_RPC_URL = `${RPC_PROXY_BASE}/fil`;
 const FIL_ATTO_PER_FIL = 1_000_000_000_000_000_000n;
 
 const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs: number, signal?: AbortSignal) => {
