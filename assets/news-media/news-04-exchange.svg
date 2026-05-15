@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">EXCHANGE EXECUTION CORE</title>
+  <desc id="d">Latency optimization for matching and routing layers</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#052e2b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <radialGradient id="glow" cx="72%" cy="30%" r="46%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.44" />
+      <stop offset="100%" stop-color="#34d399" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)" />
+  <rect width="1600" height="900" fill="url(#glow)" />
+  <g fill="none" stroke="#e2e8f0" opacity="0.26">
+    <circle cx="1220" cy="250" r="210" stroke-width="18" />
+    <circle cx="1220" cy="250" r="140" stroke-width="10" />
+    <path d="M110 730 C 380 590, 600 750, 900 620 S 1330 500, 1510 390" stroke-width="9" />
+  </g>
+  <rect x="102" y="188" width="860" height="332" rx="22" fill="#0b1220" fill-opacity="0.52" stroke="#334155" />
+  <text x="140" y="332" fill="#f8fafc" font-size="82" font-weight="800" font-family="Sora, Arial, sans-serif">EXCHANGE EXECUTION CORE</text>
+  <text x="140" y="398" fill="#bfdbfe" font-size="30" font-weight="500" font-family="Space Grotesk, Arial, sans-serif">Latency optimization for matching and routing layers</text>
+</svg>

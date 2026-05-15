@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">Mining</title>
+  <desc id="d">A mining infrastructure visual with grid and node blocks.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1326" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g stroke="#334155" opacity="0.5">
+    <path d="M0 180 H1600"/><path d="M0 300 H1600"/><path d="M0 420 H1600"/><path d="M0 540 H1600"/><path d="M0 660 H1600"/>
+    <path d="M200 0 V900"/><path d="M420 0 V900"/><path d="M640 0 V900"/><path d="M860 0 V900"/><path d="M1080 0 V900"/><path d="M1300 0 V900"/>
+  </g>
+  <g>
+    <rect x="930" y="210" width="180" height="110" rx="12" fill="#1d4ed8" fill-opacity="0.45"/>
+    <rect x="1140" y="340" width="180" height="110" rx="12" fill="#2563eb" fill-opacity="0.45"/>
+    <rect x="930" y="470" width="180" height="110" rx="12" fill="#3b82f6" fill-opacity="0.45"/>
+    <rect x="1140" y="600" width="180" height="110" rx="12" fill="#60a5fa" fill-opacity="0.45"/>
+  </g>
+  <text x="120" y="380" fill="#f8fafc" font-size="108" font-weight="800" font-family="Sora, Arial, sans-serif">MINING</text>
+  <text x="120" y="444" fill="#bfdbfe" font-size="32" font-weight="500" font-family="Space Grotesk, Arial, sans-serif">Web3.0 storage and Bitcoin infrastructure operations</text>
+</svg>

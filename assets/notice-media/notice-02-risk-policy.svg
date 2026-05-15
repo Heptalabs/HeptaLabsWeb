@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Risk Policy Update</title>
+  <desc id="desc">Abstract visual for risk policy notice.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1319"/>
+      <stop offset="100%" stop-color="#1c293d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <path d="M0 500 C220 420 340 620 560 520 C740 440 920 350 1200 430" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="10" fill="none"/>
+  <rect x="110" y="145" width="980" height="430" rx="32" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.25)"/>
+  <text x="180" y="300" fill="#f8fafc" font-size="62" font-family="Sora, Arial, sans-serif" font-weight="700">Risk Policy v2.1</text>
+  <text x="180" y="368" fill="#cbd5e1" font-size="34" font-family="Space Grotesk, Arial, sans-serif">Volatility Response Standard</text>
+</svg>

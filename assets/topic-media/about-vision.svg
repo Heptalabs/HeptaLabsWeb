@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">Vision</title>
+  <desc id="d">A strategic vision visual with directional lines.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#0b1220" />
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g opacity="0.75">
+    <rect x="120" y="190" width="1360" height="3" fill="url(#line)"/>
+    <rect x="120" y="260" width="1360" height="2" fill="url(#line)"/>
+    <rect x="120" y="330" width="1360" height="2" fill="url(#line)"/>
+    <rect x="120" y="400" width="1360" height="3" fill="url(#line)"/>
+    <rect x="120" y="470" width="1360" height="2" fill="url(#line)"/>
+  </g>
+  <g fill="none" stroke="#93c5fd" opacity="0.35">
+    <path d="M140 730 C 340 600, 420 760, 640 620 S 980 560, 1180 520 S 1400 460, 1500 380" stroke-width="14"/>
+  </g>
+  <text x="120" y="610" fill="#f8fafc" font-size="104" font-weight="800" font-family="Sora, Arial, sans-serif">VISION</text>
+  <text x="120" y="672" fill="#bfdbfe" font-size="32" font-weight="500" font-family="Space Grotesk, Arial, sans-serif">Long-term models, disciplined risk control, measurable outcomes</text>
+</svg>
