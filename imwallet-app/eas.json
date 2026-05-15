@@ -8,23 +8,23 @@
       "distribution": "internal"
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_BASE_URL": "https://staging-api.imwallet.app",
-        "EXPO_PUBLIC_RPC_PROXY_API_KEY": "__SET_IN_EAS_ENV__"
+        "EXPO_PUBLIC_BACKEND_BASE_URL": "https://staging-api.imwallet.app"
       }
     },
     "production": {
+      "environment": "production",
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_BASE_URL": "https://api.imwallet.app",
-        "EXPO_PUBLIC_RPC_PROXY_API_KEY": "__SET_IN_EAS_ENV__"
+        "EXPO_PUBLIC_BACKEND_BASE_URL": "https://api.imwallet.app"
       }
     }
   },

@@ -21,11 +21,17 @@ pass() {
   echo "[OK] $1"
 }
 
+has_pattern() {
+  local pattern="$1"
+  shift
+  grep -RinE "$pattern" "$@" >/dev/null 2>&1
+}
+
 require_match() {
   local pattern="$1"
   local target="$2"
   local label="$3"
-  if ! rg -n "$pattern" "$target" >/dev/null 2>&1; then
+  if ! has_pattern "$pattern" "$target"; then
     fail "$label (pattern: $pattern)"
   fi
   pass "$label"
@@ -35,7 +41,7 @@ require_no_match() {
   local pattern="$1"
   local target="$2"
   local label="$3"
-  if rg -n "$pattern" "$target" >/dev/null 2>&1; then
+  if has_pattern "$pattern" "$target"; then
     fail "$label (pattern: $pattern)"
   fi
   pass "$label"

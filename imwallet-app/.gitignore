@@ -9,3 +9,6 @@ dist
 builds/
 *.apk
 *.aab
+android/local.properties
+android/app/*.keystore
+android/app/*.jks

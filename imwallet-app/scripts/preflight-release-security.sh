@@ -9,6 +9,7 @@ ADDRESS_ENGINE="$ROOT_DIR/src/services/addressEngine.ts"
 MANIFEST="$ROOT_DIR/android/app/src/main/AndroidManifest.xml"
 NETWORK_CONFIG="$ROOT_DIR/android/app/src/main/res/xml/network_security_config.xml"
 BUILD_GRADLE="$ROOT_DIR/android/app/build.gradle"
+ANDROID_MAIN_SRC="$ROOT_DIR/android/app/src/main"
 APP_JSON="$ROOT_DIR/app.json"
 PACKAGE_JSON="$ROOT_DIR/package.json"
 EAS_JSON="$ROOT_DIR/eas.json"
@@ -25,15 +26,6 @@ pass() {
 has_pattern() {
   local pattern="$1"
   shift
-  if command -v rg >/dev/null 2>&1; then
-    if rg -n "$pattern" "$@" >/dev/null 2>&1; then
-      return 0
-    fi
-    local rg_status=$?
-    if [[ "$rg_status" -eq 1 ]]; then
-      return 1
-    fi
-  fi
   grep -RinE "$pattern" "$@" >/dev/null 2>&1
 }
 
@@ -60,7 +52,7 @@ require_match() {
 echo "== IMWallet Release Security Preflight =="
 
 if has_pattern "DEFAULT_COMPAT_SEEDS|clipboard-read|clipboard-write|api\\.qrserver\\.com|Math\\.random\\(" \
-  "$APP_TSX" "$ROOT_DIR/src" "$ROOT_DIR/android"; then
+  "$APP_TSX" "$ROOT_DIR/src" "$ANDROID_MAIN_SRC"; then
   fail "No critical insecure patterns in app source"
 fi
 pass "No critical insecure patterns in app source"

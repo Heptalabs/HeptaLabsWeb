@@ -34,6 +34,13 @@
         "VIBRATE",
         "READ_MEDIA_IMAGES"
       ],
+      "blockedPermissions": [
+        "RECORD_AUDIO",
+        "SYSTEM_ALERT_WINDOW",
+        "USE_FINGERPRINT",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
