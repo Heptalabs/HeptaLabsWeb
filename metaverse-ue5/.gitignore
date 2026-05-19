@@ -1,0 +1,14 @@
+.runtime/
+infrastructure/PixelStreamingInfrastructure/
+
+# Unreal generated artifacts (rebuild on target machine)
+CyberMetaverse/Binaries/
+CyberMetaverse/Intermediate/
+CyberMetaverse/Saved/
+CyberMetaverse/DerivedDataCache/
+CyberMetaverse/.vs/
+CyberMetaverse/*.xcworkspace
+CyberMetaverse/*.xcodeproj
+
+# OS noise
+.DS_Store
