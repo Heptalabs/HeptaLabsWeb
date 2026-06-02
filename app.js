@@ -805,12 +805,12 @@
     }
   };
   const FIL_LOTTERY_TITLE_BRAND_ASSETS = {
-    symbol: "/assets/brand/fil-lottery-symbol.png",
+    symbol: "/assets/brand/fil-lottery-symbol-teal.png",
     day: {
-      logo: "/assets/brand/fil-lottery-logo-light.png"
+      logo: "/assets/brand/fil-lottery-logo-light-teal.png"
     },
     night: {
-      logo: "/assets/brand/fil-lottery-logo-dark.png"
+      logo: "/assets/brand/fil-lottery-logo-dark-teal.png"
     }
   };
   const DETAIL_MEDIA_BG_BY_THEME = {
