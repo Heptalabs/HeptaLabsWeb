@@ -382,6 +382,82 @@ window.HeptaContentDefaults = {
       },
       items: [
         {
+          id: "watch-up",
+          labels: {
+            ko: "Watch UP",
+            en: "Watch UP",
+            zh: "Watch UP"
+          },
+          translations: {
+            ko: {
+              title: "Watch UP",
+              subtitle:
+                "Watch UP은 서비스 상태, 사용자 행동 신호, 운영 알림을 하나의 워크플로로 연결해 제품 운영팀이 이상 징후를 빠르게 파악하고 대응하도록 돕는 모니터링 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "서비스 포지셔닝",
+                  body:
+                    "Watch UP은 운영자가 매일 확인해야 하는 서비스 상태, 핵심 이벤트, 알림 이력을 한 화면에서 점검할 수 있도록 설계됩니다.\n장애 대응뿐 아니라 업데이트 이후 품질 확인, 사용자 흐름 이상 감지, 운영 리포트 작성까지 반복 업무를 줄이는 데 초점을 둡니다."
+                },
+                {
+                  heading: "핵심 기능",
+                  body:
+                    "실시간 상태 카드, 이벤트 타임라인, 이상 신호 알림, 담당자 확인 로그를 중심으로 운영 상황을 빠르게 스캔할 수 있습니다.\n서비스별 임계값과 알림 채널을 분리해 긴급 알림과 참고 알림을 구분하고, 대응 이력은 이후 분석과 보고에 활용할 수 있도록 누적합니다."
+                },
+                {
+                  heading: "운영 활용",
+                  body:
+                    "웹사이트, 앱, API, 다운로드 페이지처럼 사용자 접점이 많은 서비스에서 접속 오류, 응답 지연, 주요 전환율 하락을 조기에 발견하는 용도로 활용할 수 있습니다.\nHepta Labs의 자체 서비스 운영 경험을 기반으로 제품별 운영 지표를 표준화하고, 팀이 같은 기준으로 상태를 판단하도록 돕습니다."
+                }
+              ]
+            },
+            en: {
+              title: "Watch UP",
+              subtitle:
+                "Watch UP is an operations monitoring platform that connects service status, user behavior signals, and alerts into one workflow so teams can identify and respond to anomalies faster.",
+              sections: [
+                {
+                  heading: "Service Positioning",
+                  body:
+                    "Watch UP is designed for operators who need to review service status, key events, and alert history in a single workspace every day.\nBeyond incident response, it helps reduce repeated work around release checks, user-flow anomaly detection, and operational reporting."
+                },
+                {
+                  heading: "Core Capabilities",
+                  body:
+                    "The platform centers on real-time status cards, event timelines, anomaly alerts, and owner acknowledgement logs for quick operational scanning.\nThresholds and alert channels can be separated by service, while response history is accumulated for later analysis and reporting."
+                },
+                {
+                  heading: "Operations Use",
+                  body:
+                    "Watch UP can be applied to websites, apps, APIs, and download pages where teams need early visibility into access errors, latency, or conversion drops.\nBased on Hepta Labs' internal service operations, it helps standardize product-level signals and gives teams a shared basis for status decisions."
+                }
+              ]
+            },
+            zh: {
+              title: "Watch UP",
+              subtitle:
+                "Watch UP 是一套运营监控平台，将服务状态、用户行为信号与告警流程连接到同一工作流，帮助团队更快发现并处理异常。",
+              sections: [
+                {
+                  heading: "服务定位",
+                  body:
+                    "Watch UP 面向需要每日检查服务状态、关键事件与告警记录的运营团队而设计。\n除故障响应外，也可用于版本更新后的质量确认、用户流程异常检测与运营报告整理，减少重复工作。"
+                },
+                {
+                  heading: "核心能力",
+                  body:
+                    "平台以实时状态卡片、事件时间线、异常信号告警与负责人确认记录为核心，帮助运营人员快速扫描状态。\n可按服务拆分阈值和告警渠道，并沉淀响应历史，用于后续分析与报告。"
+                },
+                {
+                  heading: "运营应用",
+                  body:
+                    "适用于网站、App、API、下载页等用户触点较多的服务，可提前发现访问错误、响应延迟或关键转化下降。\n结合 Hepta Labs 的自有服务运营经验，Watch UP 帮助产品团队统一指标口径并基于同一标准判断服务状态。"
+                }
+              ]
+            }
+          }
+        },
+        {
           id: "imwallet",
           labels: {
             ko: "IMWallet",
@@ -734,6 +810,97 @@ window.HeptaContentDefaults = {
                   heading: "风控与运营治理",
                   body:
                     "系统内置仓位上限、止损阈值、异常信号检测与紧急保护模式，可在极端行情下自动启用防御层。\n管理控制台可统一查看策略版本、日结日志与用户参与数据，提升透明度与审计可追溯性。"
+                }
+              ]
+            }
+          }
+        },
+        {
+          id: "fil-lottery",
+          labels: {
+            ko: "FIL Lottery",
+            en: "FIL Lottery",
+            zh: "FIL Lottery"
+          },
+          translations: {
+            ko: {
+              title: "FIL Lottery",
+              subtitle:
+                "FIL Lottery는 Filecoin 마이너의 epoch별 블록 생성 여부를 당첨 트리거로 사용하는 Android 중심 로터리 플랫폼입니다.",
+              sections: [
+                {
+                  heading: "제품 개념",
+                  body:
+                    "FIL Lottery는 1일 관측창의 2880개 Filecoin epoch를 티켓 번호 1~2880과 매핑하고, 지정 마이너가 해당 epoch에서 블록을 생성하면 대응 티켓을 당첨으로 판정하는 구조입니다.\n당첨금은 마이너 보상이 아니라 플랫폼 풀과 내부 원장을 기준으로 지급되도록 설계되어 사용자 경험과 정산 흐름을 분리합니다."
+                },
+                {
+                  heading: "라운드 운영",
+                  body:
+                    "KST 기준 판매창, 관측창, 발표/지급 단계를 분리해 라운드 상태를 명확히 관리합니다.\n판매가 2880석에 미달하면 플랫폼 시스템 계정이 남은 티켓을 자동 채우고, 관측 시작 전 전체 티켓 구성을 확정해 판정 기준을 흔들리지 않게 고정합니다."
+                },
+                {
+                  heading: "검증 및 투명성",
+                  body:
+                    "다중 Filecoin RPC 소스 교차검증, null epoch 처리, 판정 실패 재확인 큐, 라운드별 원본 로그 공개 API를 통해 결과 신뢰도를 높입니다.\n티켓별 판정 근거와 CSV 내보내기를 제공해 사용자와 운영자가 동일한 데이터 기준으로 결과를 확인할 수 있도록 설계합니다."
+                },
+                {
+                  heading: "앱 및 배포",
+                  body:
+                    "MVP는 Android APK 직접 배포와 다운로드 랜딩페이지를 중심으로 구성됩니다.\n사용자 앱은 회원가입/로그인, 내부 FIL 잔고, 참여, 내 티켓, 실시간 관측 진행바, 결과 조회, 당첨금 반영, 입출금 기본 UX와 알림함을 포함합니다."
+                }
+              ]
+            },
+            en: {
+              title: "FIL Lottery",
+              subtitle:
+                "FIL Lottery is an Android-first lottery platform that uses Filecoin miner block production by epoch as the winning trigger.",
+              sections: [
+                {
+                  heading: "Product Concept",
+                  body:
+                    "FIL Lottery maps the 2880 Filecoin epochs in a one-day observation window to ticket numbers 1-2880, and marks a ticket as winning when the selected miner produces a block in the matching epoch.\nPayouts are designed around a platform pool and internal ledger rather than direct miner rewards, separating user experience from settlement mechanics."
+                },
+                {
+                  heading: "Round Operations",
+                  body:
+                    "Each round separates the sales window, observation window, and announcement/payout phase using KST as the operating baseline.\nIf sales are below 2880 seats, a platform system account fills the remaining tickets before observation starts, fixing the ticket map before the result process begins."
+                },
+                {
+                  heading: "Verification and Transparency",
+                  body:
+                    "The model uses multiple Filecoin RPC sources, explicit null-epoch handling, recheck queues for failed reads, and public raw-log APIs per round to strengthen result reliability.\nTicket-level evidence and CSV exports are planned so users and operators can review outcomes from the same data basis."
+                },
+                {
+                  heading: "App and Distribution",
+                  body:
+                    "The MVP is centered on direct Android APK distribution through a download landing page.\nThe user app covers sign-up/login, internal FIL balance, participation, ticket lookup, live observation progress, result lookup, prize crediting, deposit/withdrawal UX, and notifications."
+                }
+              ]
+            },
+            zh: {
+              title: "FIL Lottery",
+              subtitle:
+                "FIL Lottery 是一款以 Android 为核心的 Filecoin 抽奖平台，使用指定矿工在各 epoch 中是否出块作为中奖触发条件。",
+              sections: [
+                {
+                  heading: "产品概念",
+                  body:
+                    "FIL Lottery 将一天观测窗口内的 2880 个 Filecoin epoch 映射到 1~2880 号票，当指定矿工在对应 epoch 成功出块时，该票号即判定中奖。\n中奖支付基于平台奖池与内部账本，而不是直接依赖矿工奖励，从而将用户体验与结算机制分离。"
+                },
+                {
+                  heading: "轮次运营",
+                  body:
+                    "每轮以 KST 为运营基准，拆分为销售窗口、观测窗口、公布/支付阶段，便于清晰管理状态。\n如果销售不足 2880 席，平台系统账户会在观测开始前自动填充剩余票号，确保票号映射在判定前固定。"
+                },
+                {
+                  heading: "验证与透明性",
+                  body:
+                    "系统设计包括多 Filecoin RPC 源交叉验证、null epoch 明确处理、读取失败重检队列，以及按轮次公开原始日志 API，以提升结果可信度。\n票号级判定依据与 CSV 导出可帮助用户和运营方基于同一数据检查结果。"
+                },
+                {
+                  heading: "应用与分发",
+                  body:
+                    "MVP 以 Android APK 直接分发和下载落地页为中心。\n用户应用覆盖注册/登录、内部 FIL 余额、参与、我的票号、实时观测进度、结果查询、奖金入账、基础充值/提现 UX 与通知。"
                 }
               ]
             }

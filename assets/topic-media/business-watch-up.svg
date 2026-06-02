@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="t d">
+  <title id="t">Watch UP</title>
+  <desc id="d">Operations monitoring dashboard visual for Watch UP.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071110" />
+      <stop offset="52%" stop-color="#10201c" />
+      <stop offset="100%" stop-color="#0b0d10" />
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#46f5c8" />
+      <stop offset="48%" stop-color="#f4f7fb" />
+      <stop offset="100%" stop-color="#ff9f43" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)" />
+  <rect x="930" y="130" width="470" height="640" rx="42" fill="#07100f" stroke="#2f4741" stroke-width="3" />
+  <rect x="980" y="190" width="370" height="92" rx="20" fill="#10231f" stroke="#325a51" />
+  <rect x="980" y="316" width="370" height="92" rx="20" fill="#10231f" stroke="#325a51" />
+  <rect x="980" y="442" width="370" height="240" rx="24" fill="#0b1715" stroke="#325a51" />
+  <path d="M1018 610 C1062 520 1115 548 1162 498 C1216 440 1259 470 1314 382" fill="none" stroke="url(#line)" stroke-width="16" stroke-linecap="round" />
+  <circle cx="1018" cy="610" r="18" fill="#46f5c8" />
+  <circle cx="1162" cy="498" r="18" fill="#f4f7fb" />
+  <circle cx="1314" cy="382" r="18" fill="#ff9f43" />
+  <text x="122" y="360" fill="#f8fafc" font-size="106" font-weight="800" font-family="Sora, Arial, sans-serif">Watch UP</text>
+  <text x="126" y="434" fill="#b7d7cf" font-size="32" font-weight="500" font-family="Space Grotesk, Arial, sans-serif">Operations signals, status checks, and alert response</text>
+  <g fill="#dffcf4" font-family="Space Grotesk, Arial, sans-serif" font-size="28" font-weight="700">
+    <text x="1018" y="247">STATUS</text>
+    <text x="1018" y="373">EVENTS</text>
+    <text x="1018" y="730">RESPONSE</text>
+  </g>
+  <g fill="#46f5c8">
+    <rect x="1240" y="224" width="74" height="20" rx="10" />
+    <rect x="1210" y="350" width="104" height="20" rx="10" opacity="0.72" />
+  </g>
+</svg>

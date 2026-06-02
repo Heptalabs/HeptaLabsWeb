@@ -808,7 +808,14 @@
     day: "rgba(248, 250, 255, 0.98)",
     night: "rgba(0, 0, 0, 0.35)"
   };
-  const BUSINESS_PRIMARY_ITEM_IDS = ["imwallet", "imsaas", "imgtest", "hedge-x"];
+  const BUSINESS_PRIMARY_ITEM_IDS = [
+    "watch-up",
+    "imwallet",
+    "imsaas",
+    "imgtest",
+    "hedge-x",
+    "fil-lottery"
+  ];
 
   const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"]);
   const TOPIC_MEDIA_DEFAULTS = {
@@ -839,6 +846,14 @@
       }
     },
     business: {
+      "watch-up": {
+        url: "/assets/topic-media/business-watch-up.svg",
+        alt: {
+          ko: "Watch UP 운영 모니터링 대표 비주얼",
+          en: "Watch UP operations monitoring visual",
+          zh: "Watch UP 运营监控主视觉"
+        }
+      },
       imwallet: {
         url: "/assets/topic-media/business-imwallet-45708.png",
         alt: {
@@ -869,6 +884,14 @@
           ko: "Hedge X 서비스 대표 비주얼",
           en: "Hedge X service visual",
           zh: "Hedge X 服务主视觉"
+        }
+      },
+      "fil-lottery": {
+        url: "/assets/filecoin_lottery_3d_symbol.png",
+        alt: {
+          ko: "FIL Lottery Filecoin 로터리 대표 비주얼",
+          en: "FIL Lottery Filecoin lottery visual",
+          zh: "FIL Lottery Filecoin 抽奖主视觉"
         }
       },
       mining: {
