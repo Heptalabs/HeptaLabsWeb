@@ -804,6 +804,14 @@
       logo: "/assets/brand/imwallet-logo-dark.png"
     }
   };
+  const FIL_LOTTERY_TITLE_BRAND_ASSETS = {
+    day: {
+      logo: "/assets/brand/fil-lottery-logo-light.png"
+    },
+    night: {
+      logo: "/assets/brand/fil-lottery-logo-dark.png"
+    }
+  };
   const DETAIL_MEDIA_BG_BY_THEME = {
     day: "rgba(248, 250, 255, 0.98)",
     night: "rgba(0, 0, 0, 0.35)"
@@ -887,7 +895,7 @@
         }
       },
       "fil-lottery": {
-        url: "/assets/filecoin_lottery_3d_symbol.png",
+        url: "/assets/brand/fil-lottery-symbol.png",
         alt: {
           ko: "FIL Lottery Filecoin 로터리 대표 비주얼",
           en: "FIL Lottery Filecoin lottery visual",
@@ -2214,10 +2222,12 @@
 
   const syncImsaasTitleBrand = () => {
     const activeVariant = state.theme === "night" ? "night" : "day";
-    document.querySelectorAll("[data-imsaas-brand], [data-imwallet-brand]").forEach((node) => {
-      const variant = node.dataset.imsaasBrand || node.dataset.imwalletBrand || "";
-      node.style.display = variant === activeVariant ? "block" : "none";
-    });
+    document
+      .querySelectorAll("[data-imsaas-brand], [data-imwallet-brand], [data-fil-lottery-brand]")
+      .forEach((node) => {
+        const variant = node.dataset.imsaasBrand || node.dataset.imwalletBrand || node.dataset.filLotteryBrand || "";
+        node.style.display = variant === activeVariant ? "block" : "none";
+      });
   };
 
   const syncDetailMediaSurface = () => {
@@ -3776,6 +3786,40 @@
     syncImsaasTitleBrand();
   };
 
+  const renderFilLotteryTitleBrand = (titleElement, titleText) => {
+    titleElement.textContent = "";
+    titleElement.setAttribute("aria-label", titleText);
+
+    const lockup = document.createElement("span");
+    lockup.style.display = "inline-flex";
+    lockup.style.alignItems = "center";
+    lockup.style.lineHeight = "1";
+    lockup.style.maxWidth = "100%";
+
+    const createBrandImage = (variant, src, alt) => {
+      const image = document.createElement("img");
+      image.dataset.filLotteryBrand = variant;
+      image.src = src;
+      image.alt = alt;
+      image.loading = "lazy";
+      image.style.display = "none";
+      image.style.height = "clamp(38px, 4.8vw, 64px)";
+      image.style.width = "auto";
+      image.style.maxWidth = "min(78vw, 640px)";
+      image.style.borderRadius = "0";
+      image.style.flexShrink = "1";
+      return image;
+    };
+
+    lockup.append(
+      createBrandImage("day", FIL_LOTTERY_TITLE_BRAND_ASSETS.day.logo, "FIL Lottery"),
+      createBrandImage("night", FIL_LOTTERY_TITLE_BRAND_ASSETS.night.logo, "FIL Lottery")
+    );
+
+    titleElement.append(lockup);
+    syncImsaasTitleBrand();
+  };
+
   const renderDetail = () => {
     const pathText = getLangText(UI_TEXT.detail);
     const { menuId, itemId, postId, page } = resolveDetailParams();
@@ -3855,6 +3899,8 @@
         renderImsaasTitleBrand(titleElement, translation.title);
       } else if (menuId === "business" && itemId === "imwallet") {
         renderImwalletTitleBrand(titleElement, translation.title);
+      } else if (menuId === "business" && itemId === "fil-lottery") {
+        renderFilLotteryTitleBrand(titleElement, translation.title);
       } else {
         titleElement.removeAttribute("aria-label");
         titleElement.textContent = translation.title;
