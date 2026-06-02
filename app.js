@@ -805,6 +805,7 @@
     }
   };
   const FIL_LOTTERY_TITLE_BRAND_ASSETS = {
+    symbol: "/assets/brand/fil-lottery-symbol.png",
     day: {
       logo: "/assets/brand/fil-lottery-logo-light.png"
     },
@@ -892,14 +893,6 @@
           ko: "Hedge X 서비스 대표 비주얼",
           en: "Hedge X service visual",
           zh: "Hedge X 服务主视觉"
-        }
-      },
-      "fil-lottery": {
-        url: "/assets/brand/fil-lottery-symbol.png",
-        alt: {
-          ko: "FIL Lottery Filecoin 로터리 대표 비주얼",
-          en: "FIL Lottery Filecoin lottery visual",
-          zh: "FIL Lottery Filecoin 抽奖主视觉"
         }
       },
       mining: {
@@ -3793,8 +3786,20 @@
     const lockup = document.createElement("span");
     lockup.style.display = "inline-flex";
     lockup.style.alignItems = "center";
+    lockup.style.gap = "12px";
     lockup.style.lineHeight = "1";
     lockup.style.maxWidth = "100%";
+
+    const symbol = document.createElement("img");
+    symbol.src = FIL_LOTTERY_TITLE_BRAND_ASSETS.symbol;
+    symbol.alt = "FIL Lottery symbol";
+    symbol.loading = "lazy";
+    symbol.style.display = "block";
+    symbol.style.height = "clamp(38px, 4.8vw, 64px)";
+    symbol.style.width = "auto";
+    symbol.style.maxWidth = "clamp(38px, 4.8vw, 64px)";
+    symbol.style.borderRadius = "0";
+    symbol.style.flexShrink = "0";
 
     const createBrandImage = (variant, src, alt) => {
       const image = document.createElement("img");
@@ -3812,6 +3817,7 @@
     };
 
     lockup.append(
+      symbol,
       createBrandImage("day", FIL_LOTTERY_TITLE_BRAND_ASSETS.day.logo, "FIL Lottery"),
       createBrandImage("night", FIL_LOTTERY_TITLE_BRAND_ASSETS.night.logo, "FIL Lottery")
     );
