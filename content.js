@@ -392,66 +392,66 @@ window.HeptaContentDefaults = {
             ko: {
               title: "Watch UP",
               subtitle:
-                "Watch UP은 서비스 상태, 사용자 행동 신호, 운영 알림을 하나의 워크플로로 연결해 제품 운영팀이 이상 징후를 빠르게 파악하고 대응하도록 돕는 모니터링 플랫폼입니다.",
+                "Watch UP은 한국·일본 중고 명품 시계 매물을 한곳에서 탐색하고, 중고장터·대리구매·렌탈·거래 채팅까지 연결하는 프리미엄 시계 마켓 플랫폼입니다.",
               sections: [
                 {
                   heading: "서비스 포지셔닝",
                   body:
-                    "Watch UP은 운영자가 매일 확인해야 하는 서비스 상태, 핵심 이벤트, 알림 이력을 한 화면에서 점검할 수 있도록 설계됩니다.\n장애 대응뿐 아니라 업데이트 이후 품질 확인, 사용자 흐름 이상 감지, 운영 리포트 작성까지 반복 업무를 줄이는 데 초점을 둡니다."
+                    "Watch UP은 롤렉스, 파텍 필립, 오데마 피게(AP) 등 프리미엄 시계를 찾는 고객이 국내외 중고 매물을 빠르게 비교하고 거래 흐름까지 이어갈 수 있도록 설계된 명품 시계 마켓입니다.\n웹/PWA와 iPhone 앱 기반으로 운영되며, 시계 탐색부터 판매, 상담, 대리구매, 렌탈까지 하나의 서비스 경험으로 묶는 데 초점을 둡니다."
                 },
                 {
                   heading: "핵심 기능",
                   body:
-                    "실시간 상태 카드, 이벤트 타임라인, 이상 신호 알림, 담당자 확인 로그를 중심으로 운영 상황을 빠르게 스캔할 수 있습니다.\n서비스별 임계값과 알림 채널을 분리해 긴급 알림과 참고 알림을 구분하고, 대응 이력은 이후 분석과 보고에 활용할 수 있도록 누적합니다."
+                    "슈퍼검색을 통해 한국·일본 중고 시계 매물을 통합 탐색하고, 중고장터에서 프리미엄 시계 매물을 둘러볼 수 있습니다.\n대리구매 신청, 렌탈, 거래 채팅, 사진 전송, 매거진 콘텐츠를 연결해 사용자가 시계 탐색 이후의 상담과 거래 단계까지 자연스럽게 이동하도록 구성합니다."
                 },
                 {
-                  heading: "운영 활용",
+                  heading: "거래 경험",
                   body:
-                    "웹사이트, 앱, API, 다운로드 페이지처럼 사용자 접점이 많은 서비스에서 접속 오류, 응답 지연, 주요 전환율 하락을 조기에 발견하는 용도로 활용할 수 있습니다.\nHepta Labs의 자체 서비스 운영 경험을 기반으로 제품별 운영 지표를 표준화하고, 팀이 같은 기준으로 상태를 판단하도록 돕습니다."
+                    "Watch UP은 명품 시계를 빠르고 안전하게 판매할 수 있는 사용자 경험을 지향합니다.\n브랜드별 탐색, 매물 확인, 상담, 신청, 채팅을 분리된 기능이 아니라 하나의 구매·판매 여정으로 설계해 고가 상품 거래에서 중요한 신뢰도와 편의성을 함께 높입니다."
                 }
               ]
             },
             en: {
               title: "Watch UP",
               subtitle:
-                "Watch UP is an operations monitoring platform that connects service status, user behavior signals, and alerts into one workflow so teams can identify and respond to anomalies faster.",
+                "Watch UP is a premium watch marketplace that brings Korean and Japanese pre-owned luxury watch listings together with marketplace, concierge purchase, rental, and transaction chat flows.",
               sections: [
                 {
                   heading: "Service Positioning",
                   body:
-                    "Watch UP is designed for operators who need to review service status, key events, and alert history in a single workspace every day.\nBeyond incident response, it helps reduce repeated work around release checks, user-flow anomaly detection, and operational reporting."
+                    "Watch UP is designed for customers looking for premium watches such as Rolex, Patek Philippe, and Audemars Piguet, helping them compare pre-owned listings across markets and move into a trusted transaction flow.\nThe service runs across web/PWA and iPhone app experiences, connecting discovery, selling, consultation, concierge purchase, and rental into one product journey."
                 },
                 {
                   heading: "Core Capabilities",
                   body:
-                    "The platform centers on real-time status cards, event timelines, anomaly alerts, and owner acknowledgement logs for quick operational scanning.\nThresholds and alert channels can be separated by service, while response history is accumulated for later analysis and reporting."
+                    "Super Search supports integrated discovery of Korean and Japanese used watch listings, while the marketplace helps users browse premium inventory.\nConcierge purchase requests, rental, transaction chat, photo sharing, and magazine content are connected so users can move naturally from watch discovery to consultation and deal execution."
                 },
                 {
-                  heading: "Operations Use",
+                  heading: "Transaction Experience",
                   body:
-                    "Watch UP can be applied to websites, apps, APIs, and download pages where teams need early visibility into access errors, latency, or conversion drops.\nBased on Hepta Labs' internal service operations, it helps standardize product-level signals and gives teams a shared basis for status decisions."
+                    "Watch UP aims to help users sell luxury watches quickly and safely.\nBrand-based discovery, listing review, consultation, application, and chat are treated as one buying and selling journey, improving both convenience and trust for high-value transactions."
                 }
               ]
             },
             zh: {
               title: "Watch UP",
               subtitle:
-                "Watch UP 是一套运营监控平台，将服务状态、用户行为信号与告警流程连接到同一工作流，帮助团队更快发现并处理异常。",
+                "Watch UP 是面向高端腕表交易的精品市场平台，将韩国、日本二手名表搜索、中古市场、代购、租赁与交易聊天连接到同一体验中。",
               sections: [
                 {
                   heading: "服务定位",
                   body:
-                    "Watch UP 面向需要每日检查服务状态、关键事件与告警记录的运营团队而设计。\n除故障响应外，也可用于版本更新后的质量确认、用户流程异常检测与运营报告整理，减少重复工作。"
+                    "Watch UP 面向寻找劳力士、百达翡丽、爱彼等高端腕表的用户，帮助他们比较国内外二手表源，并顺畅进入可信交易流程。\n服务以 Web/PWA 与 iPhone App 为基础，将搜索、出售、咨询、代购、租赁整合为一个完整的产品体验。"
                 },
                 {
                   heading: "核心能力",
                   body:
-                    "平台以实时状态卡片、事件时间线、异常信号告警与负责人确认记录为核心，帮助运营人员快速扫描状态。\n可按服务拆分阈值和告警渠道，并沉淀响应历史，用于后续分析与报告。"
+                    "通过 Super Search，用户可以统一搜索韩国、日本的二手腕表信息，并在中古市场浏览高端腕表库存。\n代购申请、租赁、交易聊天、照片发送与杂志内容相互连接，让用户从发现腕表自然进入咨询和交易阶段。"
                 },
                 {
-                  heading: "运营应用",
+                  heading: "交易体验",
                   body:
-                    "适用于网站、App、API、下载页等用户触点较多的服务，可提前发现访问错误、响应延迟或关键转化下降。\n结合 Hepta Labs 的自有服务运营经验，Watch UP 帮助产品团队统一指标口径并基于同一标准判断服务状态。"
+                    "Watch UP 旨在帮助用户更快速、更安全地出售名表。\n品牌搜索、商品确认、咨询、申请与聊天不是分散功能，而是统一的购买与出售路径，从而提升高价值商品交易中的便利性与信任感。"
                 }
               ]
             }
