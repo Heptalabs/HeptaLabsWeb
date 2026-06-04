@@ -813,6 +813,16 @@
       logo: "/assets/brand/fil-lottery-logo-dark-teal.png"
     }
   };
+  const WATCH_UP_TITLE_BRAND_ASSETS = {
+    day: {
+      symbol: "/assets/brand/watch-up-symbol-light.svg",
+      logo: "/assets/brand/watch-up-logo-light.png"
+    },
+    night: {
+      symbol: "/assets/brand/watch-up-symbol-dark.svg",
+      logo: "/assets/brand/watch-up-logo-dark.png"
+    }
+  };
   const DETAIL_MEDIA_BG_BY_THEME = {
     day: "rgba(248, 250, 255, 0.98)",
     night: "rgba(0, 0, 0, 0.35)"
@@ -2216,9 +2226,16 @@
   const syncImsaasTitleBrand = () => {
     const activeVariant = state.theme === "night" ? "night" : "day";
     document
-      .querySelectorAll("[data-imsaas-brand], [data-imwallet-brand], [data-fil-lottery-brand]")
+      .querySelectorAll(
+        "[data-imsaas-brand], [data-imwallet-brand], [data-fil-lottery-brand], [data-watch-up-brand]"
+      )
       .forEach((node) => {
-        const variant = node.dataset.imsaasBrand || node.dataset.imwalletBrand || node.dataset.filLotteryBrand || "";
+        const variant =
+          node.dataset.imsaasBrand ||
+          node.dataset.imwalletBrand ||
+          node.dataset.filLotteryBrand ||
+          node.dataset.watchUpBrand ||
+          "";
         node.style.display = variant === activeVariant ? "block" : "none";
       });
   };
@@ -3826,6 +3843,67 @@
     syncImsaasTitleBrand();
   };
 
+  const renderWatchUpTitleBrand = (titleElement, titleText) => {
+    titleElement.textContent = "";
+    titleElement.setAttribute("aria-label", titleText);
+
+    const lockup = document.createElement("span");
+    lockup.style.display = "inline-flex";
+    lockup.style.alignItems = "center";
+    lockup.style.gap = "12px";
+    lockup.style.lineHeight = "1";
+    lockup.style.maxWidth = "100%";
+
+    const createBrandImage = (variant, src, alt, height, maxWidth) => {
+      const image = document.createElement("img");
+      image.dataset.watchUpBrand = variant;
+      image.src = src;
+      image.alt = alt;
+      image.loading = "lazy";
+      image.style.display = "none";
+      image.style.height = height;
+      image.style.width = "auto";
+      image.style.maxWidth = maxWidth;
+      image.style.borderRadius = "0";
+      image.style.flexShrink = "0";
+      return image;
+    };
+
+    lockup.append(
+      createBrandImage(
+        "day",
+        WATCH_UP_TITLE_BRAND_ASSETS.day.symbol,
+        "Watch UP symbol",
+        "clamp(38px, 4.8vw, 64px)",
+        "clamp(52px, 6.5vw, 88px)"
+      ),
+      createBrandImage(
+        "night",
+        WATCH_UP_TITLE_BRAND_ASSETS.night.symbol,
+        "Watch UP symbol",
+        "clamp(38px, 4.8vw, 64px)",
+        "clamp(52px, 6.5vw, 88px)"
+      ),
+      createBrandImage(
+        "day",
+        WATCH_UP_TITLE_BRAND_ASSETS.day.logo,
+        "Watch UP",
+        "clamp(34px, 4.5vw, 60px)",
+        "min(78vw, 520px)"
+      ),
+      createBrandImage(
+        "night",
+        WATCH_UP_TITLE_BRAND_ASSETS.night.logo,
+        "Watch UP",
+        "clamp(34px, 4.5vw, 60px)",
+        "min(78vw, 520px)"
+      )
+    );
+
+    titleElement.append(lockup);
+    syncImsaasTitleBrand();
+  };
+
   const renderDetail = () => {
     const pathText = getLangText(UI_TEXT.detail);
     const { menuId, itemId, postId, page } = resolveDetailParams();
@@ -3901,7 +3979,9 @@
     }
 
     if (titleElement) {
-      if (menuId === "business" && itemId === "imsaas") {
+      if (menuId === "business" && itemId === "watch-up") {
+        renderWatchUpTitleBrand(titleElement, translation.title);
+      } else if (menuId === "business" && itemId === "imsaas") {
         renderImsaasTitleBrand(titleElement, translation.title);
       } else if (menuId === "business" && itemId === "imwallet") {
         renderImwalletTitleBrand(titleElement, translation.title);
