@@ -33,51 +33,92 @@
           <div class="container">
             <p class="kicker">PRIVACY POLICY</p>
             <h1>IMWallet 개인정보처리방침</h1>
-            <p class="lead">최종 업데이트: 2026-05-09 (KST)</p>
+            <p class="lead">최종 업데이트: 2026-07-06 (KST)</p>
 
             <div class="info-card" style="margin-top:16px; text-align:left;">
               <h3>KO</h3>
               <p>
-                IMWallet는 비수탁(Self-custody) 지갑 앱으로, 시드 구문/개인키를 운영 서버에 저장하지 않습니다.
-                체인 조회/전송을 위해 외부 블록체인 RPC 또는 익스플로러 엔드포인트로 지갑 주소/트랜잭션 정보가 전송될 수 있습니다.
-                또한 시장 데이터, Discover 콘텐츠 제공을 위해 IMWallet 백엔드 및 연동 데이터 제공처와 통신합니다.
+                IMWallet(운영: Hepta Labs)은 비수탁(Self-custody) 지갑 앱입니다. <strong>복구 구문(시드 구문)과 개인키는
+                이용자의 기기에만 암호화되어 저장되며, 어떤 경우에도 운영 서버로 전송·보관되지 않습니다.</strong>
               </p>
+              <h4>1. 수집·처리하는 항목</h4>
               <ul>
-                <li>수집/처리 항목(예): 앱 로그, 지갑 주소, 거래 해시, 디바이스 기본 진단 정보</li>
-                <li>목적: 지갑 기능 제공, 보안 검증, 오류 대응, 서비스 품질 개선</li>
-                <li>보관: 법령 또는 운영 정책 범위 내 최소 기간 보관</li>
-                <li>삭제 요청: support@imwallet.app</li>
+                <li><strong>지갑 주소·거래 해시</strong>: 잔액 조회와 송금 처리를 위해 IMWallet 백엔드 및 각 블록체인의 공개
+                  RPC/익스플로러 엔드포인트로 전송됩니다. 블록체인 특성상 주소·거래 내역은 공개 네트워크에 기록됩니다.</li>
+                <li><strong>서비스 이용 기록</strong>: 둘러보기(Discover) 콘텐츠 클릭 등 앱 내 상호작용이 품질 개선 목적으로
+                  백엔드에 기록될 수 있습니다.</li>
+                <li><strong>앱 로그·기기 기본 진단 정보</strong>: 오류 대응과 보안 검증을 위한 서버 접속 기록(IP 주소 포함)과
+                  기본 진단 정보가 수집됩니다.</li>
+                <li>이름·연락처·사진 등 그 밖의 개인정보는 수집하지 않으며, 계정 가입 절차 자체가 없습니다.</li>
               </ul>
+              <h4>2. 이용 목적</h4>
+              <ul><li>지갑 기능 제공(잔액 조회·송금·수신), 보안 검증 및 부정 이용 방지, 오류 대응, 서비스 품질 개선</li></ul>
+              <h4>3. 보관 기간</h4>
+              <ul><li>서버 접속 기록·앱 로그는 수집일로부터 <strong>최대 90일</strong> 보관 후 파기합니다. 관련 법령이 별도
+                보존을 요구하는 경우 해당 기간을 따릅니다. 블록체인에 기록된 정보는 네트워크 특성상 삭제가 불가능합니다.</li></ul>
+              <h4>4. 제3자 제공</h4>
+              <ul><li>잔액 조회·전송 목적의 공개 블록체인 RPC/익스플로러(예: blockstream.info, api.trongrid.io 등) 외에
+                개인정보를 제3자에게 제공하지 않으며, 광고·마케팅 목적의 공유가 없습니다.</li></ul>
+              <h4>5. 이용자 권리 및 삭제 요청</h4>
+              <ul><li>서버에 저장된 로그·이용 기록의 삭제를 요청할 수 있습니다. 아래 이메일로 요청 시 영업일 기준 7일 이내에
+                처리 결과를 회신합니다.</li>
+                <li>문의·삭제 요청: <!--email_off--><a href="mailto:support@imwallet.app">support@imwallet.app</a><!--/email_off--></li></ul>
             </div>
 
             <div class="info-card" style="margin-top:16px; text-align:left;">
               <h3>EN</h3>
               <p>
-                IMWallet is a self-custody wallet. Seed phrases and private keys are not stored on operator servers.
-                For on-chain balance checks and transfers, wallet addresses and transaction-related data may be sent to public blockchain RPC/explorer endpoints.
-                The app also communicates with IMWallet backend services and market/discover data providers.
+                IMWallet (operated by Hepta Labs) is a self-custody wallet. <strong>Your recovery phrase and private keys are
+                stored encrypted on your device only and are never transmitted to or stored on our servers.</strong>
               </p>
+              <h4>1. Data we process</h4>
               <ul>
-                <li>Data categories (examples): app logs, wallet addresses, transaction hashes, basic device diagnostics</li>
-                <li>Purposes: wallet operations, security checks, issue response, service quality improvement</li>
-                <li>Retention: minimum period required by law/policy</li>
-                <li>Data deletion requests: support@imwallet.app</li>
+                <li><strong>Wallet addresses &amp; transaction hashes</strong> — sent to the IMWallet backend and public
+                  blockchain RPC/explorer endpoints to fetch balances and broadcast transactions. By the nature of public
+                  blockchains, addresses and transactions are recorded on public networks.</li>
+                <li><strong>Service usage</strong> — in-app interactions such as Discover content clicks may be logged by our
+                  backend for quality improvement.</li>
+                <li><strong>App logs &amp; basic device diagnostics</strong> — server access logs (including IP address) and
+                  basic diagnostics, used for troubleshooting and security review.</li>
+                <li>We do not collect names, contacts, photos, or any other personal data. There is no account sign-up.</li>
               </ul>
+              <h4>2. Purposes</h4>
+              <ul><li>Wallet operations (balances, send/receive), security and abuse prevention, issue response, quality improvement.</li></ul>
+              <h4>3. Retention</h4>
+              <ul><li>Server access logs and app logs are kept for up to <strong>90 days</strong> from collection, then deleted,
+                unless a longer period is required by law. Data recorded on public blockchains cannot be deleted.</li></ul>
+              <h4>4. Sharing</h4>
+              <ul><li>Other than public blockchain RPC/explorer endpoints used for balance checks and broadcasting, we do not
+                share data with third parties. No advertising or marketing use.</li></ul>
+              <h4>5. Your rights &amp; deletion requests</h4>
+              <ul><li>You may request deletion of server-side logs and usage records. We respond within 7 business days.</li>
+                <li>Contact / deletion requests: <!--email_off--><a href="mailto:support@imwallet.app">support@imwallet.app</a><!--/email_off--></li></ul>
             </div>
 
             <div class="info-card" style="margin-top:16px; text-align:left;">
               <h3>ZH</h3>
               <p>
-                IMWallet 是非托管（Self-custody）钱包，不会在运营服务器保存助记词或私钥。
-                为了进行链上查询与转账，钱包地址及交易相关信息可能会发送到区块链 RPC / 浏览器端点。
-                应用还会与 IMWallet 后端以及行情/发现内容服务进行通信。
+                IMWallet（由 Hepta Labs 运营）是非托管（Self-custody）钱包。<strong>助记词与私钥仅加密保存在您的设备上，
+                绝不会传输或保存到运营服务器。</strong>
               </p>
+              <h4>1. 处理的数据</h4>
               <ul>
-                <li>数据类型（示例）：应用日志、钱包地址、交易哈希、基础设备诊断信息</li>
-                <li>用途：钱包功能提供、安全校验、故障处理、服务质量优化</li>
-                <li>保存期限：依法规及运营政策最小化保存</li>
-                <li>删除申请：support@imwallet.app</li>
+                <li><strong>钱包地址与交易哈希</strong>：为查询余额和广播交易，会发送至 IMWallet 后端及公共区块链 RPC /
+                  区块浏览器端点。基于公链特性，地址与交易会记录在公开网络上。</li>
+                <li><strong>使用记录</strong>：发现页内容点击等应用内交互可能被后端记录，用于改进服务质量。</li>
+                <li><strong>应用日志与基础设备诊断信息</strong>：包括 IP 地址在内的服务器访问日志，用于故障处理与安全审查。</li>
+                <li>不收集姓名、联系人、照片等其他个人信息，也没有账号注册流程。</li>
               </ul>
+              <h4>2. 用途</h4>
+              <ul><li>钱包功能（余额、收发）、安全校验与滥用防范、故障处理、服务质量优化。</li></ul>
+              <h4>3. 保存期限</h4>
+              <ul><li>服务器访问日志与应用日志自收集之日起最长保存 <strong>90 天</strong>后删除；法律另有要求的除外。
+                记录在公链上的信息无法删除。</li></ul>
+              <h4>4. 第三方提供</h4>
+              <ul><li>除用于余额查询与交易广播的公共区块链 RPC / 浏览器端点外，不向第三方提供数据；无广告或营销用途。</li></ul>
+              <h4>5. 用户权利与删除申请</h4>
+              <ul><li>您可申请删除服务器端日志与使用记录，我们将在 7 个工作日内回复。</li>
+                <li>联系 / 删除申请：<!--email_off--><a href="mailto:support@imwallet.app">support@imwallet.app</a><!--/email_off--></li></ul>
             </div>
           </div>
         </section>
@@ -86,56 +127,16 @@
       <footer class="site-footer">
         <div class="container footer-shell">
           <section class="footer-card" aria-label="IMWallet footer">
-            <div class="footer-top">
-              <a class="footer-brand" href="./index.html" aria-label="IMWallet Home">
-                <img class="footer-symbol footer-symbol-light" src="./assets/imwallet-symbol-light.png" alt="IMWallet Symbol" />
-                <img class="footer-symbol footer-symbol-dark" src="./assets/imwallet-symbol-dark.png" alt="IMWallet Symbol" />
-                <img class="footer-logo footer-logo-light" src="./assets/imwallet-logo-light.png" alt="IMWallet Logo" />
-                <img class="footer-logo footer-logo-dark" src="./assets/imwallet-logo-dark.png" alt="IMWallet Logo" />
-              </a>
-              <div class="footer-badges">
-                <span class="footer-badge">Security First</span>
-                <span class="footer-badge">Multi-Chain</span>
-              </div>
-            </div>
-
             <div class="footer-links-grid">
               <div class="footer-col">
-                <h4>제품</h4>
-                <a href="./index.html">소개</a>
-                <a href="./features.html">기능</a>
-                <a href="./security.html">보안</a>
-                <a href="./download.html">다운로드</a>
-              </div>
-              <div class="footer-col">
-                <h4>사용</h4>
-                <a href="./discover.html">둘러보기</a>
-                <a href="./flow.html">사용 흐름</a>
-                <a href="./faq.html">FAQ</a>
-                <a href="./download.html#protocol-compat">프로토콜 안내</a>
-              </div>
-              <div class="footer-col">
                 <h4>지원</h4>
-                <a href="./download.html">릴리즈 상태</a>
-                <a href="./download.html#platform-install">설치 가이드</a>
                 <a href="./privacy.html">개인정보처리방침</a>
+                <a href="./support.html">지원 · Support</a>
                 <a href="./faq.html">FAQ</a>
-                <a href="mailto:support@imwallet.app">문의하기</a>
-              </div>
-              <div class="footer-col">
-                <h4>채널</h4>
-                <a href="https://x.com" target="_blank" rel="noopener noreferrer">X</a>
-                <a href="https://t.me" target="_blank" rel="noopener noreferrer">Telegram</a>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
-                <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">YouTube</a>
-                <a class="footer-download-link" href="/downloads/imwallet-latest.apk" data-apk-download="/downloads/imwallet-latest.apk">APK 다운로드</a>
               </div>
             </div>
-
             <div class="footer-bottom">
-              <div class="footer-legal">
-                <span>@ 2026 FIL Lottery. Powered by Hepta Labs.</span>
-              </div>
+              <div class="footer-legal"><span>© 2026 Hepta Labs.</span></div>
             </div>
           </section>
         </div>
